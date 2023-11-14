@@ -1,0 +1,424 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "provider-config-schema.json",
+  "title": "CMDB population script's configuration schema for providers",
+  "description": "Configuration file with manual information about CMDB providers",
+  "fileMatch": "*.config.yaml",
+  "type": "object",
+  "properties": {
+    "trusted_idps": {
+      "description": "List of identity providers URLs available for OIDC-agent authentication",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "issuer": {
+            "description": "Identity Provider endpoint",
+            "type": "string",
+            "format": "uri"
+          },
+          "group_claim": {
+            "description": "Group claim to use to check user's group",
+            "type": "string"
+          },
+          "user_groups": {
+            "description": "List of owned user groups",
+            "type": "array",
+            "format": "object",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "description": "User group name",
+                  "type": "string"
+                },
+                "slas": {
+                  "description": "List of SLAs owned by this user group",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "doc_uuid": {
+                        "description": "SLA document UUID",
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "start_date": {
+                        "description": "SLA starting date",
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "end_date": {
+                        "description": "SLA ending date",
+                        "type": "string",
+                        "format": "date"
+                      }
+                    },
+                    "required": ["start_date", "end_date", "doc_uuid"]
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              },
+              "required": ["name", "slas"]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "required": ["issuer", "group_claim", "user_groups"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "openstack": {
+      "description": "List of Openstack instances to integrate in the CMDB",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/$defs/name"
+          },
+          "status": {
+            "$ref": "#/$defs/status"
+          },
+          "is_public": {
+            "$ref": "#/$defs/is_public"
+          },
+          "support_emails": {
+            "$ref": "#/$defs/support_emails"
+          },
+          "image_tags": {
+            "$ref": "#/$defs/image_tags"
+          },
+          "network_tags": {
+            "$ref": "#/$defs/network_tags"
+          },
+          "block_storage_vol_types": {
+            "$ref": "#/$defs/block_storage_vol_types"
+          },
+          "auth_url": {
+            "$ref": "#/$defs/auth_url"
+          },
+          "identity_providers": {
+            "$ref": "#/$defs/identity_providers"
+          },
+          "regions": {
+            "$ref": "#/$defs/regions"
+          },
+          "projects": {
+            "$ref": "#/$defs/projects"
+          }
+        },
+        "required": ["name", "auth_url", "identity_providers", "projects"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "kubernetes": {
+      "description": "List of Openstack instances to integrate in the CMDB",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/$defs/name"
+          },
+          "status": {
+            "$ref": "#/$defs/status"
+          },
+          "is_public": {
+            "$ref": "#/$defs/is_public"
+          },
+          "support_emails": {
+            "$ref": "#/$defs/support_emails"
+          },
+          "image_tags": {
+            "$ref": "#/$defs/image_tags"
+          },
+          "block_storage_vol_types": {
+            "$ref": "#/$defs/block_storage_vol_types"
+          },
+          "auth_url": {
+            "$ref": "#/$defs/auth_url"
+          },
+          "identity_providers": {
+            "$ref": "#/$defs/identity_providers"
+          },
+          "regions": {
+            "$ref": "#/$defs/regions"
+          },
+          "projects": {
+            "$ref": "#/$defs/projects"
+          }
+        },
+        "required": ["name", "auth_url", "identity_providers", "projects"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  },
+  "required": ["trusted_idps"],
+
+  "$defs": {
+    "default_public_net": {
+      "description": "Name of the default public network to use when multiple public networks are available for this project",
+      "type": "string"
+    },
+    "default_private_net": {
+      "description": "Name of the default private network to use when multiple public networks are available for this project",
+      "type": "string"
+    },
+    "private_net_proxy": {
+      "description": "Proxy the IM service will use to access the private network",
+      "type": "object",
+      "properties": {
+        "user": {
+          "description": "Username used to perform ssh operations",
+          "type": "string"
+        },
+        "ip": {
+          "description": "Proxy IP",
+          "type": "string",
+          "pattern": "((^|\\.)((25[0-5])|(2[0-4]\\d)|(1\\d\\d)|([1-9]?\\d))){4}$"
+        }
+      }
+    },
+    "per_user_limits": {
+      "description": "Resource limitations to apply to each user belonging to this project",
+      "type": "object",
+      "properties": {
+        "compute": {
+          "description": "Compute per user quotas",
+          "type": "object",
+          "properties": {
+            "cores": {
+              "description": "Max num of CPUs",
+              "type": "number"
+            },
+            "fixed_ips": {
+              "description": "Max num of assignable fixed IPs",
+              "type": "number"
+            },
+            "public_ips": {
+              "description": "Max num of assignable public IPs",
+              "type": "number"
+            },
+            "instances": {
+              "description": "Max num of VM instances",
+              "type": "number"
+            },
+            "ram": {
+              "description": "Max usable RAM in MB",
+              "type": "number"
+            }
+          }
+        },
+        "block_storage": {
+          "description": "Block storage per user quotas",
+          "type": "object",
+          "properties": {
+            "gigabytes": {
+              "description": "Disk size in gigabytes",
+              "type": "number"
+            },
+            "per_volumes_gigabytes": {
+              "description": "Max size in gigabytes for each volume",
+              "type": "number"
+            },
+            "volumes": {
+              "description": "Max num of volumes",
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "name": {
+      "description": "Provider name",
+      "type": "string"
+    },
+    "status": {
+      "description": "Provider status",
+      "type": "string",
+      "enum": ["active", "maintenance", "deprecate"],
+      "default": "active"
+    },
+    "is_public": {
+      "description": "Provider is public",
+      "type": "boolean",
+      "default": false
+    },
+    "support_emails": {
+      "description": "List of support emails for this provider",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "email"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "image_tags": {
+      "description": "List of tags to use to filter images",
+      "type": "array",
+      "items": {
+        "description": "Image required tag",
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "network_tags": {
+      "description": "List of tags to use to filter networks",
+      "type": "array",
+      "items": {
+        "description": "Network required tag",
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "block_storage_vol_types": {
+      "description": "Mapping of custom block storage volume types into standardized types",
+      "type": "object",
+      "properties": {}
+    },
+    "auth_url": {
+      "description": "Provider authentication url",
+      "type": "string",
+      "format": "uri"
+    },
+    "identity_providers": {
+      "description": "List of identity providers supported by this provider",
+      "type": "array",
+      "items": {
+        "description": "Identity provider details",
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "description": "Identity provider URL",
+            "type": "string",
+            "format": "uri"
+          },
+          "name": {
+            "description": "Identity provider name used by this provider to communicate",
+            "type": "string"
+          },
+          "protocol": {
+            "description": "Protocol used by this provider to communicate",
+            "type": "string"
+          }
+        },
+        "required": ["name", "protocol", "endpoint"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "regions": {
+      "description": "Provider regions to integrate in the CMDB",
+      "type": "array",
+      "items": {
+        "description": "Region location",
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Openstack region name",
+            "type": "string"
+          },
+          "location": {
+            "description": "Provider geographical location",
+            "type": "object",
+            "properties": {
+              "site": {
+                "description": "Location site name",
+                "type": "string"
+              },
+              "country": {
+                "description": "Location country extended name",
+                "type": "string"
+              },
+              "latitude": {
+                "description": "Location latitude",
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "longitude": {
+                "description": "Location longitude",
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              }
+            },
+            "required": ["site", "country"]
+          }
+        },
+        "required": ["name"]
+      },
+      "minItems": 1
+    },
+    "projects": {
+      "description": "List of projects to integrate in the CMDB",
+      "type": "array",
+      "items": {
+        "description": "Project details",
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Project UUID",
+            "type": "string",
+            "format": "uuid"
+          },
+          "sla": {
+            "description": "Corresponding SLA",
+            "type": "string",
+            "format": "uuid"
+          },
+          "default_public_net": {
+            "$ref": "#/$defs/default_public_net"
+          },
+          "default_private_net": {
+            "$ref": "#/$defs/default_private_net"
+          },
+          "private_net_proxy": {
+            "$ref": "#/$defs/private_net_proxy"
+          },
+          "per_user_limits": {
+            "$ref": "#/$defs/per_user_limits"
+          },
+          "per_region_props": {
+            "description": "Project properties that may change based on region",
+            "type": "array",
+            "items": {
+              "description": "",
+              "type": "object",
+              "properties": {
+                "region_name": {
+                  "description": "Region name",
+                  "type": "string"
+                },
+                "default_public_net": {
+                  "$ref": "#/$defs/default_public_net"
+                },
+                "default_private_net": {
+                  "$ref": "#/$defs/default_private_net"
+                },
+                "private_net_proxy": {
+                  "$ref": "#/$defs/private_net_proxy"
+                },
+                "per_user_limits": {
+                  "$ref": "#/$defs/per_user_limits"
+                }
+              },
+              "required": ["region_name"]
+            },
+            "minItems": 2
+          }
+        },
+        "required": ["id", "sla"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  }
+}

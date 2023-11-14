@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cmdb-config-schema.json",
+  "title": "CMDB population script's configuration schema for CMDB",
+  "description": "Configuration file with manual information about CMDB providers",
+  "fileMatch": "*.cmdb-config.yaml",
+  "type": "object",
+  "properties": {
+    "cmdb": {
+      "description": "CMDB instance details",
+      "type": "object",
+      "properties": {
+        "base_url": {
+          "description": "CMDB base URL",
+          "type": "string",
+          "format": "uri"
+        },
+        "api_ver": {
+          "description": "API versions",
+          "type": "object",
+          "properties": {
+            "flavors": {
+              "description": "Flavors API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "identity_providers": {
+              "description": "Identity providers API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "images": {
+              "description": "Images API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "locations": {
+              "description": "Locations API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "networks": {
+              "description": "Networks API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "projects": {
+              "description": "Projects API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "providers": {
+              "description": "Providers API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "regions": {
+              "description": "Regions API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "quotas": {
+              "description": "Quotas API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "services": {
+              "description": "Services API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "slas": {
+              "description": "SLAs API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "user_groups": {
+              "description": "User groups API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            }
+          }
+        }
+      },
+      "required": ["base_url"]
+    }
+  }
+}
