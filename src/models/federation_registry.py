@@ -9,9 +9,18 @@ class URLs(BaseModel):
     networks: AnyHttpUrl = Field(description="Networks endpoint")
     projects: AnyHttpUrl = Field(description="Projects endpoint")
     providers: AnyHttpUrl = Field(description="Providers endpoint")
+    block_storage_quotas: AnyHttpUrl = Field(
+        description="Block Storage Quotas endpoint"
+    )
+    compute_quotas: AnyHttpUrl = Field(description="Compute Quotas endpoint")
+    network_quotas: AnyHttpUrl = Field(description="Network Quotas endpoint")
     regions: AnyHttpUrl = Field(description="Regions endpoint")
-    quotas: AnyHttpUrl = Field(description="Quotas endpoint")
-    services: AnyHttpUrl = Field(description="Services endpoint")
+    block_storage_services: AnyHttpUrl = Field(
+        description="Block Storage Services endpoint"
+    )
+    compute_services: AnyHttpUrl = Field(description="Compute Services endpoint")
+    identity_services: AnyHttpUrl = Field(description="Identity Services endpoint")
+    network_services: AnyHttpUrl = Field(description="Network Services endpoint")
     slas: AnyHttpUrl = Field(description="SLAs endpoint")
     user_groups: AnyHttpUrl = Field(description="User Groups endpoint")
 
@@ -26,9 +35,28 @@ class APIVersions(BaseModel):
     networks: str = Field(default="v1", description="Networks API version to use")
     projects: str = Field(default="v1", description="Projects API version to use")
     providers: str = Field(default="v1", description="Providers API version to use")
+    block_storage_quotas: str = Field(
+        default="v1", description="Block Storage Quotas API version to use"
+    )
+    compute_quotas: str = Field(
+        default="v1", description="Compute Quotas API version to use"
+    )
+    network_quotas: str = Field(
+        default="v1", description="Network Quotas API version to use"
+    )
     regions: str = Field(default="v1", description="Regions API version to use")
-    quotas: str = Field(default="v1", description="Quotas API version to use")
-    services: str = Field(default="v1", description="Services API version to use")
+    block_storage_services: str = Field(
+        default="v1", description="Block Storage Services API version to use"
+    )
+    compute_services: str = Field(
+        default="v1", description="Compute Services API version to use"
+    )
+    identity_services: str = Field(
+        default="v1", description="Identity Services API version to use"
+    )
+    network_ervices: str = Field(
+        default="v1", description="Network Services API version to use"
+    )
     slas: str = Field(default="v1", description="SLAs API version to use")
     user_groups: str = Field(default="v1", description="User groups API version to use")
 
