@@ -15,6 +15,10 @@
           "type": "string",
           "format": "uri"
         },
+        "watcher": {
+          "description": "User authorized to inspect projects details on all providers",
+          "type": "string"
+        },
         "block_storage_vol_labels": {
           "description": "List of the volume type labels accepted",
           "type": "array",
@@ -112,7 +116,7 @@
           }
         }
       },
-      "required": ["base_url", "block_storage_vol_labels"]
+      "required": ["base_url", "block_storage_vol_labels", "watcher"]
     }
   }
 }
