@@ -54,18 +54,43 @@
               "type": "string",
               "default": "v1"
             },
+            "block_storage_quotas": {
+              "description": "Block Storage Quotas API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "compute_quotas": {
+              "description": "Compute Quotas API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "network_quotas": {
+              "description": "Network Quotas API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
             "regions": {
               "description": "Regions API endpoint version to use",
               "type": "string",
               "default": "v1"
             },
-            "quotas": {
-              "description": "Quotas API endpoint version to use",
+            "block_storage_services": {
+              "description": "Block Storage Services API endpoint version to use",
               "type": "string",
               "default": "v1"
             },
-            "services": {
-              "description": "Services API endpoint version to use",
+            "compute_services": {
+              "description": "Compute Services API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "identity_services": {
+              "description": "Identity Services API endpoint version to use",
+              "type": "string",
+              "default": "v1"
+            },
+            "network_services": {
+              "description": "Network Services API endpoint version to use",
               "type": "string",
               "default": "v1"
             },
