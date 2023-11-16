@@ -1,0 +1,4 @@
+base_url: http://localhost:8000/
+api_ver:
+  flavors: v1
+block_storage_vol_labels: []

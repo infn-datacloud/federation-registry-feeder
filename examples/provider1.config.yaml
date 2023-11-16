@@ -1,0 +1,35 @@
+trusted_idps:
+  - issuer: https://idp.test.com/
+    group_claim: groups
+    user_groups:
+      - name: test1
+        slas:
+          - doc_uuid: edfda059a23c439f8ffc06edd484e1a0
+            start_date: 2023-09-10
+            end_date: 2024-09-25
+      - name: test2
+        slas:
+          - doc_uuid: cdfda059a23c439f8ffc06edd484e1a0
+            start_date: 2023-09-11
+            end_date: 2023-10-25
+
+openstack:
+  - name: test-provider1
+    status: active
+    is_public: false
+    support_emails: [admin@test.it]
+    regions:
+      - name: RegionOne
+        location:
+          site: test-site
+          country: Italy
+    auth_url: https://keystone.test.it/
+    identity_providers:
+      - endpoint: https://idp.test.com/
+        name: my-test-idp
+        protocol: openid
+    projects:
+      - id: a8b324a0f4f349d28e98e4e78b11bacc
+        sla: edfda059a23c439f8ffc06edd484e1a0
+      - id: 83be7870dbb54d4a988f89ea77e9e2b9
+        sla: cdfda059a23c439f8ffc06edd484e1a0
