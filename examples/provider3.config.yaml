@@ -52,6 +52,10 @@ openstack:
                 ram: 2
               block_storage:
                 gigabytes: 2
+              network:
+                networks: 1
+                public_ips: 1
+                ports: 10
           - region_name: test-region2
             default_public_net: test-public-net2
             default_private_net: test-private-net2
@@ -66,3 +70,6 @@ openstack:
                 gigabytes: 10
                 per_volume_gigabytes: 2
                 volumes: 5
+              network:
+                networks: 3
+                public_ips: 5

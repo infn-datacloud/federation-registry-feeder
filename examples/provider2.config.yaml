@@ -48,6 +48,8 @@ openstack:
           compute:
             cores: 2
             ram: 2
-            public_ips: 2
           block_storage:
             gigabytes: 2
+          network:
+            networks: 3
+            public_ips: 5

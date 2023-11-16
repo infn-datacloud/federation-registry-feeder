@@ -197,14 +197,6 @@
               "description": "Max num of CPUs",
               "type": "number"
             },
-            "fixed_ips": {
-              "description": "Max num of assignable fixed IPs",
-              "type": "number"
-            },
-            "public_ips": {
-              "description": "Max num of assignable public IPs",
-              "type": "number"
-            },
             "instances": {
               "description": "Max num of VM instances",
               "type": "number"
@@ -229,6 +221,32 @@
             },
             "volumes": {
               "description": "Max num of volumes",
+              "type": "number"
+            }
+          }
+        },
+        "network": {
+          "description": "Network per user quotas",
+          "type": "object",
+          "properties": {
+            "networks": {
+              "description": "Max num of networks",
+              "type": "number"
+            },
+            "public_ips": {
+              "description": "Max num of assignable public IPs",
+              "type": "number"
+            },
+            "ports": {
+              "description": "Max num of assignable ports",
+              "type": "number"
+            },
+            "security_groups": {
+              "description": "Max num of security groups",
+              "type": "number"
+            },
+            "security_group_rules": {
+              "description": "Max num of rules for security group",
               "type": "number"
             }
           }
