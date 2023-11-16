@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "provider-config-schema.json",
-  "title": "CMDB population script's configuration schema for providers",
-  "description": "Configuration file with manual information about CMDB providers",
+  "title": "Federation Registry population script's configuration schema for providers",
+  "description": "Configuration file with manual information about Federation Registry providers",
   "fileMatch": "*.config.yaml",
   "type": "object",
   "properties": {
@@ -72,7 +72,7 @@
       "uniqueItems": true
     },
     "openstack": {
-      "description": "List of Openstack instances to integrate in the CMDB",
+      "description": "List of Openstack instances to integrate in the Federation Registry",
       "type": "array",
       "items": {
         "type": "object",
@@ -117,7 +117,7 @@
       "uniqueItems": true
     },
     "kubernetes": {
-      "description": "List of Openstack instances to integrate in the CMDB",
+      "description": "List of Openstack instances to integrate in the Federation Registry",
       "type": "array",
       "items": {
         "type": "object",
@@ -315,7 +315,7 @@
       "uniqueItems": true
     },
     "regions": {
-      "description": "Provider regions to integrate in the CMDB",
+      "description": "Provider regions to integrate in the Federation Registry",
       "type": "array",
       "items": {
         "description": "Region location",
@@ -358,7 +358,7 @@
       "minItems": 1
     },
     "projects": {
-      "description": "List of projects to integrate in the CMDB",
+      "description": "List of projects to integrate in the Federation Registry",
       "type": "array",
       "items": {
         "description": "Project details",

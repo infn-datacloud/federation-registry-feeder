@@ -1,17 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "cmdb-config-schema.json",
-  "title": "CMDB population script's configuration schema for CMDB",
-  "description": "Configuration file with manual information about CMDB providers",
-  "fileMatch": "*.cmdb-config.yaml",
+  "$id": "federation-registry-config-schema.json",
+  "title": "Federation Registry population script's configuration schema for Federation Registry",
+  "description": "Configuration file with manual information about Federation Registry providers",
+  "fileMatch": "*.federation-registry-config.yaml",
   "type": "object",
   "properties": {
-    "cmdb": {
-      "description": "CMDB instance details",
+    "federation-registry": {
+      "description": "Federation Registry instance details",
       "type": "object",
       "properties": {
         "base_url": {
-          "description": "CMDB base URL",
+          "description": "Federation Registry base URL",
           "type": "string",
           "format": "uri"
         },
