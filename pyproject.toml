@@ -28,8 +28,8 @@ extend-select = ["B", "C90", "E", "F", "G", "I", "N", "Q", "RUF", "UP", "W"]
 
 [tool.ruff.lint.per-file-ignores]
 "main.py" = ["E402"]
-"models/provider.py" = ["N805"]
-"providers/opnstk.py" = ["C901"]
+"provider.py" = ["N805"]
+"opnstk.py" = ["C901"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
