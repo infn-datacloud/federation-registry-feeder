@@ -15,6 +15,11 @@
           "type": "string",
           "format": "uri"
         },
+        "block_storage_vol_labels": {
+          "description": "List of the volume type labels accepted",
+          "type": "array",
+          "format": "string"
+        },
         "api_ver": {
           "description": "API versions",
           "type": "object",
@@ -107,7 +112,7 @@
           }
         }
       },
-      "required": ["base_url"]
+      "required": ["base_url", "block_storage_vol_labels"]
     }
   }
 }
