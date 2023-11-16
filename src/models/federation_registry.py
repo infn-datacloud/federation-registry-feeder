@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import AnyHttpUrl, BaseModel, Field
 
 
@@ -64,3 +66,6 @@ class APIVersions(BaseModel):
 class FederationRegistry(BaseModel):
     base_url: AnyHttpUrl = Field(description="Federation Registry base URL")
     api_ver: APIVersions = Field(description="API versions")
+    block_storage_vol_labels: List[str] = Field(
+        description="List of accepted volume type labels."
+    )
