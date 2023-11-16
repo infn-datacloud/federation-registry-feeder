@@ -69,3 +69,6 @@ class FederationRegistry(BaseModel):
     block_storage_vol_labels: List[str] = Field(
         description="List of accepted volume type labels."
     )
+    watcher: str = Field(
+        description="User allowed to inspect projects details on providers."
+    )
