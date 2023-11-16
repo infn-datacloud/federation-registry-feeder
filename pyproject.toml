@@ -27,7 +27,6 @@ build-backend = "poetry.core.masonry.api"
 extend-select = ["B", "C90", "E", "F", "G", "I", "N", "Q", "RUF", "UP", "W"]
 
 [tool.ruff.lint.per-file-ignores]
-"main.py" = ["E402"]
 "provider.py" = ["N805"]
 "opnstk.py" = ["C901"]
 

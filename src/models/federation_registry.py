@@ -56,7 +56,7 @@ class APIVersions(BaseModel):
     identity_services: str = Field(
         default="v1", description="Identity Services API version to use"
     )
-    network_ervices: str = Field(
+    network_services: str = Field(
         default="v1", description="Network Services API version to use"
     )
     slas: str = Field(default="v1", description="SLAs API version to use")
