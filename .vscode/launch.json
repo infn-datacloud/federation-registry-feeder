@@ -1,0 +1,11 @@
+{
+  "configurations": [
+    {
+      "name": "Python: Population script",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/main.py",
+      "console": "integratedTerminal",
+    }
+  ]
+}
