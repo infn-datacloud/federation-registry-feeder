@@ -5,21 +5,19 @@ import yaml
 from app.provider.schemas_extended import ProviderCreateExtended
 from crud import CRUD
 from logger import logger
-from models.federation_registry import FederationRegistry, URLs
 from models.provider import SiteConfig
 
+from src.config import Settings, URLs
 
-def load_federation_registry_config(*, base_path: str = ".") -> SiteConfig:
-    """Load Federation Registry configuration."""
-    logger.info("Loading Federation Registry configuration")
-    with open(os.path.join(base_path, ".federation-registry-config.yaml")) as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-    config = FederationRegistry(**config)
-    logger.debug(f"{config!r}")
 
+def load_service_endpoints(*, config: Settings) -> SiteConfig:
+    """Detect Federation Registry endpoints from given configuration."""
+    logger.info("Building Federation Registry endpoints from configuration.")
     d = {}
     for k, v in config.api_ver.dict().items():
-        d[k] = os.path.join(config.base_url, "api", f"{v}", f"{k}")
+        d[k.lower()] = os.path.join(
+            config.FEDERATION_REGISTRY_URL, "api", f"{v}", f"{k.lower()}"
+        )
     urls = URLs(**d)
     logger.debug(f"{urls!r}")
     return urls

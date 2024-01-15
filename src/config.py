@@ -1,6 +1,7 @@
+from functools import lru_cache
 from typing import List
 
-from pydantic import AnyHttpUrl, BaseModel, Field
+from pydantic import AnyHttpUrl, BaseModel, BaseSettings, Field
 
 
 class URLs(BaseModel):
@@ -27,48 +28,66 @@ class URLs(BaseModel):
     user_groups: AnyHttpUrl = Field(description="User Groups endpoint")
 
 
-class APIVersions(BaseModel):
-    flavors: str = Field(default="v1", description="Flavors API version to use")
-    identity_providers: str = Field(
+class APIVersions(BaseSettings):
+    FLAVORS: str = Field(default="v1", description="Flavors API version to use")
+    IDENTITY_PROVIDERS: str = Field(
         default="v1", description="Identity providers API version to use"
     )
-    images: str = Field(default="v1", description="Images API version to use")
-    locations: str = Field(default="v1", description="Locations API version to use")
-    networks: str = Field(default="v1", description="Networks API version to use")
-    projects: str = Field(default="v1", description="Projects API version to use")
-    providers: str = Field(default="v1", description="Providers API version to use")
-    block_storage_quotas: str = Field(
+    IMAGES: str = Field(default="v1", description="Images API version to use")
+    LOCATIONS: str = Field(default="v1", description="Locations API version to use")
+    NETWORKS: str = Field(default="v1", description="Networks API version to use")
+    PROJECTS: str = Field(default="v1", description="Projects API version to use")
+    PROVIDERS: str = Field(default="v1", description="Providers API version to use")
+    BLOCK_STORAGE_QUOTAS: str = Field(
         default="v1", description="Block Storage Quotas API version to use"
     )
-    compute_quotas: str = Field(
+    COMPUTE_QUOTAS: str = Field(
         default="v1", description="Compute Quotas API version to use"
     )
-    network_quotas: str = Field(
+    NETWORK_QUOTAS: str = Field(
         default="v1", description="Network Quotas API version to use"
     )
-    regions: str = Field(default="v1", description="Regions API version to use")
-    block_storage_services: str = Field(
+    REGIONS: str = Field(default="v1", description="Regions API version to use")
+    BLOCK_STORAGE_SERVICES: str = Field(
         default="v1", description="Block Storage Services API version to use"
     )
-    compute_services: str = Field(
+    COMPUTE_SERVICES: str = Field(
         default="v1", description="Compute Services API version to use"
     )
-    identity_services: str = Field(
+    IDENTITY_SERVICES: str = Field(
         default="v1", description="Identity Services API version to use"
     )
-    network_services: str = Field(
+    NETWORK_SERVICES: str = Field(
         default="v1", description="Network Services API version to use"
     )
-    slas: str = Field(default="v1", description="SLAs API version to use")
-    user_groups: str = Field(default="v1", description="User groups API version to use")
+    SLAS: str = Field(default="v1", description="SLAs API version to use")
+    USER_GROUPS: str = Field(default="v1", description="User groups API version to use")
+
+    class Config:
+        """Sub class to set attribute as case sensitive."""
+
+        case_sensitive = True
 
 
-class FederationRegistry(BaseModel):
-    base_url: AnyHttpUrl = Field(description="Federation Registry base URL")
-    api_ver: APIVersions = Field(description="API versions")
-    block_storage_vol_labels: List[str] = Field(
+class Settings(BaseSettings):
+    FEDERATION_REGISTRY_URL: AnyHttpUrl = Field(
+        description="Federation Registry base URL"
+    )
+    BLOCK_STORAGE_VOL_LABELS: List[str] = Field(
         description="List of accepted volume type labels."
     )
-    watcher: str = Field(
+    WATCHER: str = Field(
         description="User allowed to inspect projects details on providers."
     )
+    api_ver: APIVersions = Field(description="API versions.")
+
+    class Config:
+        """Sub class to set attribute as case sensitive."""
+
+        case_sensitive = True
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """Retrieve cached settings."""
+    return Settings(api_ver=APIVersions())

@@ -8,7 +8,9 @@ from app.provider.schemas_extended import ProviderCreateExtended
 from logger import logger
 from models.provider import Openstack, TrustedIDP
 from providers.opnstk import get_provider
-from utils import load_config, load_federation_registry_config, update_database
+from utils import load_config, load_service_endpoints, update_database
+
+from src.config import get_settings
 
 MAX_WORKERS = 7
 data_lock = Lock()
@@ -30,7 +32,10 @@ if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
 
     # Load Federation Registry configuration
-    federation_registry_urls = load_federation_registry_config(base_path=base_path)
+    config = get_settings()
+    logger.debug(f"{config!r}")
+
+    fed_reg_endpoints = load_service_endpoints(config=config)
 
     providers = []
     thread_pool = ThreadPoolExecutor(max_workers=MAX_WORKERS)
@@ -53,7 +58,7 @@ if __name__ == "__main__":
 
     # Update the Federation Registry
     update_database(
-        federation_registry_urls=federation_registry_urls,
+        federation_registry_urls=fed_reg_endpoints,
         token=config.trusted_idps[0].token,
         items=providers,
     )
