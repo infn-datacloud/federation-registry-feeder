@@ -55,6 +55,9 @@ RUN apt-get update && apt-get -y install cron && apt-get clean
 COPY --from=requirements /tmp/requirements.txt /app/requirements.txt
 COPY src /app/src
 
+ARG PROVIDERS_CONF_DIR=/providers-conf
+ENV PROVIDERS_CONF_DIR=${PROVIDERS_CONF_DIR}
+
 # Add crontab file in the cron directory
 # and give execution rights on the cron job
 COPY crontab /etc/cron.d/federation-registry-feeder-cron

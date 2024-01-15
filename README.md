@@ -42,37 +42,40 @@ In production mode you should run the application using the dedicated image [ind
 The command to start the application inside a container is:
 
 ```bash
-docker run -d indigopaas/federation-registry-feeder
+docker run -d -v ./providers-conf:/providers-conf indigopaas/federation-registry-feeder
 ```
+
+The previous command binds the host's **providers-conf** folder (in the project top level) to the container's **/providers-conf** directory. 
 
 The application requires the following persistent volumes:
 
--
+- **/providers-conf**: folder with the yaml files with the federated providers configurations.
 
 It uses environment variables to configure the connection with the federation-registry service and with the providers to federate. You can pass these variables as arguments when starting the container. In the following table we list all the environment variables that can be passed to the command.
 
-| Name                       | Mandatory | Description                                                                                                                                                                                              | Default value         |
-| -------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `FEDERATION_REGISTRY_URL`  | x         | The federation-registry base URL. The script uses this value to build the endpoints to hit to update the service database. **A default value if provided to simplify development environment start up.** | http://localhost:8000 |
-| `BLOCK_STORAGE_VOL_LABELS` | x         | List of the volume type labels accepted. **The project starts also if this variable is not set but ...**                                                                                                 | []                    |
-| `WATCHER`                  | x         | User authorized to inspect projects details on all providers.                                                                                                                                            | null                  |
-| `FLAVORS`                  |           | Flavors API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                            | v1                    |
-| `IDENTITY_PROVIDERS`       |           | Identity providers API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                 | v1                    |
-| `IMAGES`                   |           | Images API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                             | v1                    |
-| `LOCATIONS`                |           | Locations API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                          | v1                    |
-| `NETWORK`                  |           | Networks API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                           | v1                    |
-| `PROJECTS`                 |           | Projects API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                           | v1                    |
-| `PROVIDERS`                |           | Providers API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                          | v1                    |
-| `BLOCK_STORAGE_QUOTAS`     |           | Block storage quotas API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                               | v1                    |
-| `COMPUTE_QUOTAS`           |           | Compute quotas API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                     | v1                    |
-| `NETWORK_QUOTAS`           |           | Network quotas API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                     | v1                    |
-| `REGIONS`                  |           | Regions API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                            | v1                    |
-| `BLOCK_STORAGE_SERVICES`   |           | Block storage services API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                             | v1                    |
-| `COMPUTE_SERVICES`         |           | Compute services API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                   | v1                    |
-| `IDENTITY_SERVICES`        |           | Identity services API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                  | v1                    |
-| `NETWORK_SERVICES`         |           | Network services API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                   | v1                    |
-| `SLAS`                     |           | SLAs API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                               | v1                    |
-| `USER_GROUPS`              |           | User groups API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                        | v1                    |
+| Name                       | Mandatory | Description                                                                                                                                                                                                                             | Default value         |
+| -------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `FEDERATION_REGISTRY_URL`  | x         | The federation-registry base URL. The script uses this value to build the endpoints to hit to update the service database. **A default value if provided to simplify development environment start up.**                                | http://localhost:8000 |
+| `BLOCK_STORAGE_VOL_LABELS` | x         | List of the volume type labels accepted. **The project starts also if this variable is not set but ...**                                                                                                                                | []                    |
+| `WATCHER`                  | x         | User authorized to inspect projects details on all providers.                                                                                                                                                                           | null                  |
+| `PROVIDERS_CONF_DIR`       | x         | Path to the directory containing the yaml files with the federated provider configurations. In production mode, it depends on were you mount this folder. **A default value if provided to simplify development environment start up.** | ./providers-conf      |
+| `FLAVORS`                  |           | Flavors API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                           | v1                    |
+| `IDENTITY_PROVIDERS`       |           | Identity providers API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                | v1                    |
+| `IMAGES`                   |           | Images API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                            | v1                    |
+| `LOCATIONS`                |           | Locations API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                         | v1                    |
+| `NETWORK`                  |           | Networks API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                          | v1                    |
+| `PROJECTS`                 |           | Projects API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                          | v1                    |
+| `PROVIDERS`                |           | Providers API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                         | v1                    |
+| `BLOCK_STORAGE_QUOTAS`     |           | Block storage quotas API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                              | v1                    |
+| `COMPUTE_QUOTAS`           |           | Compute quotas API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                    | v1                    |
+| `NETWORK_QUOTAS`           |           | Network quotas API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                    | v1                    |
+| `REGIONS`                  |           | Regions API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                           | v1                    |
+| `BLOCK_STORAGE_SERVICES`   |           | Block storage services API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                            | v1                    |
+| `COMPUTE_SERVICES`         |           | Compute services API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                  | v1                    |
+| `IDENTITY_SERVICES`        |           | Identity services API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                 | v1                    |
+| `NETWORK_SERVICES`         |           | Network services API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                  | v1                    |
+| `SLAS`                     |           | SLAs API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                              | v1                    |
+| `USER_GROUPS`              |           | User groups API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                       | v1                    |
 
 Some of these variables are not mandatory. If not specified they will use the default value.
 
@@ -84,11 +87,14 @@ You can also create a `.env` file with all the variables you want to override. H
 FEDERATION_REGISTRY_URL=https://fed-reg.it/
 BLOCK_STORAGE_VOL_LABELS=["first", "second"]
 WATCHER=test-watcher
+PROVIDERS_CONF="/providers-conf"
 
 FLAVORS=v1
 IDENTITY_PROVIDERS=v1
 ...
 ```
+
+> The **providers-conf** folder, in the project top level, is not tracked by git and can be used to contain all yaml files with the federated providers configurations. Alternatively you can mount your another volume into the same container directory, or you can change also the container's directory. If you change the container's folder name, you must consistently change the `PROVIDERS_CONF_DIR` environment variable.
 
 ### Ancillary services
 

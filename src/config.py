@@ -79,6 +79,11 @@ class Settings(BaseSettings):
     WATCHER: str = Field(
         description="User allowed to inspect projects details on providers."
     )
+    PROVIDERS_CONF_DIR: str = Field(
+        default="./providers-conf",
+        description="Path to the directory containing the federated provider \
+            yaml configurations.",
+    )
     api_ver: APIVersions = Field(description="API versions.")
 
     class Config:
