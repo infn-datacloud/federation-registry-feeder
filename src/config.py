@@ -71,10 +71,10 @@ class APIVersions(BaseSettings):
 
 class Settings(BaseSettings):
     FEDERATION_REGISTRY_URL: AnyHttpUrl = Field(
-        description="Federation Registry base URL"
+        default="http://localhost:8000", description="Federation Registry base URL"
     )
     BLOCK_STORAGE_VOL_LABELS: List[str] = Field(
-        description="List of accepted volume type labels."
+        default_factory=list, description="List of accepted volume type labels."
     )
     WATCHER: str = Field(
         description="User allowed to inspect projects details on providers."
