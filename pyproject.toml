@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "federation-registry-population-script"
+name = "federation-registry-feeder"
 version = "0.1.0"
 description = "Python script to populate the Federation Registry app"
 authors = ["Giovanni Savarese <giovanni.savarese@ba.infn.it>"]
