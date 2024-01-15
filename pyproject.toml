@@ -8,7 +8,7 @@ authors = ["Giovanni Savarese <giovanni.savarese@ba.infn.it>"]
 python = "^3.8.1"
 python-openstackclient = "^6.2.0"
 python-glanceclient = "^4.4.0"
-federation-registry = {git = "https://github.com/indigo-paas/federation-registry", rev = "main"}
+federation-registry = {git = "https://github.com/indigo-paas/federation-registry"}
 
 [tool.poetry.dev-dependencies]
 pytest-cov = "^4.1.0"
