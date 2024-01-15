@@ -3,14 +3,13 @@ from typing import Dict, List, Tuple
 
 import yaml
 from app.provider.schemas_extended import ProviderCreateExtended
+from config import Settings, URLs
 from crud import CRUD
 from logger import logger
 from models.provider import SiteConfig
 
-from src.config import Settings, URLs
 
-
-def load_service_endpoints(*, config: Settings) -> SiteConfig:
+def infer_service_endpoints(*, config: Settings) -> URLs:
     """Detect Federation Registry endpoints from given configuration."""
     logger.info("Building Federation Registry endpoints from configuration.")
     d = {}
@@ -18,9 +17,7 @@ def load_service_endpoints(*, config: Settings) -> SiteConfig:
         d[k.lower()] = os.path.join(
             config.FEDERATION_REGISTRY_URL, "api", f"{v}", f"{k.lower()}"
         )
-    urls = URLs(**d)
-    logger.debug(f"{urls!r}")
-    return urls
+    return URLs(**d)
 
 
 def load_config(*, fname: str) -> SiteConfig:

@@ -5,12 +5,11 @@ from threading import Lock
 from typing import List
 
 from app.provider.schemas_extended import ProviderCreateExtended
+from config import get_settings
 from logger import logger
 from models.provider import Openstack, TrustedIDP
 from providers.opnstk import get_provider
-from utils import load_config, load_service_endpoints, update_database
-
-from src.config import get_settings
+from utils import infer_service_endpoints, load_config, update_database
 
 MAX_WORKERS = 7
 data_lock = Lock()
@@ -28,23 +27,24 @@ def add_os_provider_to_list(
 
 
 if __name__ == "__main__":
-    base_path = "."
-    logger.setLevel(logging.DEBUG)
-
-    # Load Federation Registry configuration
-    config = get_settings()
-    logger.debug(f"{config!r}")
-
-    fed_reg_endpoints = load_service_endpoints(config=config)
-
+    file_extension = ".config.yaml"
     providers = []
     thread_pool = ThreadPoolExecutor(max_workers=MAX_WORKERS)
+    logger.setLevel(logging.DEBUG)
 
-    # Read all yaml files containing providers configurations.
-    # Multithreading read.
-    yaml_files = list(
-        filter(lambda x: x.endswith(".config.yaml"), os.listdir(base_path))
+    # Load Federation Registry configuration, infer Federation Registry endpoints and
+    # read all yaml files containing providers configurations.
+    config = get_settings()
+    fed_reg_endpoints = infer_service_endpoints(config=config)
+    yaml_files = filter(
+        lambda x: x.endswith(file_extension), os.listdir(config.PROVIDERS_CONF_DIR)
     )
+
+    logger.debug(f"{config!r}")
+    logger.debug(f"{fed_reg_endpoints!r}")
+    logger.debug(f"{list(yaml_files)!r}")
+
+    # Multithreading read.
     for file in yaml_files:
         config = load_config(fname=file)
         for os_conf in config.openstack:
