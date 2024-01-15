@@ -57,8 +57,8 @@ COPY src /app/src
 
 # Add crontab file in the cron directory
 # and give execution rights on the cron job
-COPY crontab /etc/cron.d/federation-registry-population-script-cron
-RUN chmod 0644 /etc/cron.d/federation-registry-population-script-cron
+COPY crontab /etc/cron.d/federation-registry-feeder-cron
+RUN chmod 0644 /etc/cron.d/federation-registry-feeder-cron
 
 # Create the log file to be able to run tail
 RUN touch /var/log/cron.log
