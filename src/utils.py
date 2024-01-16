@@ -62,8 +62,15 @@ def get_read_write_headers(*, token: str) -> Tuple[Dict[str, str], Dict[str, str
 def update_database(
     *, federation_registry_urls: URLs, items: List[ProviderCreateExtended], token: str
 ) -> None:
-    """Use the read and write headers to create, update or remove providers from the
-    Federation Registry.
+    """Update the Federation-Registry data.
+
+    Create the read and write headers to use in requests.
+    Retrieve current providers.
+    For each current federated provider, if a provider with the same name and type
+    already exists, update it, otherwise create a new provider entry with the given
+    data. Once all the current federated providers have been added or updated, remove
+    the remaining providers retrieved from the Federation-Registry, they are no more
+    tracked.
     """
     read_header, write_header = get_read_write_headers(token=token)
     crud = CRUD(
@@ -73,10 +80,10 @@ def update_database(
     )
 
     logger.info("Retrieving data from Federation Registry")
-    db_items = {db_item.name: db_item for db_item in crud.read(with_conn=True)}
+    db_items = {db_item.name: db_item for db_item in crud.read(short=True)}
     for item in items:
         db_item = db_items.pop(item.name, None)
-        if db_item is None:
+        if db_item is None or db_item.type != item.type:
             crud.create(data=item)
         else:
             crud.update(new_data=item, old_data=db_item)

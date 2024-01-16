@@ -1,14 +1,18 @@
 import os
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import requests
-from app.provider.schemas_extended import ProviderCreateExtended, ProviderReadExtended
+from app.provider.schemas_extended import (
+    ProviderCreateExtended,
+    ProviderReadExtended,
+    ProviderReadPublic,
+)
 from fastapi import status
 from fastapi.encoders import jsonable_encoder
 from logger import logger
 from pydantic import AnyHttpUrl
 
-TIMEOUT = 5  # s
+TIMEOUT = 30  # s
 
 
 class CRUD:
@@ -19,105 +23,95 @@ class CRUD:
         read_headers: Dict[str, str],
         write_headers: Dict[str, str],
     ) -> None:
-        self.type = "Provider"
         self.read_headers = read_headers
         self.write_headers = write_headers
-        self.list_url = url
-        self.item_url = os.path.join(url, "{uid}")
+        self.multi_url = url
+        self.single_url = os.path.join(url, "{uid}")
 
-    def read(self, *, with_conn: bool = False) -> List[ProviderReadExtended]:
-        """Retrieve all instances of this type."""
-        logger.info(f"Looking for all {self.type}s")
-        logger.debug(f"Url={self.list_url}")
+    def read(self, *, short: bool = True) -> List[ProviderReadPublic]:
+        """Retrieve all providers from the Federation-Registry."""
+        logger.info("Looking for all Providers")
+        logger.debug(f"Url={self.multi_url}")
 
         resp = requests.get(
-            url=self.list_url,
-            params={"with_conn": with_conn},
+            url=self.multi_url,
+            params={"short": short},
             headers=self.read_headers,
             timeout=TIMEOUT,
         )
         if resp.status_code == status.HTTP_200_OK:
+            logger.info("Retrieved")
             logger.debug(f"{resp.json()}")
-            return [ProviderReadExtended(**i) for i in resp.json()]
+            return [ProviderReadPublic(**i) for i in resp.json()]
 
-        logger.error("GET operation failed")
-        logger.error(f"Status code: {resp.status_code}")
-        logger.error(f"Message: {resp.text}")
-        raise Exception("GET operation failed")
+        logger.debug(f"Status code: {resp.status_code}")
+        logger.debug(f"Message: {resp.text}")
+        resp.raise_for_status()
 
-    def create(
-        self,
-        *,
-        data: ProviderCreateExtended,
-        params: Optional[Dict[str, Any]] = None,
-    ) -> ProviderReadExtended:
+    def create(self, *, data: ProviderCreateExtended) -> ProviderReadExtended:
         """Create new instance."""
-        logger.info(f"Creating new {self.type}={data.name}")
-        logger.debug(f"Url={self.list_url}")
+        logger.info(f"Creating Provider={data.name}")
+        logger.debug(f"Url={self.multi_url}")
         logger.debug(f"New Data={data}")
 
         resp = requests.post(
-            url=self.list_url,
+            url=self.multi_url,
             json=jsonable_encoder(data),
             headers=self.write_headers,
-            params=params,
             timeout=TIMEOUT,
         )
         if resp.status_code == status.HTTP_201_CREATED:
-            logger.info("Created")
+            logger.info(f"Provider={data.name} created")
             logger.debug(f"{resp.json()}")
             return ProviderReadExtended(**resp.json())
 
-        logger.error(f"Failed to create {self.type}={data.name}")
-        logger.error(f"Status code: {resp.status_code}")
-        logger.error(f"Message: {resp.text}")
-        raise Exception(f"Failed to create {self.type}={data.name}")
+        logger.debug(f"Status code: {resp.status_code}")
+        logger.debug(f"Message: {resp.text}")
+        resp.raise_for_status()
 
     def remove(self, *, item: ProviderReadExtended) -> None:
         """Remove item."""
-        logger.info(f"Removing {self.type}={item.name}.")
-        logger.debug(f"Url={self.item_url.format(uid=item.uid)}")
+        logger.info(f"Removing Provider={item.name}.")
+        logger.debug(f"Url={self.single_url.format(uid=item.uid)}")
 
         resp = requests.delete(
-            url=self.item_url.format(uid=item.uid),
+            url=self.single_url.format(uid=item.uid),
             headers=self.write_headers,
             timeout=TIMEOUT,
         )
         if resp.status_code == status.HTTP_204_NO_CONTENT:
-            logger.info("Removed")
+            logger.info(f"Provider={item.name} removed")
             return None
 
-        logger.error(f"Failed to remove {self.type}={item.name}")
-        logger.error(f"Status code: {resp.status_code}")
-        logger.error(f"Message: {resp.text}")
-        raise Exception(f"Failed to remove {self.type}={item.name}")
+        logger.debug(f"Status code: {resp.status_code}")
+        logger.debug(f"Message: {resp.text}")
+        resp.raise_for_status()
 
     def update(
         self, *, new_data: ProviderCreateExtended, old_data: ProviderReadExtended
     ) -> Optional[ProviderReadExtended]:
         """Update existing instance."""
-        logger.info(f"Updating {self.type}={new_data.name}.")
-        logger.debug(f"Url={self.item_url.format(uid=old_data.uid)}")
+        logger.info(f"Updating Provider={new_data.name}.")
+        logger.debug(f"Url={self.single_url.format(uid=old_data.uid)}")
         logger.debug(f"New Data={new_data}")
 
         resp = requests.put(
-            url=self.item_url.format(uid=old_data.uid),
+            url=self.single_url.format(uid=old_data.uid),
             json=jsonable_encoder(new_data),
             headers=self.write_headers,
             timeout=TIMEOUT,
         )
         if resp.status_code == status.HTTP_200_OK:
-            logger.info(f"{self.type}={new_data.name} successfully updated")
+            logger.info(f"Provider={new_data.name} updated")
             logger.debug(f"{resp.json()}")
             return ProviderReadExtended(**resp.json())
 
         if resp.status_code == status.HTTP_304_NOT_MODIFIED:
             logger.info(
-                f"New data match stored data. {self.type}={new_data.name} not modified"
+                f"New data match stored data. Provider={new_data.name} not modified"
             )
             return None
 
-        logger.error(f"Failed to update {self.type}={new_data.name}")
-        logger.error(f"Status code: {resp.status_code}")
-        logger.error(f"Message: {resp.text}")
-        raise Exception(f"Failed to update {self.type}={new_data.name}")
+        logger.debug(f"Status code: {resp.status_code}")
+        logger.debug(f"Message: {resp.text}")
+        resp.raise_for_status()
