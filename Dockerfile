@@ -54,6 +54,8 @@ RUN apt-get update && apt-get -y install cron && apt-get clean
 
 WORKDIR /app/
 
+ENV PROVIDERS_CONF_DIR=/providers-conf
+
 COPY --from=requirements /tmp/requirements.txt /app/requirements.txt
 
 # Upgrade pip and install requirements
@@ -62,16 +64,19 @@ RUN pip install --user --no-cache-dir --upgrade -r /app/requirements.txt
 
 COPY src /app/src
 
-ARG PROVIDERS_CONF_DIR=/providers-conf
-ENV PROVIDERS_CONF_DIR=${PROVIDERS_CONF_DIR}
-
 # Add crontab file in the cron directory
 # and give execution rights on the cron job
-COPY crontab /etc/cron.d/federation-registry-feeder-cron
-RUN chmod 0644 /etc/cron.d/federation-registry-feeder-cron
 
-# Create the log file to be able to run tail
-RUN touch /var/log/cron.log
+WORKDIR /
+
+ENV LOG_FILE=/var/log/cron.log
+RUN touch ${LOG_FILE}
+
+COPY cron-scripts /cron-scripts
+COPY cron-scripts/crontab-script /etc/cron.d/crontab
+
+RUN chmod 644 /etc/cron.d/crontab
+RUN chmod +x /cron-scripts/start.sh
 
 # Run the command on container startup
-CMD cron && tail -f /var/log/cron.log
+CMD /cron-scripts/start.sh

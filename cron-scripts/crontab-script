@@ -1,2 +1,2 @@
-* * * * * root /usr/local/bin/python /app/src/main.py >> /var/log/cron.log 2>&1
+* * * * * root /bin/sh /cron-scripts/cron-job.sh >> /var/log/cron.log 2>&1
 # Don't remove the empty line at the end of this file. It is required to run the cron job
