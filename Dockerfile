@@ -52,7 +52,14 @@ FROM python:3.8 AS cron-job
 # Updating packages and installing cron
 RUN apt-get update && apt-get -y install cron && apt-get clean
 
+WORKDIR /app/
+
 COPY --from=requirements /tmp/requirements.txt /app/requirements.txt
+
+# Upgrade pip and install requirements
+RUN pip install --user --upgrade pip
+RUN pip install --user --no-cache-dir --upgrade -r /app/requirements.txt
+
 COPY src /app/src
 
 ARG PROVIDERS_CONF_DIR=/providers-conf
