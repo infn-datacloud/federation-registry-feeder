@@ -12,6 +12,7 @@ from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQu
 from app.region.schemas import RegionBase
 from app.sla.schemas import SLABase
 from app.user_group.schemas import UserGroupBase
+from config import get_settings
 from pydantic import AnyHttpUrl, BaseModel, Field, root_validator, validator
 
 
@@ -45,31 +46,33 @@ class UserGroup(UserGroupBase):
 
 
 class TrustedIDP(IdentityProviderBase):
-    issuer: AnyHttpUrl = Field(description="issuer url")
-    token: str = Field(description="Access token")
+    endpoint: AnyHttpUrl = Field(description="issuer url", alias="issuer")
+    token: Optional[str] = Field(description="Access token")
     user_groups: List[UserGroup] = Field(
         default_factory=list, description="User groups"
     )
     relationship: Optional[AuthMethodBase] = Field(default=None, description="")
 
-    @root_validator(pre=True)
-    def rename_issuer_to_endpoint(cls, values):
-        values["endpoint"] = values.get("issuer")
+    @validator("token", pre=True, always=True)
+    def get_token(cls, v, values):
         # Generate token
-        if values.get("token") is None:
+        if not v:
+            settings = get_settings()
             token_cmd = subprocess.run(
                 [
                     "docker",
                     "exec",
-                    "federation-registry_devcontainer-oidc-agent-1",
+                    settings.OIDC_AGENT_CONTAINER_NAME,
                     "oidc-token",
                     values.get("endpoint"),
                 ],
-                stdout=subprocess.PIPE,
+                capture_output=True,
                 text=True,
             )
-            values["token"] = token_cmd.stdout.strip("\n")
-        return values
+            v = token_cmd.stdout.strip("\n")
+            if token_cmd.stderr:
+                raise ValueError(token_cmd.stderr)
+        return v
 
 
 class Limits(BaseModel):

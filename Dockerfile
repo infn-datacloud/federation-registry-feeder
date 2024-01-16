@@ -50,7 +50,7 @@ COPY ./app /code/app
 FROM python:3.8 AS cron-job
 
 # Updating packages and installing cron
-RUN apt-get update && apt-get -y install cron && apt-get clean
+RUN apt-get update && apt-get -y install cron docker.io && apt-get clean
 
 WORKDIR /app/
 

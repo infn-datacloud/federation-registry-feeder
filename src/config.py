@@ -84,6 +84,10 @@ class Settings(BaseSettings):
         description="Path to the directory containing the federated provider \
             yaml configurations.",
     )
+    OIDC_AGENT_CONTAINER_NAME: str = Field(
+        default="federation-registry-feeder-oidc-agent-1",
+        description="Name of the container with the oidc-agent service instance.",
+    )
     api_ver: APIVersions = Field(description="API versions.")
 
     class Config:

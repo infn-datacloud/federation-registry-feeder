@@ -11,22 +11,38 @@ from models.provider import SiteConfig
 
 def infer_service_endpoints(*, settings: Settings) -> URLs:
     """Detect Federation Registry endpoints from given configuration."""
-    logger.info("Building Federation Registry endpoints from configuration.")
+    logger.info("Building Federation-Registry endpoints from configuration.")
+    logger.debug(f"{settings!r}")
     d = {}
     for k, v in settings.api_ver.dict().items():
         d[k.lower()] = os.path.join(
             settings.FEDERATION_REGISTRY_URL, "api", f"{v}", f"{k.lower()}"
         )
-    return URLs(**d)
+    endpoints = URLs(**d)
+    logger.info("Federation-Registry endpoints detected")
+    logger.debug(f"{endpoints!r}")
+    return endpoints
+
+
+def get_conf_files(*, settings: Settings) -> List[str]:
+    """Get the list of the yaml files with the provider configurations."""
+    logger.info("Detecting yaml files with provider configurations.")
+    file_extension = ".config.yaml"
+    yaml_files = filter(
+        lambda x: x.endswith(file_extension), os.listdir(settings.PROVIDERS_CONF_DIR)
+    )
+    yaml_files = [os.path.join(settings.PROVIDERS_CONF_DIR, i) for i in yaml_files]
+    logger.info("Files retrieved")
+    logger.debug(f"{yaml_files}")
+    return yaml_files
 
 
 def load_config(*, fname: str) -> SiteConfig:
     """Load provider configuration from yaml file."""
-    logger.info(f"Loading provider configuration from {fname}")
+    logger.info(f"Loading provider configuration from file: {fname}")
     with open(fname) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
         config = SiteConfig(**config)
-
     logger.info("Configuration loaded")
     logger.debug(f"{config!r}")
     return config

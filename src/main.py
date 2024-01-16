@@ -1,5 +1,4 @@
 import logging
-import os
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from typing import List
@@ -9,7 +8,7 @@ from config import get_settings
 from logger import logger
 from models.provider import Openstack, TrustedIDP
 from providers.opnstk import get_provider
-from utils import infer_service_endpoints, load_config, update_database
+from utils import get_conf_files, infer_service_endpoints, load_config, update_database
 
 MAX_WORKERS = 7
 data_lock = Lock()
@@ -27,7 +26,6 @@ def add_os_provider_to_list(
 
 
 if __name__ == "__main__":
-    file_extension = ".config.yaml"
     providers = []
     thread_pool = ThreadPoolExecutor(max_workers=MAX_WORKERS)
     logger.setLevel(logging.DEBUG)
@@ -36,15 +34,7 @@ if __name__ == "__main__":
     # read all yaml files containing providers configurations.
     settings = get_settings()
     fed_reg_endpoints = infer_service_endpoints(settings=settings)
-    yaml_files = filter(
-        lambda x: x.endswith(file_extension),
-        os.listdir(settings.PROVIDERS_CONF_DIR),
-    )
-    yaml_files = [os.path.join(settings.PROVIDERS_CONF_DIR, i) for i in yaml_files]
-
-    logger.debug(f"{settings!r}")
-    logger.debug(f"{fed_reg_endpoints!r}")
-    logger.debug(f"{yaml_files}")
+    yaml_files = get_conf_files(settings=settings)
 
     # Multithreading read.
     config = None
