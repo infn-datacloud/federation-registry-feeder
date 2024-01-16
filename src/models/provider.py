@@ -1,5 +1,5 @@
 import subprocess
-from typing import List, Optional
+from typing import Any, List, Optional, Union
 from uuid import UUID
 
 from app.auth_method.schemas import AuthMethodBase
@@ -86,27 +86,13 @@ class Limits(BaseModel):
         default=None, description="Network per user quota"
     )
 
-    @validator("block_storage")
-    def set_per_user_block_storage(
-        cls, v: Optional[BlockStorageQuotaBase]
-    ) -> Optional[BlockStorageQuotaBase]:
-        if v is not None:
-            v.per_user = True
-        return v
-
-    @validator("compute")
-    def set_per_user_compute(
-        cls, v: Optional[ComputeQuotaBase]
-    ) -> Optional[ComputeQuotaBase]:
-        if v is not None:
-            v.per_user = True
-        return v
-
-    @validator("network")
-    def set_per_user_network(
-        cls, v: Optional[NetworkQuotaBase]
-    ) -> Optional[NetworkQuotaBase]:
-        if v is not None:
+    @validator("*")
+    def set_per_user(
+        cls,
+        v: Optional[Union[BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase]],
+    ) -> Optional[Union[BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase]]:
+        """These quotas applies to each user. Set per_user flag to true."""
+        if v:
             v.per_user = True
         return v
 
@@ -164,17 +150,11 @@ class Project(BaseModel):
     )
     sla: str = Field(description="SLA document uuid")
 
-    @validator("sla", pre=True)
-    def sla_to_string(cls, v):
-        if isinstance(v, UUID):
-            return v.hex
-        return v
-
-    @validator("id", pre=True)
-    def id_to_string(cls, v):
-        if isinstance(v, UUID):
-            return v.hex
-        return v
+    @validator("*", pre=True)
+    @classmethod
+    def get_str_from_uuid(cls, v: Any) -> Any:
+        """Get hex attribute from UUID values."""
+        return v.hex if isinstance(v, UUID) else v
 
 
 class Region(RegionBase):
