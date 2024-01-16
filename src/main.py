@@ -34,17 +34,20 @@ if __name__ == "__main__":
 
     # Load Federation Registry configuration, infer Federation Registry endpoints and
     # read all yaml files containing providers configurations.
-    config = get_settings()
-    fed_reg_endpoints = infer_service_endpoints(config=config)
+    settings = get_settings()
+    fed_reg_endpoints = infer_service_endpoints(settings=settings)
     yaml_files = filter(
-        lambda x: x.endswith(file_extension), os.listdir(config.PROVIDERS_CONF_DIR)
+        lambda x: x.endswith(file_extension),
+        os.listdir(settings.PROVIDERS_CONF_DIR),
     )
+    yaml_files = [os.path.join(settings.PROVIDERS_CONF_DIR, i) for i in yaml_files]
 
-    logger.debug(f"{config!r}")
+    logger.debug(f"{settings!r}")
     logger.debug(f"{fed_reg_endpoints!r}")
-    logger.debug(f"{list(yaml_files)!r}")
+    logger.debug(f"{yaml_files}")
 
     # Multithreading read.
+    config = None
     for file in yaml_files:
         config = load_config(fname=file)
         for os_conf in config.openstack:
@@ -57,8 +60,9 @@ if __name__ == "__main__":
     thread_pool.shutdown(wait=True)
 
     # Update the Federation Registry
-    update_database(
-        federation_registry_urls=fed_reg_endpoints,
-        token=config.trusted_idps[0].token,
-        items=providers,
-    )
+    if config:
+        update_database(
+            federation_registry_urls=fed_reg_endpoints,
+            token=config.trusted_idps[0].token,
+            items=providers,
+        )

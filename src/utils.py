@@ -9,13 +9,13 @@ from logger import logger
 from models.provider import SiteConfig
 
 
-def infer_service_endpoints(*, config: Settings) -> URLs:
+def infer_service_endpoints(*, settings: Settings) -> URLs:
     """Detect Federation Registry endpoints from given configuration."""
     logger.info("Building Federation Registry endpoints from configuration.")
     d = {}
-    for k, v in config.api_ver.dict().items():
+    for k, v in settings.api_ver.dict().items():
         d[k.lower()] = os.path.join(
-            config.FEDERATION_REGISTRY_URL, "api", f"{v}", f"{k.lower()}"
+            settings.FEDERATION_REGISTRY_URL, "api", f"{v}", f"{k.lower()}"
         )
     return URLs(**d)
 
