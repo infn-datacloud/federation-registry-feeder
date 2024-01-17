@@ -76,9 +76,6 @@ class Settings(BaseSettings):
     BLOCK_STORAGE_VOL_LABELS: List[str] = Field(
         default_factory=list, description="List of accepted volume type labels."
     )
-    WATCHER: str = Field(
-        description="User allowed to inspect projects details on providers."
-    )
     PROVIDERS_CONF_DIR: str = Field(
         default="./providers-conf",
         description="Path to the directory containing the federated provider \

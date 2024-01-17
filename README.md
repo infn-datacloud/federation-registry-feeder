@@ -58,7 +58,6 @@ It uses environment variables to configure the connection with the federation-re
 | --------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | `FEDERATION_REGISTRY_URL`   | x         | The federation-registry base URL. The script uses this value to build the endpoints to hit to update the service database. **A default value if provided to simplify development environment start up.**                                | http://localhost:8000                                                                  |
 | `BLOCK_STORAGE_VOL_LABELS`  | x         | List of the volume type labels accepted. **The project starts also if this variable is not set but ...**                                                                                                                                | []                                                                                     |
-| `WATCHER`                   | x         | User authorized to inspect projects details on all providers.                                                                                                                                                                           | null                                                                                   |
 | `PROVIDERS_CONF_DIR`        |           | Path to the directory containing the yaml files with the federated provider configurations. In production mode, it depends on were you mount this folder. **A default value if provided to simplify development environment start up.** | ./providers-conf (when working locally), /providers-conf (when using the docker image) |
 | `OIDC_AGENT_CONTAINER_NAME` |           | Name of the container with the oidc-agent service instance. **A default value if provided to simplify development environment start up.**                                                                                               | federation-registry-feeder-oidc-agent-1                                                |
 | `FLAVORS`                   |           | Flavors API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.                                                                                                           | v1                                                                                     |
@@ -88,7 +87,6 @@ You can also create a `.env` file with all the variables you want to override. H
 
 FEDERATION_REGISTRY_URL=https://fed-reg.it/
 BLOCK_STORAGE_VOL_LABELS=["first", "second"]
-WATCHER=test-watcher
 PROVIDERS_CONF=/providers-config
 OIDC_AGENT_CONTAINER_NAME=fed-reg-feeder-oidc-1
 
@@ -101,13 +99,13 @@ IDENTITY_PROVIDERS=v1
 
 ### Ancillary services
 
-To correctly work, the application requires a running `federation-registry` service instance. **Do not forget to add to the `ADMIN_EMAIL_LIST` the email of the user defined in the `WATCHER` env variable, and to add to the TRUSTED_IDP_LIST the identity provider hosting that user.**
+To correctly work, the application requires a running `federation-registry` service instance.
 
 If you don't have an already running instance, we suggest to deploy your instance using the [indigopaas/federation-registry](https://hub.docker.com/r/indigopaas/federation-registry) docker image available on DockerHub.
 
 > The service instance needs a `neo4j` database instance with the **apoc** extension. Look at the [federation-registry documentation](https://github.com/indigo-paas/federation-registry) for more information about it.
 
-Moreover it needs a running `oidc-agent` service instance. **In fact you have to register a client for each trusted identity provider in any yaml files. When registering a client you must use the user defined in the `WATCHER` env variable.**
+It also needs a running `oidc-agent` service instance. **In fact you have to register a client for each trusted identity provider in any yaml files.** When registering a client you must use a user having access to every project defined in the yaml files. To have write access to the `federation-registry` instance ,**this user must be associated to one of the emails defined in the `federation-registry` `ADMIN_EMAIL_LIST` env variable, and it's hosting identity provider must be in the `TRUSTED_IDP_LIST`.**
 
 If you don't have an already running instance, we suggest to deploy your instance using the [opensciencegrid/oidc-agent](https://hub.docker.com/r/opensciencegrid/oidc-agent) docker image available on DockerHub.
 
@@ -124,6 +122,8 @@ docker exec <oidc-agent-container-name> \
     --scope="openid profile offline_access email" \
     <config-name>
 ```
+
+Once the service responds, move to the received link and authenticate using the credentials of the user with special privileges defined before. Once you have authorized service to access to user information the procedure will conclude.
 
 Here an example using INFNCloud IAM:
 
