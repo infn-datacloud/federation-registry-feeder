@@ -80,7 +80,7 @@ def update_database(
     )
 
     logger.info("Retrieving data from Federation Registry")
-    db_items = {db_item.name: db_item for db_item in crud.read(short=True)}
+    db_items = {db_item.name: db_item for db_item in crud.read()}
     for item in items:
         db_item = db_items.pop(item.name, None)
         if db_item is None or db_item.type != item.type:

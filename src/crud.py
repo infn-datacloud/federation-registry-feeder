@@ -4,8 +4,8 @@ from typing import Dict, List, Optional
 import requests
 from app.provider.schemas_extended import (
     ProviderCreateExtended,
+    ProviderRead,
     ProviderReadExtended,
-    ProviderReadPublic,
 )
 from fastapi import status
 from fastapi.encoders import jsonable_encoder
@@ -28,21 +28,18 @@ class CRUD:
         self.multi_url = url
         self.single_url = os.path.join(url, "{uid}")
 
-    def read(self, *, short: bool = True) -> List[ProviderReadPublic]:
+    def read(self) -> List[ProviderRead]:
         """Retrieve all providers from the Federation-Registry."""
         logger.info("Looking for all Providers")
         logger.debug(f"Url={self.multi_url}")
 
         resp = requests.get(
-            url=self.multi_url,
-            params={"short": short},
-            headers=self.read_headers,
-            timeout=TIMEOUT,
+            url=self.multi_url, headers=self.read_headers, timeout=TIMEOUT
         )
         if resp.status_code == status.HTTP_200_OK:
             logger.info("Retrieved")
             logger.debug(f"{resp.json()}")
-            return [ProviderReadPublic(**i) for i in resp.json()]
+            return [ProviderRead(**i) for i in resp.json()]
 
         logger.debug(f"Status code: {resp.status_code}")
         logger.debug(f"Message: {resp.text}")
@@ -88,7 +85,7 @@ class CRUD:
         resp.raise_for_status()
 
     def update(
-        self, *, new_data: ProviderCreateExtended, old_data: ProviderReadExtended
+        self, *, new_data: ProviderCreateExtended, old_data: ProviderRead
     ) -> Optional[ProviderReadExtended]:
         """Update existing instance."""
         logger.info(f"Updating Provider={new_data.name}.")
