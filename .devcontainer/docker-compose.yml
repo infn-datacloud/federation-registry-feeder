@@ -1,19 +1,70 @@
 version: "3"
 
 services:
+  db:
+    image: neo4j:5.15.0
+    container_name: feeder-dev-db
+    volumes:
+      - dev-db-data:/data
+      - dev-db-logs:/logs
+    ports: 
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=none
+      - NEO4J_PLUGINS=["apoc"]
+    networks:
+      - fed-reg-db
+
+  registry:
+    image: indigopaas/federation-registry:build-docker
+    container_name: feeder-dev-registry
+    depends_on:
+      - db
+    ports:
+      - "8000:80"
+    environment:
+      - NEO4J_SERVER=feeder-dev-db
+      - TRUSTED_IDP_LIST=${TRUSTED_IDP_LIST-[]}
+      - ADMIN_EMAIL_LIST=${ADMIN_EMAIL_LIST-[]}
+    networks:
+      - fed-reg-db
+      - feeder-fed-reg
+
   oidc-agent:
-    image: opensciencegrid/oidc-agent:3.6-release-20230802-1615
+    image: opensciencegrid/oidc-agent:3.6-release
+    container_name: feeder-dev-oidc-agent
     platform: linux/amd64
+    volumes:
+      - dev-oidc-config:/root/.oidc-agent
+    networks:
+      - feeder-oidc-agent 
 
   base:
     build:
       context: ../.
-      target: development
-      args:
-        INSTALL_DEV: ${INSTALL_DEV-true}
+      dockerfile: .devcontainer/Dockerfile
+    container_name: feeder-dev
     depends_on:
-      - db
+      - registry
+      - oidc-agent
     volumes:
       - ..:/workspace:cached
+    environment:
+      - FEDERATION_REGISTRY_URL=http://feeder-dev-registry
+      - OIDC_AGENT_CONTAINER_NAME=feeder-dev-oidc-agent
+    networks:
+      - feeder-oidc-agent 
+      - feeder-fed-reg
     # Infinite loop to keep container live doing nothing
     command: bash -c "while true; do sleep 1; done"
+
+volumes:
+  dev-db-data:
+  dev-db-logs:
+  dev-oidc-config:
+
+networks:
+  fed-reg-db:
+  feeder-fed-reg:
+  feeder-oidc-agent:
