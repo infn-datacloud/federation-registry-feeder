@@ -1,0 +1,37 @@
+version: "3"
+
+services:
+  oidc-agent:
+    image: opensciencegrid/oidc-agent:3.6-release
+    container_name: feeder-oidc-agent
+    platform: linux/amd64
+    volumes:
+      - feeder-oidc-config:/root/.oidc-agent
+
+  federation-registry-feeder: 
+    image: indigopaas/federation-registry-feeder:build-docker
+    container_name: feeder
+    env_file:
+      - .giovanni.env
+    volumes:
+      - ./providers-conf:/providers-conf
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # Infinite loop to keep container live doing nothing
+    command: bash -c "while true; do sleep 1; done"
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-exec.feed.schedule: "@every 1m"
+      ofelia.job-exec.feed.command: "python /app/src/main.py"
+      ofelia.job-exec.feed.no-overlap: true
+
+  ofelia:
+    image: mcuadros/ofelia:latest
+    container_name: feeder-job-scheduler
+    depends_on:
+      - federation-registry-feeder
+    command: daemon --docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+volumes:
+  feeder-oidc-config:
