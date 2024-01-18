@@ -69,9 +69,10 @@ class TrustedIDP(IdentityProviderBase):
                 capture_output=True,
                 text=True,
             )
-            v = token_cmd.stdout.strip("\n")
-            if token_cmd.stderr:
-                raise ValueError(token_cmd.stderr)
+            if token_cmd.returncode > 0:
+                raise ValueError(
+                    token_cmd.stderr if token_cmd.stderr else token_cmd.stdout
+                )
         return v
 
 
