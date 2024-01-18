@@ -1,12 +1,41 @@
 version: "3"
 
 services:
+  db:
+    image: neo4j:5.15.0
+    container_name: feeder-db
+    environment:
+      - NEO4J_AUTH=none
+      - NEO4J_PLUGINS=["apoc"]
+    volumes:
+      - feeder-db-data:/data
+      - feeder-db-logs:/logs
+    networks:
+      - db-net
+
+  registry:
+    image: indigopaas/federation-registry:build-docker
+    container_name: feeder-registry
+    depends_on:
+      - db
+    ports:
+      - 8000:80
+    environment:
+      - NEO4J_SERVER=feeder-db
+      - TRUSTED_IDP_LIST=${TRUSTED_IDP_LIST}
+      - ADMIN_EMAIL_LIST=${ADMIN_EMAIL_LIST}
+    networks:
+      - db-net
+      - feeder-net
+
   oidc-agent:
     image: opensciencegrid/oidc-agent:3.6-release
     container_name: feeder-oidc-agent
     platform: linux/amd64
     volumes:
       - feeder-oidc-config:/root/.oidc-agent
+    networks:
+      - oidc-net
 
   federation-registry-feeder:
     image: indigopaas/federation-registry-feeder:build-docker
@@ -14,11 +43,15 @@ services:
     depends_on:
       - oidc-agent
     environment:
-      - FEDERATION_REGISTRY_URL=http://host.docker.internal:8000/
+      - FEDERATION_REGISTRY_URL=http://feeder-registry/
       - OIDC_AGENT_CONTAINER_NAME=feeder-oidc-agent
     volumes:
       - ./providers-conf:/providers-conf:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - feeder-net
+      - ofelia-net
+      - oidc-net
     # Infinite loop to keep container live doing nothing
     command: bash -c "while true; do sleep 1; done"
     extra_hosts:
@@ -39,7 +72,17 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - feeder-logs:/var/log
+    networks:
+      - ofelia-net
 
 volumes:
+  feeder-db-data:
+  feeder-db-logs:
   feeder-oidc-config:
   feeder-logs:
+
+networks:
+  db-net:
+  feeder-net:
+  ofelia-net:
+  oidc-net:
