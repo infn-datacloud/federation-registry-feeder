@@ -8,21 +8,27 @@ services:
     volumes:
       - feeder-oidc-config:/root/.oidc-agent
 
-  federation-registry-feeder: 
+  federation-registry-feeder:
     image: indigopaas/federation-registry-feeder:build-docker
     container_name: feeder
-    env_file:
-      - .giovanni.env
+    depends_on:
+      - oidc-agent
+    environment:
+      - FEDERATION_REGISTRY_URL=http://host.docker.internal:8000/
+      - OIDC_AGENT_CONTAINER_NAME=feeder-oidc-agent
     volumes:
-      - ./providers-conf:/providers-conf
+      - ./providers-conf:/providers-conf:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     # Infinite loop to keep container live doing nothing
     command: bash -c "while true; do sleep 1; done"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     labels:
       ofelia.enabled: "true"
-      ofelia.job-exec.feed.schedule: "@every 1m"
+      ofelia.job-exec.feed.schedule: "@every 5s"
       ofelia.job-exec.feed.command: "python /app/src/main.py"
       ofelia.job-exec.feed.no-overlap: true
+      ofelia.job-exec.feed.save-folder: /var/log
 
   ofelia:
     image: mcuadros/ofelia:latest
@@ -32,6 +38,8 @@ services:
     command: daemon --docker
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - feeder-logs:/var/log
 
 volumes:
   feeder-oidc-config:
+  feeder-logs:
