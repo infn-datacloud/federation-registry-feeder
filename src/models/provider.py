@@ -1,74 +1,15 @@
-import subprocess
-from typing import Any, List, Optional, Union
-from uuid import UUID
+from typing import List, Optional, Union
 
 from app.auth_method.schemas import AuthMethodBase
-from app.identity_provider.schemas import IdentityProviderBase
 from app.location.schemas import LocationBase
 from app.models import BaseNode
 from app.provider.enum import ProviderType
 from app.provider.schemas import ProviderBase
-from app.provider.schemas_extended import find_duplicates
 from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
 from app.region.schemas import RegionBase
-from app.sla.schemas import SLABase
-from app.user_group.schemas import UserGroupBase
 from pydantic import AnyHttpUrl, BaseModel, Field, IPvAnyAddress, validator
 
-from src.config import get_settings
-
-
-class SLA(SLABase):
-    projects: List[str] = Field(
-        default_factory=list, description="List of projects UUID"
-    )
-
-    @validator("projects")
-    @classmethod
-    def validate_projects(cls, v: List[str]) -> List[str]:
-        find_duplicates(v)
-        return v
-
-
-class UserGroup(UserGroupBase):
-    slas: List[SLA] = Field(description="List of SLAs")
-
-    @validator("slas")
-    @classmethod
-    def validate_slas(cls, v: List[SLA]) -> List[SLA]:
-        find_duplicates(v, "doc_uuid")
-        return v
-
-
-class TrustedIDP(IdentityProviderBase):
-    endpoint: AnyHttpUrl = Field(description="issuer url", alias="issuer")
-    token: Optional[str] = Field(description="Access token")
-    user_groups: List[UserGroup] = Field(
-        default_factory=list, description="User groups"
-    )
-    relationship: Optional[AuthMethodBase] = Field(default=None, description="")
-
-    @validator("token", pre=True, always=True)
-    def get_token(cls, v, values):
-        # Generate token
-        if not v:
-            settings = get_settings()
-            token_cmd = subprocess.run(
-                [
-                    "docker",
-                    "exec",
-                    settings.OIDC_AGENT_CONTAINER_NAME,
-                    "oidc-token",
-                    values.get("endpoint"),
-                ],
-                capture_output=True,
-                text=True,
-            )
-            if token_cmd.returncode > 0:
-                raise ValueError(
-                    token_cmd.stderr if token_cmd.stderr else token_cmd.stdout
-                )
-        return v
+from src.models.identity_provider import TrustedIDP
 
 
 class Limits(BaseNode):
@@ -127,8 +68,9 @@ class BlockStorageVolMap(BaseModel):
     ...
 
 
-class Project(BaseModel):
-    id: str = Field(default=None, description="Project unique ID or name")
+class Project(BaseNode):
+    id: str = Field(description="Project unique ID or name")
+    sla: str = Field(description="SLA document uuid")
     default_public_net: Optional[str] = Field(
         default=None, description="Name of the default public network"
     )
@@ -145,13 +87,6 @@ class Project(BaseModel):
     per_region_props: List[PerRegionProps] = Field(
         default_factory=list, description="Region specific properties"
     )
-    sla: str = Field(description="SLA document uuid")
-
-    @validator("*", pre=True)
-    @classmethod
-    def get_str_from_uuid(cls, v: Any) -> Any:
-        """Get hex attribute from UUID values."""
-        return v.hex if isinstance(v, UUID) else v
 
 
 class Region(RegionBase):

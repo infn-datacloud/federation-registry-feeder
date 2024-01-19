@@ -3,7 +3,7 @@ from uuid import uuid4
 import pytest
 from pytest_cases import parametrize, parametrize_with_cases
 
-from src.models.provider import SLA, UserGroup
+from src.models.identity_provider import SLA, UserGroup
 from tests.schemas.utils import random_lower_string, random_start_end_dates
 
 

@@ -7,7 +7,8 @@ from app.provider.schemas_extended import ProviderCreateExtended
 
 from src.config import get_settings
 from src.logger import logger
-from src.models.provider import Openstack, TrustedIDP
+from src.models.identity_provider import TrustedIDP
+from src.models.provider import Openstack
 from src.providers.openstack import get_provider
 from src.utils import (
     get_conf_files,
