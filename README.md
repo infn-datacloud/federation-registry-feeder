@@ -44,10 +44,10 @@ It uses **environment variables** to configure the connection with the `federati
 The command to correctly start the application inside a container is the environment variables default is:
 
 ```bash
-docker run -d -v ./providers-conf:/providers-conf:ro -v /var/run/docker.sock:/var/run/docker.sock:ro indigopaas/federation-registry-feeder
+docker run -d -v providers-conf:/providers-conf:ro -v /var/run/docker.sock:/var/run/docker.sock:ro indigopaas/federation-registry-feeder
 ```
 
-The previous command binds the host's **providers-conf** folder (in the project top level) to the container's **/providers-conf** directory. The application will try to connect to the `federation-registry` instance located at http://localhost:8000; it will try to use the docker container named `federation-registry-feeder-oidc-agent-1` to generate the authorization tokens.
+The previous command binds the host's **providers-conf** folder (in the project top level) to the container's **/providers-conf** directory. The application will try to connect to the `federation-registry` instance located at http://localhost:8000; it will try to use the docker container named `feeder-dev-oidc-agent` to generate the authorization tokens.
 
 In the following table we list all the environment variables that can be passed to the command using the `-e` param.
 
@@ -60,7 +60,7 @@ In the following table we list all the environment variables that can be passed 
   - **description**: Name of the container with the oidc-agent service instance. It depends on the value of `container_name` of the `oidc-agent` docker service to use.
   - **type**: string
   - **mandatory**: YES
-  - **default**: federation-registry-feeder-oidc-agent-1. _A default value if provided to simplify development environment start up._
+  - **default**: feeder-dev-oidc-agent. _A default value if provided to simplify development environment start up._
 - `BLOCK_STORAGE_VOL_LABELS`
   - **description**: List of the volume type labels accepted. **The project starts also if this variable is not set but ...**
   - **type**: List of string
@@ -70,7 +70,7 @@ In the following table we list all the environment variables that can be passed 
   - **description**: Path to the directory containing the `.config.yaml` files with the federated provider configurations. **In production mode, it depends on were you mount this folder. Hopefully this should not be changed.**
   - **type**: path
   - **mandatory**: NO
-  - **default**: /providers-conf. _in development mode, the default value is **./providers-conf**._
+  - **default**: /providers-conf. _in development mode, the default value is **providers-conf**._
 - `FLAVORS`
   - **description**: Flavors API endpoint version to use. The script uses this value to build the endpoints to hit to update the service database.
   - **type**: URL
@@ -228,7 +228,7 @@ Here an example using INFN Cloud IAM:
 
 ```bash
 # Create a new INFN CLoud IAM configuration.
-docker exec federation-registry-feeder-oidc-agent-1 \
+docker exec feeder-dev-oidc-agent \
     oidc-gen \
     --flow device \
     --iss https://iam.cloud.infn.it/ \
@@ -237,10 +237,10 @@ docker exec federation-registry-feeder-oidc-agent-1 \
     infncloud
 
 # Retrieve a valid token for the INFN CLoud IAM configuration.
-docker exec federation-registry-feeder-oidc-agent-1 oidc-token infncloud
+docker exec feeder-dev-oidc-agent oidc-token infncloud
 
 # Add again the INFN CLoud IAM configuration on service start-up.
-docker exec federation-registry-feeder-oidc-agent-1 oidc-token infncloud
+docker exec feeder-dev-oidc-agent oidc-token infncloud
 ```
 
 ### Job Scheduler
@@ -259,7 +259,7 @@ services:
     container_name: feeder
       - FEDERATION_REGISTRY_URL=http://host.docker.internal:8000/
     volumes:
-      - ./providers-conf:/providers-conf:ro
+      - providers-conf:/providers-conf:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     # Infinite loop to keep container live doing nothing
     command: bash -c "while true; do sleep 1; done"
