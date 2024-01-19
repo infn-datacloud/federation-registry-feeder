@@ -9,8 +9,9 @@ from app.provider.schemas_extended import (
 )
 from fastapi import status
 from fastapi.encoders import jsonable_encoder
-from logger import logger
 from pydantic import AnyHttpUrl
+
+from src.logger import logger
 
 TIMEOUT = 30  # s
 

@@ -4,11 +4,17 @@ from threading import Lock
 from typing import List
 
 from app.provider.schemas_extended import ProviderCreateExtended
-from config import get_settings
-from logger import logger
-from models.provider import Openstack, TrustedIDP
-from providers.opnstk import get_provider
-from utils import get_conf_files, infer_service_endpoints, load_config, update_database
+
+from src.config import get_settings
+from src.logger import logger
+from src.models.provider import Openstack, TrustedIDP
+from src.providers.opnstk import get_provider
+from src.utils import (
+    get_conf_files,
+    infer_service_endpoints,
+    load_config,
+    update_database,
+)
 
 MAX_WORKERS = 7
 data_lock = Lock()

@@ -12,8 +12,9 @@ from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQu
 from app.region.schemas import RegionBase
 from app.sla.schemas import SLABase
 from app.user_group.schemas import UserGroupBase
-from config import get_settings
 from pydantic import AnyHttpUrl, BaseModel, Field, root_validator, validator
+
+from src.config import get_settings
 
 
 class SLA(SLABase):

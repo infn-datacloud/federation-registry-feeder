@@ -28,16 +28,17 @@ from app.service.enum import (
     IdentityServiceName,
     NetworkServiceName,
 )
-from logger import logger
-from models.provider import (
+from openstack import connect
+from openstack.connection import Connection
+
+from src.logger import logger
+from src.models.provider import (
     AuthMethod,
     Openstack,
     PrivateNetProxy,
     Project,
     TrustedIDP,
 )
-from openstack import connect
-from openstack.connection import Connection
 
 TIMEOUT = 2  # s
 

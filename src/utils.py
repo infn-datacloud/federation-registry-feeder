@@ -3,10 +3,11 @@ from typing import Dict, List, Tuple
 
 import yaml
 from app.provider.schemas_extended import ProviderCreateExtended
-from config import Settings, URLs
-from crud import CRUD
-from logger import logger
-from models.provider import SiteConfig
+
+from src.config import Settings, URLs
+from src.crud import CRUD
+from src.logger import logger
+from src.models.provider import SiteConfig
 
 
 def infer_service_endpoints(*, settings: Settings) -> URLs:
