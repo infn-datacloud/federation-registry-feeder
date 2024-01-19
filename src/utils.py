@@ -16,9 +16,7 @@ def infer_service_endpoints(*, settings: Settings) -> URLs:
     logger.debug(f"{settings!r}")
     d = {}
     for k, v in settings.api_ver.dict().items():
-        d[k.lower()] = os.path.join(
-            settings.FEDERATION_REGISTRY_URL, "api", f"{v}", f"{k.lower()}"
-        )
+        d[k.lower()] = os.path.join(settings.FED_REG_API_URL, f"{v}", f"{k.lower()}")
     endpoints = URLs(**d)
     logger.info("Federation-Registry endpoints detected")
     logger.debug(f"{endpoints!r}")
@@ -61,7 +59,7 @@ def get_read_write_headers(*, token: str) -> Tuple[Dict[str, str], Dict[str, str
 
 
 def update_database(
-    *, federation_registry_urls: URLs, items: List[ProviderCreateExtended], token: str
+    *, service_api_url: URLs, items: List[ProviderCreateExtended], token: str
 ) -> None:
     """Update the Federation-Registry data.
 
@@ -75,7 +73,7 @@ def update_database(
     """
     read_header, write_header = get_read_write_headers(token=token)
     crud = CRUD(
-        url=federation_registry_urls.providers,
+        url=service_api_url.providers,
         read_headers=read_header,
         write_headers=write_header,
     )

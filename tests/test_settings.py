@@ -23,8 +23,8 @@ def case_api_version_key(key: str) -> str:
 class CaseSettings:
     def case_fed_reg_url(
         self,
-    ) -> Tuple[Literal["FEDERATION_REGISTRY_URL"], Literal["http://test.url.it"]]:
-        return "FEDERATION_REGISTRY_URL", "http://test.url.it"
+    ) -> Tuple[Literal["FED_REG_API_URL"], Literal["http://test.url.it/api"]]:
+        return "FED_REG_API_URL", "http://test.url.it/api"
 
     def case_vol_labels_single(
         self,
@@ -50,13 +50,13 @@ class CaseSettings:
 class CaseInvalidSettings:
     def case_fed_reg_url_empty_string(
         self,
-    ) -> Tuple[Literal["FEDERATION_REGISTRY_URL"], Literal[""]]:
-        return "FEDERATION_REGISTRY_URL", ""
+    ) -> Tuple[Literal["FED_REG_API_URL"], Literal[""]]:
+        return "FED_REG_API_URL", ""
 
     def case_fed_reg_url_non_url(
         self,
-    ) -> Tuple[Literal["FEDERATION_REGISTRY_URL"], Literal["test.wrong.url.it"]]:
-        return "FEDERATION_REGISTRY_URL", "test.wrong.url.it"
+    ) -> Tuple[Literal["FED_REG_API_URL"], Literal["test.wrong.url.it"]]:
+        return "FED_REG_API_URL", "test.wrong.url.it"
 
     def case_oidc_agent_container_empty_string(
         self,
@@ -92,7 +92,7 @@ def test_settings_defaults() -> None:
     """Settings needs at least an APIVersions instance to work."""
     api_ver = APIVersions()
     settings = Settings(api_ver=api_ver)
-    assert settings.FEDERATION_REGISTRY_URL == "http://localhost:8000"
+    assert settings.FED_REG_API_URL == "http://localhost:8000/api"
     assert settings.BLOCK_STORAGE_VOL_LABELS == []
     assert settings.PROVIDERS_CONF_DIR == "providers-conf"
     assert settings.OIDC_AGENT_CONTAINER_NAME == "feeder-dev-oidc-agent"

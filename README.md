@@ -51,11 +51,11 @@ The previous command binds the host's **providers-conf** folder (in the project 
 
 In the following table we list all the environment variables that can be passed to the command using the `-e` param.
 
-- `FEDERATION_REGISTRY_URL`
-  - **description**: The federation-registry base URL. The script uses this value to build the endpoints to hit to update the service database.
+- `FED_REG_API_URL`
+  - **description**: The federation-registry base URL to the API. The script uses this value to build the endpoints to hit to update the service database.
   - **type**: URL
   - **mandatory**: YES
-  - **default**: http://localhost:8000. _A default value if provided to simplify development environment start up._
+  - **default**: http://localhost:8000/api. _A default value if provided to simplify development environment start up._
 - `OIDC_AGENT_CONTAINER_NAME`
   - **description**: Name of the container with the oidc-agent service instance. It depends on the value of `container_name` of the `oidc-agent` docker service to use.
   - **type**: string
@@ -162,7 +162,7 @@ You can also create a `.env` file with all the variables you want to override. H
 ```bash
 # .env
 
-FEDERATION_REGISTRY_URL=https://fed-reg.it/
+FED_REG_API_URL=https://fed-reg.it/my-prefix/api
 OIDC_AGENT_CONTAINER_NAME=fed-reg-feeder-oidc-1
 BLOCK_STORAGE_VOL_LABELS=["first", "second"]
 
@@ -257,7 +257,7 @@ services:
   federation-registry-feeder:
     image: indigopaas/federation-registry-feeder
     container_name: feeder
-      - FEDERATION_REGISTRY_URL=http://host.docker.internal:8000/
+      - FED_REG_API_URL=http://host.docker.internal:8000/api/
     volumes:
       - providers-conf:/providers-conf:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

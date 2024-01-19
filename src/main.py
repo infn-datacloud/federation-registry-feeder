@@ -58,7 +58,7 @@ if __name__ == "__main__":
     # Update the Federation Registry
     if config:
         update_database(
-            federation_registry_urls=fed_reg_endpoints,
+            service_api_url=fed_reg_endpoints,
             token=config.trusted_idps[0].token,
             items=providers,
         )
