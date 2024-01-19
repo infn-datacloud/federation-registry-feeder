@@ -5,6 +5,7 @@ from uuid import UUID
 from app.auth_method.schemas import AuthMethodBase
 from app.identity_provider.schemas import IdentityProviderBase
 from app.location.schemas import LocationBase
+from app.models import BaseNode
 from app.provider.enum import ProviderType
 from app.provider.schemas import ProviderBase
 from app.provider.schemas_extended import find_duplicates
@@ -12,7 +13,7 @@ from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQu
 from app.region.schemas import RegionBase
 from app.sla.schemas import SLABase
 from app.user_group.schemas import UserGroupBase
-from pydantic import AnyHttpUrl, BaseModel, Field, validator
+from pydantic import AnyHttpUrl, BaseModel, Field, IPvAnyAddress, validator
 
 from src.config import get_settings
 
@@ -70,7 +71,7 @@ class TrustedIDP(IdentityProviderBase):
         return v
 
 
-class Limits(BaseModel):
+class Limits(BaseNode):
     block_storage: Optional[BlockStorageQuotaBase] = Field(
         default=None, description="Block storage per user quota"
     )
@@ -93,12 +94,12 @@ class Limits(BaseModel):
         return v
 
 
-class PrivateNetProxy(BaseModel):
-    ip: str = Field(description="Proxy IP address")
+class PrivateNetProxy(BaseNode):
+    ip: IPvAnyAddress = Field(description="Proxy IP address")
     user: str = Field(description="Username to use when performing ssh operations")
 
 
-class PerRegionProps(BaseModel):
+class PerRegionProps(BaseNode):
     region_name: str = Field(description="Region name")
     default_public_net: Optional[str] = Field(
         default=None, description="Name of the default public network"

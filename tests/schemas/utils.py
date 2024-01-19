@@ -1,14 +1,22 @@
+import ipaddress
 import string
 import time
 from datetime import date
 from random import choices, randint
-from typing import Tuple
+from typing import Tuple, Union
 
 
 def random_date() -> date:
     """Return a random date."""
     d = randint(1, int(time.time()))
     return date.fromtimestamp(d)
+
+
+def random_ip(version: str) -> Union[ipaddress.IPv4Address, ipaddress.IPv6Address]:
+    if version == "v4":
+        return ipaddress.IPv4Address(randint(0, 2**32 - 1))
+    elif version == "v6":
+        return ipaddress.IPv6Address(randint(0, 2**128 - 1))
 
 
 def random_lower_string() -> str:
