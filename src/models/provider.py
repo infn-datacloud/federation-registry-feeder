@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Literal, Optional, Union
 
 from app.auth_method.schemas import AuthMethodBase
 from app.location.schemas import LocationBase
@@ -8,8 +8,6 @@ from app.provider.schemas import ProviderBase
 from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
 from app.region.schemas import RegionBase
 from pydantic import AnyHttpUrl, BaseModel, Field, IPvAnyAddress, validator
-
-from src.models.identity_provider import TrustedIDP
 
 
 class Limits(BaseNode):
@@ -104,12 +102,14 @@ class Provider(ProviderBase):
     regions: List[Region] = Field(
         default_factory=list, description="List of hosted regions"
     )
+    projects: List[Project] = Field(
+        description="List of projects/namespaces... belonged by this provider"
+    )
 
 
 class Openstack(Provider):
-    type: ProviderType = Field(default="openstack", description="Provider type")
-    projects: List[Project] = Field(
-        description="List of Projects belonged by this provider"
+    type: ProviderType = Field(
+        default=ProviderType.OS, description="Openstack provider type"
     )
     image_tags: List[str] = Field(
         default_factory=list, description="List of image tags to filter"
@@ -119,42 +119,33 @@ class Openstack(Provider):
     )
 
     @validator("type")
-    def type_fixed(cls, v):
+    @classmethod
+    def type_fixed(cls, v: Literal[ProviderType.OS]) -> Literal[ProviderType.OS]:
         assert v == ProviderType.OS
         return v
 
     @validator("regions")
-    def default_region(cls, v):
+    @classmethod
+    def default_region(cls, v: List[Region]) -> List[Region]:
         if len(v) == 0:
             v.append(Region(name="RegionOne"))
         return v
 
 
 class Kubernetes(Provider):
-    type: ProviderType = Field(default="kubernetes", description="Provider type")
-    projects: List[Project] = Field(description="List of names")
+    type: ProviderType = Field(
+        default=ProviderType.K8S, description="Kubernetes provider type"
+    )
 
     @validator("type")
-    def type_fixed(cls, v):
+    @classmethod
+    def type_fixed(cls, v: Literal[ProviderType.K8S]) -> Literal[ProviderType.K8S]:
         assert v == ProviderType.K8S
         return v
 
     @validator("regions")
-    def default_region(cls, v):
+    @classmethod
+    def default_region(cls, v: List[Region]) -> List[Region]:
         if len(v) == 0:
             v.append(Region(name="default"))
         return v
-
-
-class SiteConfig(BaseModel):
-    trusted_idps: List[TrustedIDP] = Field(
-        description="List of OIDC-Agent supported identity providers endpoints"
-    )
-    openstack: List[Openstack] = Field(
-        default_factory=list,
-        description="Openstack providers to integrate in the Federation Registry",
-    )
-    kubernetes: List[Kubernetes] = Field(
-        default_factory=list,
-        description="Openstack providers to integrate in the Federation Registry",
-    )

@@ -7,7 +7,7 @@ from app.provider.schemas_extended import ProviderCreateExtended
 from src.config import Settings, URLs
 from src.crud import CRUD
 from src.logger import logger
-from src.models.provider import SiteConfig
+from src.models.config import SiteConfig
 
 
 def infer_service_endpoints(*, settings: Settings) -> URLs:

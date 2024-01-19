@@ -32,8 +32,9 @@ from openstack import connect
 from openstack.connection import Connection
 
 from src.logger import logger
+from src.models.config import Openstack
 from src.models.identity_provider import TrustedIDP
-from src.models.provider import AuthMethod, Openstack, PrivateNetProxy, Project
+from src.models.provider import AuthMethod, PrivateNetProxy, Project
 
 TIMEOUT = 2  # s
 
