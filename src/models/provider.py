@@ -82,6 +82,7 @@ class Limits(BaseModel):
     )
 
     @validator("*")
+    @classmethod
     def set_per_user(
         cls,
         v: Optional[Union[BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase]],

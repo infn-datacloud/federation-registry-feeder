@@ -31,7 +31,7 @@ def test_user_group_schema(sla: SLA) -> None:
 
 
 @parametrize_with_cases("with_slas", cases=".")
-def test_sla_invalid_schema(with_slas: bool, sla: SLA) -> None:
+def test_user_group_invalid_schema(with_slas: bool, sla: SLA) -> None:
     """SLA with invalid slas list.
 
     Duplicated values: SLA with same doc_uuid.
