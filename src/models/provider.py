@@ -12,7 +12,7 @@ from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQu
 from app.region.schemas import RegionBase
 from app.sla.schemas import SLABase
 from app.user_group.schemas import UserGroupBase
-from pydantic import AnyHttpUrl, BaseModel, Field, root_validator, validator
+from pydantic import AnyHttpUrl, BaseModel, Field, validator
 
 from src.config import get_settings
 
@@ -22,18 +22,11 @@ class SLA(SLABase):
         default_factory=list, description="List of projects UUID"
     )
 
-    @validator("projects", pre=True)
-    def validate_projects(cls, v):
-        v = [i.hex if isinstance(i, UUID) else i for i in v]
+    @validator("projects")
+    @classmethod
+    def validate_projects(cls, v: List[str]) -> List[str]:
         find_duplicates(v)
         return v
-
-    @root_validator
-    def start_date_before_end_date(cls, values):
-        start = values.get("start_date")
-        end = values.get("end_date")
-        assert start < end, f"Start date {start} greater than end date {end}"
-        return values
 
 
 class UserGroup(UserGroupBase):
