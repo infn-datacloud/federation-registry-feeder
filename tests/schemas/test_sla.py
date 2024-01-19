@@ -1,34 +1,10 @@
-import time
-from datetime import date
-from random import randint
-from typing import Tuple
 from uuid import uuid4
 
 import pytest
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.provider import SLA
-
-
-def random_date() -> date:
-    """Return a random date."""
-    d = randint(1, int(time.time()))
-    return date.fromtimestamp(d)
-
-
-def random_start_end_dates() -> Tuple[date, date]:
-    """Return a random couples of valid start and end dates (in order)."""
-    d1 = random_date()
-    d2 = random_date()
-    while d1 == d2:
-        d2 = random_date()
-    if d1 < d2:
-        start_date = d1
-        end_date = d2
-    else:
-        start_date = d2
-        end_date = d1
-    return start_date, end_date
+from tests.schemas.utils import random_start_end_dates
 
 
 @parametrize(with_projects=[True, False])
@@ -38,7 +14,7 @@ def case_with_projects(with_projects: bool) -> bool:
 
 @parametrize_with_cases("with_projects", cases=".")
 def test_sla_schema(with_projects: bool) -> None:
-    """Create an SLA with or without projects"""
+    """Create an SLA with or without projects."""
     start_date, end_date = random_start_end_dates()
     d = {"doc_uuid": uuid4(), "start_date": start_date, "end_date": end_date}
     if with_projects:
@@ -59,11 +35,12 @@ def test_sla_invalid_schema(with_projects: bool) -> None:
     is an empty list.
     """
     start_date, end_date = random_start_end_dates()
-    d = {"doc_uuid": uuid4(), "start_date": start_date, "end_date": end_date}
-    if with_projects:
-        proj = uuid4()
-        d["projects"] = [proj, proj]
-    else:
-        d["projects"] = None
+    proj = uuid4()
+    d = {
+        "doc_uuid": uuid4(),
+        "start_date": start_date,
+        "end_date": end_date,
+        "projects": [proj, proj] if with_projects else None,
+    }
     with pytest.raises(ValueError):
         SLA(**d)

@@ -30,12 +30,12 @@ class SLA(SLABase):
 
 
 class UserGroup(UserGroupBase):
-    slas: List[SLA] = Field(default_factory=list, description="List of SLAs")
+    slas: List[SLA] = Field(description="List of SLAs")
 
     @validator("slas")
-    def validate_slas(cls, v):
+    @classmethod
+    def validate_slas(cls, v: List[SLA]) -> List[SLA]:
         find_duplicates(v, "doc_uuid")
-        assert len(v), "SLA list can't be empty"
         return v
 
 
