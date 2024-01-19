@@ -604,8 +604,8 @@ develop = false
 
 [package.dependencies]
 fastapi = "^0.95.2"
-flaat = "^1.1.8"
-neomodel = "5.0.1"
+flaat = "^1.1.15"
+neomodel = {git = "https://github.com/giosava94/neomodel.git", branch = "db-transaction"}
 pycountry = "^22.3.5"
 pydantic = {version = "^1.10.9", extras = ["email"]}
 uvicorn = "^0.22.0"
@@ -613,8 +613,8 @@ uvicorn = "^0.22.0"
 [package.source]
 type = "git"
 url = "https://github.com/indigo-paas/federation-registry"
-reference = "HEAD"
-resolved_reference = "827f0f02567c867816361e59d3401e136bb40ef6"
+reference = "build-docker"
+resolved_reference = "5523e9a17b0ff59dc9dfa42e1655d994dbc64ed1"
 
 [[package]]
 name = "filelock"
@@ -806,13 +806,13 @@ files = [
 
 [[package]]
 name = "jsonschema"
-version = "4.20.0"
+version = "4.21.0"
 description = "An implementation of JSON Schema validation for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "jsonschema-4.20.0-py3-none-any.whl", hash = "sha256:ed6231f0429ecf966f5bc8dfef245998220549cbbcf140f913b7464c52c3b6b3"},
-    {file = "jsonschema-4.20.0.tar.gz", hash = "sha256:4f614fd46d8d61258610998997743ec5492a648b33cf478c1ddc23ed4598a5fa"},
+    {file = "jsonschema-4.21.0-py3-none-any.whl", hash = "sha256:70a09719d375c0a2874571b363c8a24be7df8071b80c9aa76bc4551e7297c63c"},
+    {file = "jsonschema-4.21.0.tar.gz", hash = "sha256:3ba18e27f7491ea4a1b22edce00fb820eec968d397feb3f9cb61d5894bb38167"},
 ]
 
 [package.dependencies]
@@ -958,47 +958,45 @@ files = [
 ]
 
 [[package]]
-name = "neo4j-driver"
-version = "4.4.10"
+name = "neo4j"
+version = "5.15.0"
 description = "Neo4j Bolt driver for Python"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 files = [
-    {file = "neo4j-driver-4.4.10.tar.gz", hash = "sha256:df5e3b96e6991f9de4b79e48c657b34596ec9784b78a00fc273b41af48f4fc4c"},
+    {file = "neo4j-5.15.0.tar.gz", hash = "sha256:5c53eccf5192ac21463d3fac05cf58f1547ed231b953c837aa4393e2fc713ed3"},
 ]
 
 [package.dependencies]
 pytz = "*"
 
-[[package]]
-name = "neobolt"
-version = "1.7.17"
-description = "Neo4j Bolt connector for Python"
-optional = false
-python-versions = "*"
-files = [
-    {file = "neobolt-1.7.17.tar.gz", hash = "sha256:1d0d5efce7221fc4f0ffc4a315bc5272708be5aa2aef5434269e800372d8db89"},
-]
+[package.extras]
+numpy = ["numpy (>=1.7.0,<2.0.0)"]
+pandas = ["numpy (>=1.7.0,<2.0.0)", "pandas (>=1.1.0,<3.0.0)"]
+pyarrow = ["pyarrow (>=1.0.0)"]
 
 [[package]]
 name = "neomodel"
-version = "5.0.1"
+version = "5.2.1"
 description = "An object mapper for the neo4j graph database."
 optional = false
 python-versions = ">=3.7"
-files = [
-    {file = "neomodel-5.0.1-py3-none-any.whl", hash = "sha256:b4358573cb4802d7cff4de62bb7e5e3720956dd3b93d39e451e895284995f7bf"},
-    {file = "neomodel-5.0.1.tar.gz", hash = "sha256:8a1513e021f6dacbd82b548405e677f07064a3ae8e3720b56c2a4c9acc70f52b"},
-]
+files = []
+develop = false
 
 [package.dependencies]
-neo4j-driver = "4.4.10"
-neobolt = "1.7.17"
-pytz = ">=2021.1"
-six = "1.16.0"
+neo4j = ">=5.15.0,<5.16.0"
 
 [package.extras]
-dev = ["Shapely (>=1.8.1,<1.9)", "black", "isort", "pre-commit", "pytest (>=7.1)", "pytest-cov (>=4.0)"]
+dev = ["Shapely (>=2.0.0)", "black", "isort", "pre-commit", "pytest (>=7.1)", "pytest-cov (>=4.0)"]
+numpy = ["numpy"]
+pandas = ["pandas"]
+
+[package.source]
+type = "git"
+url = "https://github.com/giosava94/neomodel.git"
+reference = "db-transaction"
+resolved_reference = "cc91226693d3ac6a193c57188fce891b81c42694"
 
 [[package]]
 name = "netaddr"
@@ -1183,13 +1181,13 @@ tzdata = ">=2022.4"
 
 [[package]]
 name = "oslo-utils"
-version = "6.3.0"
+version = "7.0.0"
 description = "Oslo Utility library"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "oslo.utils-6.3.0-py3-none-any.whl", hash = "sha256:6bac2e56650f502caae6c0e8ba6e5eda3d7a16743d115f8836cad54538dd667f"},
-    {file = "oslo.utils-6.3.0.tar.gz", hash = "sha256:758d945b2bad5bea81abed80ad33ffea1d1d793348ac5eb5b3866ba745b11d55"},
+    {file = "oslo.utils-7.0.0-py3-none-any.whl", hash = "sha256:dbb724041a2ea0c342d524c4d7c7f07c8bc5016f4762d38c6a41b2ef805b3a8e"},
+    {file = "oslo.utils-7.0.0.tar.gz", hash = "sha256:5263c00980cfab74f6635ef61d0fc91e6bd4a8dd0e78a77897ed6e447c8c6731"},
 ]
 
 [package.dependencies]
@@ -2399,4 +2397,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8.1"
-content-hash = "340d82607cb17615a928076ec247a0f7f35fd33b4485b92fcb217ff091489adf"
+content-hash = "3f6c5356bb1c7146be4545420e7f97df4700a68bae55ce89c6a0fd6e1e677d06"
