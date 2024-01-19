@@ -41,7 +41,9 @@ def load_config(*, fname: str) -> SiteConfig:
     logger.info(f"Loading provider configuration from file: {fname}")
     with open(fname) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
-        config = SiteConfig(**config)
+    if config is None:
+        raise ValueError("Empty configuration")
+    config = SiteConfig(**config)
     logger.info("Configuration loaded")
     logger.debug(f"{config!r}")
     return config
