@@ -55,7 +55,7 @@ class PerRegionProps(BaseNode):
     )
 
 
-class AuthMethod(AuthMethodBase):
+class TrustedIDP(AuthMethodBase):
     idp_name: str = Field(
         alias="name", description="Identity provider name used to authenticate"
     )
@@ -96,7 +96,7 @@ class Region(RegionBase):
 class Provider(ProviderBase):
     auth_url: AnyHttpUrl = Field(description="Identity service endpoint")
     block_storage_vol_types: Optional[BlockStorageVolMap] = Field(default=None)
-    identity_providers: List[AuthMethod] = Field(
+    identity_providers: List[TrustedIDP] = Field(
         description="List of supported identity providers"
     )
     regions: List[Region] = Field(

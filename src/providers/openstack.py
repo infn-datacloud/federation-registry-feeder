@@ -34,7 +34,7 @@ from openstack.connection import Connection
 from src.logger import logger
 from src.models.config import Openstack
 from src.models.identity_provider import Issuer
-from src.models.provider import AuthMethod, PrivateNetProxy, Project
+from src.models.provider import PrivateNetProxy, Project, TrustedIDP
 
 TIMEOUT = 2  # s
 
@@ -177,7 +177,7 @@ def get_project(conn: Connection) -> ProjectCreate:
 def get_correct_idp_and_user_group_for_project(
     *,
     trusted_idps: List[Issuer],
-    os_conf_auth_methods: List[AuthMethod],
+    os_conf_auth_methods: List[TrustedIDP],
     project_conf: Project,
 ) -> Issuer:
     for trusted_idp in trusted_idps:
