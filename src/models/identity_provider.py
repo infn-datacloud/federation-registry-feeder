@@ -33,7 +33,7 @@ class UserGroup(UserGroupBase):
         return v
 
 
-class TrustedIDP(IdentityProviderBase):
+class Issuer(IdentityProviderBase):
     endpoint: AnyHttpUrl = Field(description="issuer url", alias="issuer")
     token: Optional[str] = Field(description="Access token")
     user_groups: List[UserGroup] = Field(

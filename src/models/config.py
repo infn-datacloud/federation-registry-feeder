@@ -2,12 +2,12 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
-from src.models.identity_provider import TrustedIDP
+from src.models.identity_provider import Issuer
 from src.models.provider import Kubernetes, Openstack
 
 
 class SiteConfig(BaseModel):
-    trusted_idps: List[TrustedIDP] = Field(
+    trusted_idps: List[Issuer] = Field(
         description="List of OIDC-Agent supported identity providers endpoints"
     )
     openstack: List[Openstack] = Field(

@@ -7,7 +7,7 @@ from app.provider.schemas_extended import ProviderCreateExtended
 
 from src.config import get_settings
 from src.logger import logger
-from src.models.identity_provider import TrustedIDP
+from src.models.identity_provider import Issuer
 from src.models.provider import Openstack
 from src.providers.openstack import get_provider
 from src.utils import (
@@ -23,7 +23,7 @@ data_lock = Lock()
 
 def add_os_provider_to_list(
     os_conf: Openstack,
-    trusted_idps: List[TrustedIDP],
+    trusted_idps: List[Issuer],
     providers: List[ProviderCreateExtended],
 ):
     """Add Openstack providers to the provider lists."""

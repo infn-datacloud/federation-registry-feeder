@@ -33,7 +33,7 @@ from openstack.connection import Connection
 
 from src.logger import logger
 from src.models.config import Openstack
-from src.models.identity_provider import TrustedIDP
+from src.models.identity_provider import Issuer
 from src.models.provider import AuthMethod, PrivateNetProxy, Project
 
 TIMEOUT = 2  # s
@@ -176,10 +176,10 @@ def get_project(conn: Connection) -> ProjectCreate:
 
 def get_correct_idp_and_user_group_for_project(
     *,
-    trusted_idps: List[TrustedIDP],
+    trusted_idps: List[Issuer],
     os_conf_auth_methods: List[AuthMethod],
     project_conf: Project,
-) -> TrustedIDP:
+) -> Issuer:
     for trusted_idp in trusted_idps:
         for user_group in trusted_idp.user_groups:
             for sla in user_group.slas:
@@ -203,7 +203,7 @@ def get_per_project_details(
     os_conf: Openstack,
     project_conf: Project,
     region: RegionCreateExtended,
-    trusted_idps: List[TrustedIDP],
+    trusted_idps: List[Issuer],
     projects: List[ProjectCreate],
 ) -> None:
     default_private_net = project_conf.default_private_net
@@ -364,7 +364,7 @@ def get_per_project_details(
 
 
 def get_provider(
-    *, os_conf: Openstack, trusted_idps: List[TrustedIDP]
+    *, os_conf: Openstack, trusted_idps: List[Issuer]
 ) -> ProviderCreateExtended:
     """Generate an Openstack virtual provider, reading information from a real openstack
     instance.
