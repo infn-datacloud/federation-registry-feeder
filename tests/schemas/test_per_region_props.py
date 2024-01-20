@@ -1,5 +1,5 @@
 import pytest
-from pytest_cases import case, parametrize, parametrize_with_cases
+from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.provider import Limits, PerRegionProps, PrivateNetProxy
 from tests.schemas.utils import random_ip, random_lower_string
@@ -15,30 +15,22 @@ def net_proxy() -> PrivateNetProxy:
     return PrivateNetProxy(ip=random_ip("v4"), user=random_lower_string())
 
 
-@case(tags="limit")
-@parametrize(with_limits=[True, False])
-def case_with_limits(with_limits: bool) -> bool:
-    return with_limits
+@parametrize(attr=["private_net_proxy", "per_user_limits"])
+def case_net_proxy(attr: bool) -> bool:
+    return attr
 
 
-@case(tags="net_proxy")
-@parametrize(with_net_proxy=[True, False])
-def case_net_proxy(with_net_proxy: bool) -> bool:
-    return with_net_proxy
-
-
-@parametrize_with_cases("with_limits", cases=".", has_tag="limit")
-@parametrize_with_cases("with_net_proxy", cases=".", has_tag="net_proxy")
+@parametrize_with_cases("attr", cases=".")
 def test_net_proxy_schema(
-    with_limits: bool, with_net_proxy: bool, limits: Limits, net_proxy: PrivateNetProxy
+    attr: str, limits: Limits, net_proxy: PrivateNetProxy
 ) -> None:
     """Create a PerRegionProps."""
     d = {
         "region_name": random_lower_string(),
         "default_public_net": random_lower_string(),
         "default_private_net": random_lower_string(),
-        "private_net_proxy": net_proxy if with_net_proxy else None,
-        "per_user_limits": limits if with_limits else None,
+        "private_net_proxy": net_proxy if attr == "private_net_proxy" else None,
+        "per_user_limits": limits if attr == "per_user_limits" else None,
     }
     item = PerRegionProps(**d)
     assert item.region_name == d.get("region_name")

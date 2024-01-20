@@ -2,8 +2,15 @@ import ipaddress
 import string
 import time
 from datetime import date
-from random import choices, randint
+from random import choice, choices, randint
 from typing import Tuple, Union
+
+from pycountry import countries
+
+
+def random_country() -> str:
+    """Return random country."""
+    return choice([i.name for i in countries])
 
 
 def random_date() -> date:
