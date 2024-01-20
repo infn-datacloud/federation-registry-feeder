@@ -5,7 +5,9 @@ from datetime import date
 from random import choice, choices, randint
 from typing import Tuple, Union
 
+from app.provider.enum import ProviderType
 from pycountry import countries
+from pydantic import AnyHttpUrl
 
 
 def random_country() -> str:
@@ -31,6 +33,11 @@ def random_lower_string() -> str:
     return "".join(choices(string.ascii_lowercase, k=32))
 
 
+def random_provider_type() -> str:
+    """Return one of the possible provider types."""
+    return choice([i for i in ProviderType])
+
+
 def random_start_end_dates() -> Tuple[date, date]:
     """Return a random couples of valid start and end dates (in order)."""
     d1 = random_date()
@@ -44,3 +51,8 @@ def random_start_end_dates() -> Tuple[date, date]:
         start_date = d2
         end_date = d1
     return start_date, end_date
+
+
+def random_url() -> AnyHttpUrl:
+    """Return a random URL."""
+    return "http://" + random_lower_string() + ".com"
