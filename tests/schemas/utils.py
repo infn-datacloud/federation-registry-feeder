@@ -3,7 +3,7 @@ import string
 import time
 from datetime import date
 from random import choice, choices, randint
-from typing import Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from app.provider.enum import ProviderType
 from pycountry import countries
@@ -33,9 +33,12 @@ def random_lower_string() -> str:
     return "".join(choices(string.ascii_lowercase, k=32))
 
 
-def random_provider_type() -> str:
+def random_provider_type(*, exclude: Optional[List[str]] = None) -> str:
     """Return one of the possible provider types."""
-    return choice([i for i in ProviderType])
+    if exclude is None:
+        exclude = []
+    choices = set([i for i in ProviderType]) - set(exclude)
+    return choice(list(choices))
 
 
 def random_start_end_dates() -> Tuple[date, date]:

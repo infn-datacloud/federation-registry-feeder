@@ -1,9 +1,10 @@
 from uuid import uuid4
 
 import pytest
+from app.provider.enum import ProviderType
 from pytest_cases import case, parametrize, parametrize_with_cases
 
-from src.models.provider import Project, Provider, Region, TrustedIDP
+from src.models.provider import Openstack, Project, Region, TrustedIDP
 from tests.schemas.utils import random_lower_string, random_provider_type, random_url
 
 
@@ -26,8 +27,15 @@ def region() -> Region:
     return Region(name=random_lower_string())
 
 
+@pytest.fixture
+def default_region() -> Region:
+    return Region(name="RegionOne")
+
+
 @case(tags=["valid"])
-@parametrize(attr=["regions"])  # TODO: Add BlockStorageVolMap
+@parametrize(
+    attr=["regions", "image_tags", "network_tags"]
+)  # TODO: Add BlockStorageVolMap
 def case_valid_attr(attr: bool) -> bool:
     return attr
 
@@ -35,13 +43,13 @@ def case_valid_attr(attr: bool) -> bool:
 @case(tags=["invalid"])
 @parametrize(
     attr=[
-        "auth_url",
-        "identity_providers_none",
-        "identity_providers_single",
-        "projects_none",
-        "projects_single",
+        "type",
         "regions_none",
         "regions_single",
+        "image_tags_none",
+        "image_tags_single",
+        "network_tags_none",
+        "network_tags_single",
     ]
 )
 def case_invalid_attr(attr: bool) -> bool:
@@ -49,20 +57,28 @@ def case_invalid_attr(attr: bool) -> bool:
 
 
 @parametrize_with_cases("attr", cases=".", has_tag="valid")
-def test_provider_schema(
-    attr: str, identity_provider: TrustedIDP, project: Project, region: Region
+def test_openstack_schema(
+    attr: str,
+    identity_provider: TrustedIDP,
+    project: Project,
+    region: Region,
+    default_region: Region,
 ) -> None:
     """Create an SLA with or without regions."""
     d = {
         "name": random_lower_string(),
-        "type": random_provider_type(),
+        "type": ProviderType.OS,
         "auth_url": random_url(),
         "identity_providers": [identity_provider],
         "projects": [project],
     }
     if attr == "regions":
         d["regions"] = [region]
-    item = Provider(**d)
+    if attr == "image_tags":
+        d["image_tags"] = [random_lower_string()]
+    if attr == "network_tags":
+        d["network_tags"] = [random_lower_string()]
+    item = Openstack(**d)
     assert item.name == d.get("name")
     assert item.type == d.get("type").value
     assert item.auth_url == d.get("auth_url")
@@ -72,13 +88,19 @@ def test_provider_schema(
     identity_providers = d.get("identity_providers", [])
     assert len(item.identity_providers) == len(identity_providers)
     assert item.identity_providers == identity_providers
-    regions = d.get("regions", [])
+    regions = d.get("regions", [default_region])
     assert len(item.regions) == len(regions)
     assert item.regions == regions
+    image_tags = d.get("image_tags", [])
+    assert len(item.image_tags) == len(image_tags)
+    assert item.image_tags == image_tags
+    network_tags = d.get("network_tags", [])
+    assert len(item.network_tags) == len(network_tags)
+    assert item.network_tags == network_tags
 
 
 @parametrize_with_cases("attr", cases=".", has_tag="invalid")
-def test_provider_invalid_schema(
+def test_openstack_invalid_schema(
     attr: str, identity_provider: TrustedIDP, project: Project, region: Region
 ) -> None:
     """SLA with invalid projects list.
@@ -89,18 +111,21 @@ def test_provider_invalid_schema(
     """
     d = {
         "name": random_lower_string(),
-        "type": random_provider_type(),
+        "type": random_provider_type(exclude=[ProviderType.OS])
+        if attr == "type"
+        else ProviderType.OS,
         "auth_url": None if attr == "auth_url" else random_url(),
+        "identity_providers": [identity_provider],
         "projects": [project],
     }
     if attr.endswith("_none"):
         attr = attr[: -len("_none")]
         d[attr] = None
-    elif attr == "identity_providers_single":
-        d["identity_providers"] = identity_provider
-    elif attr == "projects_single":
-        d["projects"] = project
     elif attr == "regions_single":
         d["regions"] = region
+    elif attr == "image_tags_single":
+        d["image_tags"] = region
+    elif attr == "network_tags_single":
+        d["network_tags"] = region
     with pytest.raises(ValueError):
-        Provider(**d)
+        Openstack(**d)

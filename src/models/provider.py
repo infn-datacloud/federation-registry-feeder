@@ -124,7 +124,7 @@ class Openstack(Provider):
         assert v == ProviderType.OS
         return v
 
-    @validator("regions")
+    @validator("regions", always=True)
     @classmethod
     def default_region(cls, v: List[Region]) -> List[Region]:
         if len(v) == 0:
@@ -143,7 +143,7 @@ class Kubernetes(Provider):
         assert v == ProviderType.K8S
         return v
 
-    @validator("regions")
+    @validator("regions", always=True)
     @classmethod
     def default_region(cls, v: List[Region]) -> List[Region]:
         if len(v) == 0:
