@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from random import randint
 from typing import Any, Dict, Optional
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -192,11 +193,14 @@ def network_quotas() -> Dict[str, int]:
     }
 
 
-def test_retrieve_block_storage_quotas(block_storage_quotas: Dict[str, int]) -> None:
-    conn = FakeConn(
-        current_project_id=uuid4().hex,
-        block_storage=FakeBlockStorage(**block_storage_quotas),
+@patch("src.providers.openstack.Connection.block_storage")
+def test_retrieve_block_storage_quotas(
+    mock_block_storage, block_storage_quotas: Dict[str, int]
+) -> None:
+    mock_block_storage.get_quota_set.return_value = BlockStorageQuotaSet(
+        **block_storage_quotas
     )
+    conn = FakeConn(current_project_id=uuid4().hex, block_storage=mock_block_storage)
     data = get_block_storage_quotas(conn)
     assert data.type == QuotaType.BLOCK_STORAGE
     assert not data.per_user
@@ -205,11 +209,10 @@ def test_retrieve_block_storage_quotas(block_storage_quotas: Dict[str, int]) -> 
     assert data.volumes == block_storage_quotas.get("volumes")
 
 
-def test_retrieve_compute_quotas(compute_quotas: Dict[str, int]) -> None:
-    conn = FakeConn(
-        current_project_id=uuid4().hex,
-        compute=FakeCompute(**compute_quotas),
-    )
+@patch("src.providers.openstack.Connection.compute")
+def test_retrieve_compute_quotas(mock_compute, compute_quotas: Dict[str, int]) -> None:
+    mock_compute.get_quota_set.return_value = ComputeQuotaSet(**compute_quotas)
+    conn = FakeConn(current_project_id=uuid4().hex, compute=mock_compute)
     data = get_compute_quotas(conn)
     assert data.type == QuotaType.COMPUTE
     assert not data.per_user
@@ -218,11 +221,10 @@ def test_retrieve_compute_quotas(compute_quotas: Dict[str, int]) -> None:
     assert data.ram == compute_quotas.get("ram")
 
 
-def test_retrieve_network_quotas(network_quotas: Dict[str, int]) -> None:
-    conn = FakeConn(
-        current_project_id=uuid4().hex,
-        network=FakeNetwork(**network_quotas),
-    )
+@patch("src.providers.openstack.Connection.network")
+def test_retrieve_network_quotas(mock_network, network_quotas: Dict[str, int]) -> None:
+    mock_network.get_quota.return_value = NetworkQuota(**network_quotas)
+    conn = FakeConn(current_project_id=uuid4().hex, network=mock_network)
     data = get_network_quotas(conn)
     assert data.type == QuotaType.NETWORK
     assert not data.per_user
