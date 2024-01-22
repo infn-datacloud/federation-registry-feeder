@@ -54,25 +54,25 @@ def test_limit_schema(
     """Create a Limits schema with or without quotas."""
     if qtype == "block_storage":
         item = Limits(block_storage=block_storage_quota)
-        quota: BlockStorageQuotaBase = item.__getattribute__(qtype)
-        assert quota.type == block_storage_quota.type
-        assert quota.gigabytes == block_storage_quota.gigabytes
-        assert quota.per_volume_gigabytes == block_storage_quota.per_volume_gigabytes
-        assert quota.volumes == block_storage_quota.volumes
+        assert item.block_storage.type == block_storage_quota.type
+        assert item.block_storage.gigabytes == block_storage_quota.gigabytes
+        assert (
+            item.block_storage.per_volume_gigabytes
+            == block_storage_quota.per_volume_gigabytes
+        )
+        assert item.block_storage.volumes == block_storage_quota.volumes
     elif qtype == "compute":
         item = Limits(compute=compute_quota)
-        quota: ComputeQuotaBase = item.__getattribute__(qtype)
-        assert quota.type == compute_quota.type
-        assert quota.cores == compute_quota.cores
-        assert quota.instances == compute_quota.instances
-        assert quota.ram == compute_quota.ram
+        assert item.compute.type == compute_quota.type
+        assert item.compute.cores == compute_quota.cores
+        assert item.compute.instances == compute_quota.instances
+        assert item.compute.ram == compute_quota.ram
     elif qtype == "network":
         item = Limits(network=network_quota)
-        quota: NetworkQuotaBase = item.__getattribute__(qtype)
-        assert quota.type == network_quota.type
-        assert quota.public_ips == network_quota.public_ips
-        assert quota.networks == network_quota.networks
-        assert quota.ports == network_quota.ports
-        assert quota.security_groups == network_quota.security_groups
-        assert quota.security_group_rules == network_quota.security_group_rules
-    assert quota.per_user
+        assert item.network.type == network_quota.type
+        assert item.network.public_ips == network_quota.public_ips
+        assert item.network.networks == network_quota.networks
+        assert item.network.ports == network_quota.ports
+        assert item.network.security_groups == network_quota.security_groups
+        assert item.network.security_group_rules == network_quota.security_group_rules
+    assert item.__getattribute__(qtype).per_user
