@@ -1,7 +1,6 @@
-from dataclasses import dataclass
 from random import randint
-from typing import Any, Dict, Optional
-from unittest.mock import patch
+from typing import Dict
+from unittest.mock import PropertyMock, patch
 from uuid import uuid4
 
 import pytest
@@ -15,125 +14,6 @@ from src.providers.openstack import (
     get_compute_quotas,
     get_network_quotas,
 )
-
-
-@dataclass
-class FakeBlockStorage:
-    backup_gigabytes: int = 0
-    backups: int = 0
-    gigabytes: int = 0
-    groups: int = 0
-    per_volume_gigabytes: int = 0
-    snapshots: int = 0
-    volumes: int = 0
-
-    def get_quota_set(self, project: Any) -> BlockStorageQuotaSet:
-        return BlockStorageQuotaSet(
-            backup_gigabytes=self.backup_gigabytes,
-            backups=self.backups,
-            gigabytes=self.gigabytes,
-            groups=self.groups,
-            per_volume_gigabytes=self.per_volume_gigabytes,
-            snapshots=self.snapshots,
-            volumes=self.volumes,
-        )
-
-    def to_dict(self) -> Dict[str, Any]:
-        return self.__dict__
-
-
-@dataclass
-class FakeCompute:
-    cores: int = 0
-    fixed_ips: int = 0
-    floating_ips: int = 0
-    force: bool = False
-    injected_file_content_bytes: int = 0
-    injected_file_path_bytes: int = 0
-    injected_files: int = 0
-    instances: int = 0
-    key_pairs: int = 0
-    metadata_items: int = 0
-    networks: int = 0
-    ram: int = 0
-    security_group_rules: int = 0
-    security_groups: int = 0
-    server_groups: int = 0
-    server_group_members: int = 0
-
-    def get_quota_set(self, project: Any) -> ComputeQuotaSet:
-        return ComputeQuotaSet(
-            cores=self.cores,
-            fixed_ips=self.fixed_ips,
-            floating_ips=self.floating_ips,
-            injected_file_content_bytes=self.injected_file_content_bytes,
-            injected_file_path_bytes=self.injected_file_path_bytes,
-            injected_files=self.injected_files,
-            instances=self.instances,
-            key_pairs=self.key_pairs,
-            metadata_items=self.metadata_items,
-            networks=self.networks,
-            ram=self.ram,
-            security_group_rules=self.security_group_rules,
-            security_groups=self.security_groups,
-            server_groups=self.server_groups,
-            server_group_members=self.server_group_members,
-            force=self.force,
-        )
-
-    def to_dict(self) -> Dict[str, Any]:
-        return self.__dict__
-
-
-@dataclass
-class FakeNetwork:
-    check_limit: bool = False
-    floating_ips: int = 0
-    health_monitors: int = 0
-    listeners: int = 0
-    load_balancers: int = 0
-    l7_policies: int = 0
-    networks: int = 0
-    pools: int = 0
-    ports: int = 0
-    # project_id: int = 0
-    rbac_policies: int = 0
-    routers: int = 0
-    subnets: int = 0
-    subnet_pools: int = 0
-    security_group_rules: int = 0
-    security_groups: int = 0
-
-    def get_quota(self, project: Any) -> NetworkQuota:
-        return NetworkQuota(
-            check_limit=self.check_limit,
-            floating_ips=self.floating_ips,
-            health_monitors=self.health_monitors,
-            listeners=self.listeners,
-            load_balancers=self.load_balancers,
-            l7_policies=self.l7_policies,
-            networks=self.networks,
-            pools=self.pools,
-            ports=self.ports,
-            # project_id=self.project_id,
-            rbac_policies=self.rbac_policies,
-            routers=self.routers,
-            subnets=self.subnets,
-            subnet_pools=self.subnet_pools,
-            security_group_rules=self.security_group_rules,
-            security_groups=self.security_groups,
-        )
-
-    def to_dict(self) -> Dict[str, Any]:
-        return self.__dict__
-
-
-@dataclass
-class FakeConn:
-    current_project_id: str
-    block_storage: Optional[FakeBlockStorage] = None
-    compute: Optional[FakeCompute] = None
-    network: Optional[FakeNetwork] = None
 
 
 @pytest.fixture
@@ -194,38 +74,53 @@ def network_quotas() -> Dict[str, int]:
 
 
 @patch("src.providers.openstack.Connection.block_storage")
+@patch("src.providers.openstack.Connection")
 def test_retrieve_block_storage_quotas(
-    mock_block_storage, block_storage_quotas: Dict[str, int]
+    mock_conn, mock_block_storage, block_storage_quotas: Dict[str, int]
 ) -> None:
     mock_block_storage.get_quota_set.return_value = BlockStorageQuotaSet(
         **block_storage_quotas
     )
-    conn = FakeConn(current_project_id=uuid4().hex, block_storage=mock_block_storage)
-    data = get_block_storage_quotas(conn)
+    mock_conn.block_storage = mock_block_storage
+    project_id = uuid4().hex
+    type(mock_conn).current_project_id = PropertyMock(return_value=project_id)
+    data = get_block_storage_quotas(mock_conn)
     assert data.type == QuotaType.BLOCK_STORAGE
     assert not data.per_user
     assert data.gigabytes == block_storage_quotas.get("gigabytes")
     assert data.per_volume_gigabytes == block_storage_quotas.get("per_volume_gigabytes")
     assert data.volumes == block_storage_quotas.get("volumes")
+    assert data.project == project_id
 
 
 @patch("src.providers.openstack.Connection.compute")
-def test_retrieve_compute_quotas(mock_compute, compute_quotas: Dict[str, int]) -> None:
+@patch("src.providers.openstack.Connection")
+def test_retrieve_compute_quotas(
+    mock_conn, mock_compute, compute_quotas: Dict[str, int]
+) -> None:
     mock_compute.get_quota_set.return_value = ComputeQuotaSet(**compute_quotas)
-    conn = FakeConn(current_project_id=uuid4().hex, compute=mock_compute)
-    data = get_compute_quotas(conn)
+    mock_conn.compute = mock_compute
+    project_id = uuid4().hex
+    type(mock_conn).current_project_id = PropertyMock(return_value=project_id)
+    data = get_compute_quotas(mock_conn)
     assert data.type == QuotaType.COMPUTE
     assert not data.per_user
     assert data.cores == compute_quotas.get("cores")
     assert data.instances == compute_quotas.get("instances")
     assert data.ram == compute_quotas.get("ram")
+    assert data.project == project_id
 
 
 @patch("src.providers.openstack.Connection.network")
-def test_retrieve_network_quotas(mock_network, network_quotas: Dict[str, int]) -> None:
+@patch("src.providers.openstack.Connection")
+def test_retrieve_network_quotas(
+    mock_conn, mock_network, network_quotas: Dict[str, int]
+) -> None:
     mock_network.get_quota.return_value = NetworkQuota(**network_quotas)
-    conn = FakeConn(current_project_id=uuid4().hex, network=mock_network)
-    data = get_network_quotas(conn)
+    mock_conn.network = mock_network
+    project_id = uuid4().hex
+    type(mock_conn).current_project_id = PropertyMock(return_value=project_id)
+    data = get_network_quotas(mock_conn)
     assert data.type == QuotaType.NETWORK
     assert not data.per_user
     assert data.ports == network_quotas.get("ports")
@@ -233,3 +128,4 @@ def test_retrieve_network_quotas(mock_network, network_quotas: Dict[str, int]) -
     assert data.public_ips == network_quotas.get("floating_ips")
     assert data.security_groups == network_quotas.get("security_groups")
     assert data.security_group_rules == network_quotas.get("security_group_rules")
+    assert data.project == project_id
