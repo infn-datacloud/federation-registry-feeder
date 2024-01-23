@@ -2,9 +2,10 @@ import ipaddress
 import string
 import time
 from datetime import date
-from random import choice, choices, randint
+from random import choice, choices, randint, random
 from typing import List, Optional, Tuple, Union
 
+from app.image.enum import ImageOS
 from app.provider.enum import ProviderType
 from pycountry import countries
 from pydantic import AnyHttpUrl
@@ -19,6 +20,36 @@ def random_date() -> date:
     """Return a random date."""
     d = randint(1, int(time.time()))
     return date.fromtimestamp(d)
+
+
+def random_float(start: int, end: int) -> float:
+    """Return a random float between start and end (included)."""
+    return randint(start, end - 1) + random()
+
+
+def random_image_os_type() -> str:
+    """Return one of the possible image OS values."""
+    return choice([i.value for i in ImageOS])
+
+
+def random_image_status(*, exclude: Optional[List[str]] = None) -> str:
+    """Return one of the possible image status types."""
+    if exclude is None:
+        exclude = []
+    choices = set(
+        [
+            "queued",
+            "saving",
+            "uploading",
+            "importing",
+            "active",
+            "deactivated",
+            "killed",
+            "deleted",
+            "pending_delete",
+        ]
+    ) - set(exclude)
+    return choice(list(choices))
 
 
 def random_ip(version: str) -> Union[ipaddress.IPv4Address, ipaddress.IPv6Address]:
@@ -59,3 +90,11 @@ def random_start_end_dates() -> Tuple[date, date]:
 def random_url() -> AnyHttpUrl:
     """Return a random URL."""
     return "http://" + random_lower_string() + ".com"
+
+
+def random_image_visibility(*, exclude: Optional[List[str]] = None) -> str:
+    """Return one of the possible image visibility types."""
+    if exclude is None:
+        exclude = []
+    choices = set(["public", "private", "shared", "community"]) - set(exclude)
+    return choice(list(choices))

@@ -72,10 +72,10 @@ def get_flavors(conn: Connection) -> List[FlavorCreateExtended]:
     flavors = []
     for flavor in conn.compute.flavors(is_disabled=False):
         logger.debug(f"Flavor received data={flavor!r}")
-        projects = []
+        projects = set()
         if not flavor.is_public:
             for i in conn.compute.get_flavor_access(flavor):
-                projects.append(i.get("tenant_id"))
+                projects.add(i.get("tenant_id"))
         data = flavor.to_dict()
         data["uuid"] = data.pop("id")
         if data.get("description") is None:
@@ -90,7 +90,7 @@ def get_flavors(conn: Connection) -> List[FlavorCreateExtended]:
             )
             data["infiniband"] = extra.get("infiniband", False)
         logger.debug(f"Flavor manipulated data={data}")
-        flavors.append(FlavorCreateExtended(**data, projects=projects))
+        flavors.append(FlavorCreateExtended(**data, projects=list(projects)))
     return flavors
 
 
@@ -108,20 +108,20 @@ def get_images(
         is_public = True
         projects = []
         if image.visibility in ["private", "shared"]:
-            projects = [image.owner_id]
+            projects = set([image.owner_id])
             is_public = False
         if image.visibility == "shared":
             members = list(conn.image.members(image))
             for member in members:
                 if member.status == "accepted":
-                    projects.append(member.id)
+                    projects.add(member.id)
         data = image.to_dict()
         data["uuid"] = data.pop("id")
         if data.get("description") is None:
             data["description"] = ""
         data["is_public"] = is_public
         logger.debug(f"Image manipulated data={data}")
-        images.append(ImageCreateExtended(**data, projects=projects))
+        images.append(ImageCreateExtended(**data, projects=list(projects)))
     return images
 
 
