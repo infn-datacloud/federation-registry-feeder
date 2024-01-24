@@ -22,7 +22,7 @@ from app.provider.schemas_extended import (
     SLACreateExtended,
     UserGroupCreateExtended,
 )
-from app.quota.schemas import ComputeQuotaBase
+from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
 from app.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
@@ -262,9 +262,9 @@ def get_identity_provider_for_project(
 def get_compute_service(
     conn: Connection,
     *,
-    tags: List[str],
     per_user_limits: Optional[ComputeQuotaBase],
     project_id: str,
+    tags: List[str],
 ) -> ComputeServiceCreateExtended:
     """Create region's compute service.
 
@@ -284,6 +284,89 @@ def get_compute_service(
             )
         )
     return compute_service
+
+
+def get_block_storage_service(
+    conn: Connection,
+    *,
+    per_user_limits: Optional[BlockStorageQuotaBase],
+    project_id: str,
+) -> BlockStorageServiceCreateExtended:
+    """Retrieve project's block storage service.
+
+    Remove last part which corresponds to the project ID.
+    Retrieve current project corresponding quotas.
+    Add them to the block storage service.
+    """
+    endpoint = conn.block_storage.get_endpoint()
+    endpoint = os.path.dirname(endpoint)
+    block_storage_service = BlockStorageServiceCreateExtended(
+        endpoint=endpoint, name=BlockStorageServiceName.OPENSTACK_CINDER
+    )
+    block_storage_service.quotas = [get_block_storage_quotas(conn)]
+    if per_user_limits:
+        block_storage_service.quotas.append(
+            BlockStorageQuotaCreateExtended(
+                **per_user_limits.dict(exclude_none=True), project=project_id
+            )
+        )
+    return block_storage_service
+
+
+def get_network_service(
+    conn: Connection,
+    *,
+    per_user_limits: Optional[NetworkQuotaBase],
+    project_id: str,
+    tags: List[str],
+    default_private_net: Optional[str],
+    default_public_net: Optional[str],
+    proxy: Optional[PrivateNetProxy],
+) -> NetworkServiceCreateExtended:
+    """Retrieve region's network service."""
+    network_service = NetworkServiceCreateExtended(
+        endpoint=conn.network.get_endpoint(),
+        name=NetworkServiceName.OPENSTACK_NEUTRON,
+    )
+    network_service.networks = get_networks(
+        conn,
+        default_private_net=default_private_net,
+        default_public_net=default_public_net,
+        proxy=proxy,
+        tags=tags,
+    )
+    network_service.quotas = [get_network_quotas(conn)]
+    if per_user_limits:
+        network_service.quotas.append(
+            NetworkQuotaCreateExtended(
+                **per_user_limits.dict(exclude_none=True),
+                project=project_id,
+            )
+        )
+    return network_service
+
+
+def connect_to_provider(
+    *, provider_conf: Openstack, idp: Issuer, project_id: str, region_name: str
+) -> Connection:
+    """Connect to Openstack provider"""
+    logger.info(
+        f"Connecting through IDP {idp.endpoint} to openstack "
+        f"'{provider_conf.name}' and region '{region_name}'. "
+        f"Accessing with project ID: {project_id}"
+    )
+    conn = connect(
+        auth_url=provider_conf.auth_url,
+        auth_type="v3oidcaccesstoken",
+        identity_provider=idp.relationship.idp_name,
+        protocol=idp.relationship.protocol,
+        access_token=idp.token,
+        project_id=project_id,
+        region_name=region_name,
+        timeout=TIMEOUT,
+    )
+    logger.info("Connected.")
+    return conn
 
 
 def get_project_resources(
@@ -317,31 +400,53 @@ def get_project_resources(
         logger.error(f"Skipping project {proj_conf.id}.")
         return
 
-    logger.info(
-        f"Connecting through IDP {trusted_idp.endpoint} to openstack "
-        f"'{provider_conf.name}' and region '{region.name}'. "
-        f"Accessing with project ID: {proj_conf.id}"
-    )
-    conn = connect(
-        auth_url=provider_conf.auth_url,
-        auth_type="v3oidcaccesstoken",
-        identity_provider=trusted_idp.relationship.idp_name,
-        protocol=trusted_idp.relationship.protocol,
-        access_token=trusted_idp.token,
-        project_id=proj_conf.id,
+    conn = connect_to_provider(
+        provider_conf=provider_conf,
+        idp=trusted_idp,
+        project_id=project_conf.id,
         region_name=region.name,
-        timeout=TIMEOUT,
     )
-    logger.info("Connected.")
 
-    compute_service = get_compute_service(
+    # Create project entity
+    project = get_project(conn)
+
+    # Retrieve provider services (block_storage, compute, identity and network)
+    block_storage_service = get_block_storage_service(
         conn,
-        tags=provider_conf.image_tags,
-        per_user_limits=project_conf.per_user_limits.compute,
+        per_user_limits=project_conf.per_user_limits.block_storage,
         project_id=project_conf.id,
     )
+    compute_service = get_compute_service(
+        conn,
+        per_user_limits=project_conf.per_user_limits.compute,
+        project_id=project_conf.id,
+        tags=provider_conf.image_tags,
+    )
+    identity_service = IdentityServiceCreate(
+        endpoint=provider_conf.auth_url,
+        name=IdentityServiceName.OPENSTACK_KEYSTONE,
+    )
+    network_service = get_network_service(
+        conn,
+        per_user_limits=project_conf.per_user_limits.network,
+        project_id=project_conf.id,
+        tags=provider_conf.network_tags,
+        default_private_net=proj_conf.default_private_net,
+        default_public_net=proj_conf.default_public_net,
+        proxy=proj_conf.private_net_proxy,
+    )
+
+    conn.close()
+    logger.info("Connection closed")
 
     with region_lock:
+        for i, region_service in enumerate(region.block_storage_services):
+            if region_service.endpoint == block_storage_service.endpoint:
+                region.block_storage_services[i].quotas += block_storage_service.quotas
+                break
+        else:
+            region.block_storage_services.append(block_storage_service)
+
         for i, region_service in enumerate(region.compute_services):
             if region_service.endpoint == compute_service.endpoint:
                 uuids = [j.uuid for j in region_service.flavors]
@@ -357,60 +462,12 @@ def get_project_resources(
         else:
             region.compute_services.append(compute_service)
 
-    # Retrieve project's block storage service.
-    # Remove last part which corresponds to the project ID.
-    # Retrieve current project corresponding quotas.
-    # Add them to the block storage service.
-    endpoint = conn.block_storage.get_endpoint()
-    endpoint = os.path.dirname(endpoint)
-    block_storage_service = BlockStorageServiceCreateExtended(
-        endpoint=endpoint, name=BlockStorageServiceName.OPENSTACK_CINDER
-    )
-    block_storage_service.quotas = [get_block_storage_quotas(conn)]
-    if (
-        proj_conf.per_user_limits is not None
-        and proj_conf.per_user_limits.block_storage is not None
-    ):
-        block_storage_service.quotas.append(
-            BlockStorageQuotaCreateExtended(
-                **proj_conf.per_user_limits.block_storage.dict(exclude_none=True),
-                project=proj_conf.id,
-            )
-        )
-
-    with region_lock:
-        for i, region_service in enumerate(region.block_storage_services):
-            if region_service.endpoint == block_storage_service.endpoint:
-                region.block_storage_services[i].quotas += block_storage_service.quotas
+        for region_service in region.identity_services:
+            if region_service.endpoint == identity_service.endpoint:
                 break
         else:
-            region.block_storage_services.append(block_storage_service)
+            region.identity_services.append(identity_service)
 
-    # Retrieve region's network service.
-    network_service = NetworkServiceCreateExtended(
-        endpoint=conn.network.get_endpoint(),
-        name=NetworkServiceName.OPENSTACK_NEUTRON,
-    )
-    network_service.networks = get_networks(
-        conn,
-        default_private_net=proj_conf.default_private_net,
-        default_public_net=proj_conf.default_public_net,
-        proxy=proj_conf.private_net_proxy,
-        tags=provider_conf.network_tags,
-    )
-    network_service.quotas = [get_network_quotas(conn)]
-    if (
-        proj_conf.per_user_limits is not None
-        and proj_conf.per_user_limits.network is not None
-    ):
-        network_service.quotas.append(
-            NetworkQuotaCreateExtended(
-                **proj_conf.per_user_limits.compute.dict(exclude_none=True),
-                project=proj_conf.id,
-            )
-        )
-
-    with region_lock:
         for i, region_service in enumerate(region.network_services):
             if region_service.endpoint == network_service.endpoint:
                 uuids = [j.uuid for j in region_service.networks]
@@ -421,26 +478,9 @@ def get_project_resources(
         else:
             region.network_services.append(network_service)
 
-    # Retrieve provider's identity service.
-    identity_service = IdentityServiceCreate(
-        endpoint=provider_conf.auth_url,
-        name=IdentityServiceName.OPENSTACK_KEYSTONE,
-    )
-    with region_lock:
-        for region_service in region.identity_services:
-            if region_service.endpoint == identity_service.endpoint:
-                break
-        else:
-            region.identity_services.append(identity_service)
-
-    # Create project entity
-    project = get_project(conn)
     with projects_lock:
         if project.uuid not in [i.uuid for i in projects]:
             projects.append(project)
-
-    conn.close()
-    logger.info("Connection closed")
 
 
 def get_provider(
