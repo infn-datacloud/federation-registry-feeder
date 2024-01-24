@@ -62,7 +62,7 @@ def test_project_schema(
     assert item.default_public_net == d.get("default_public_net")
     assert item.default_private_net == d.get("default_private_net")
     assert item.private_net_proxy == d.get("private_net_proxy")
-    assert item.per_user_limits == d.get("per_user_limits")
+    assert item.per_user_limits == d.get("per_user_limits", Limits())
     per_region_props = d.get("per_region_props", [])
     assert len(item.per_region_props) == len(per_region_props)
     assert item.per_region_props == per_region_props

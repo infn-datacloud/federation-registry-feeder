@@ -30,14 +30,15 @@ def test_net_proxy_schema(
         "default_public_net": random_lower_string(),
         "default_private_net": random_lower_string(),
         "private_net_proxy": net_proxy if attr == "private_net_proxy" else None,
-        "per_user_limits": limits if attr == "per_user_limits" else None,
     }
+    if attr == "per_user_limits":
+        d["per_user_limits"] = limits
     item = PerRegionProps(**d)
     assert item.region_name == d.get("region_name")
     assert item.default_public_net == d.get("default_public_net")
     assert item.default_private_net == d.get("default_private_net")
     assert item.private_net_proxy == d.get("private_net_proxy")
-    assert item.per_user_limits == d.get("per_user_limits")
+    assert item.per_user_limits == d.get("per_user_limits", Limits())
 
 
 def test_per_region_props_invalid_schema() -> None:

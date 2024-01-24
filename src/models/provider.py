@@ -49,8 +49,8 @@ class PerRegionProps(BaseNode):
     private_net_proxy: Optional[PrivateNetProxy] = Field(
         default=None, description="Proxy details to use to access to private network"
     )
-    per_user_limits: Optional[Limits] = Field(
-        default=None,
+    per_user_limits: Limits = Field(
+        default_factory=Limits,
         description="Quota limitations to apply to users owning this project",
     )
 
@@ -78,8 +78,8 @@ class Project(BaseNode):
     private_net_proxy: Optional[PrivateNetProxy] = Field(
         default=None, description="Proxy details to use to access to private network"
     )
-    per_user_limits: Optional[Limits] = Field(
-        default=None,
+    per_user_limits: Limits = Field(
+        default_factory=Limits,
         description="Quota limitations to apply to users owning this project",
     )
     per_region_props: List[PerRegionProps] = Field(
