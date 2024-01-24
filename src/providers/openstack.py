@@ -29,7 +29,10 @@ from app.service.enum import (
     NetworkServiceName,
 )
 from openstack import connect
+from openstack.compute.v2.flavor import Flavor
 from openstack.connection import Connection
+from openstack.image.v2.image import Image
+from openstack.network.v2.network import Network
 
 from src.logger import logger
 from src.models.config import Openstack
@@ -67,15 +70,22 @@ def get_network_quotas(conn: Connection) -> NetworkQuotaCreateExtended:
     return NetworkQuotaCreateExtended(**data, project=conn.current_project_id)
 
 
+def get_flavor_projects(conn: Connection, flavor: Flavor) -> List[str]:
+    """Retrieve project ids having access to target flavor."""
+    projects = set()
+    for i in conn.compute.get_flavor_access(flavor):
+        projects.add(i.get("tenant_id"))
+    return list(projects)
+
+
 def get_flavors(conn: Connection) -> List[FlavorCreateExtended]:
     logger.info("Retrieve current project accessible flavors")
     flavors = []
     for flavor in conn.compute.flavors(is_disabled=False):
         logger.debug(f"Flavor received data={flavor!r}")
-        projects = set()
+        projects = []
         if not flavor.is_public:
-            for i in conn.compute.get_flavor_access(flavor):
-                projects.add(i.get("tenant_id"))
+            projects = get_flavor_projects(conn, flavor)
         data = flavor.to_dict()
         data["uuid"] = data.pop("id")
         if data.get("description") is None:
@@ -94,6 +104,18 @@ def get_flavors(conn: Connection) -> List[FlavorCreateExtended]:
     return flavors
 
 
+def get_image_projects(
+    conn: Connection, image: Image, projects: List[str]
+) -> List[str]:
+    """Retrieve project ids having access to target image."""
+    projects = set(projects)
+    members = list(conn.image.members(image))
+    for member in members:
+        if member.status == "accepted":
+            projects.add(member.id)
+    return list(projects)
+
+
 def get_images(
     conn: Connection, tags: Optional[List[str]] = None
 ) -> List[ImageCreateExtended]:
@@ -108,13 +130,10 @@ def get_images(
         is_public = True
         projects = []
         if image.visibility in ["private", "shared"]:
-            projects = set([image.owner_id])
+            projects = [image.owner_id]
             is_public = False
         if image.visibility == "shared":
-            members = list(conn.image.members(image))
-            for member in members:
-                if member.status == "accepted":
-                    projects.add(member.id)
+            projects = get_image_projects(conn, image, projects)
         data = image.to_dict()
         data["uuid"] = data.pop("id")
         if data.get("description") is None:
@@ -123,6 +142,19 @@ def get_images(
         logger.debug(f"Image manipulated data={data}")
         images.append(ImageCreateExtended(**data, projects=list(projects)))
     return images
+
+
+def is_default_network(
+    network: Network,
+    default_private_net: Optional[str] = None,
+    default_public_net: Optional[str] = None,
+) -> bool:
+    """Detect if this network is the default one."""
+    if (network.is_shared and default_public_net == network.name) or (
+        not network.is_shared and default_private_net == network.name
+    ):
+        return True
+    return False
 
 
 def get_networks(
@@ -148,12 +180,9 @@ def get_networks(
         if data.get("description") is None:
             data["description"] = ""
         if data.get("is_default") is None:
-            if (network.is_shared and default_public_net == network.name) or (
-                not network.is_shared and default_private_net == network.name
-            ):
-                data["is_default"] = True
-            else:
-                data["is_default"] = False
+            data["is_default"] = is_default_network(
+                network, default_private_net, default_public_net
+            )
         if proxy is not None:
             data["proxy_ip"] = proxy.ip
             data["proxy_user"] = proxy.user
