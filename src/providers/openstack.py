@@ -37,7 +37,7 @@ from openstack.network.v2.network import Network
 from src.logger import logger
 from src.models.config import Openstack
 from src.models.identity_provider import Issuer
-from src.models.provider import PrivateNetProxy, Project, TrustedIDP
+from src.models.provider import PerRegionProps, PrivateNetProxy, Project, TrustedIDP
 
 TIMEOUT = 2  # s
 
@@ -246,17 +246,32 @@ def get_identity_provider_for_project(
     )
 
 
-def get_per_project_details(
-    os_conf: Openstack,
+def get_project_conf_params(
+    *, project_conf: Project, region_props: PerRegionProps
+) -> Project:
+    """Get project parameters defined in the yaml file.
+
+    If the `per_region` attribute has been defined, override values if the region name
+    matches the current region.
+    """
+    new_conf = Project(**project_conf.dict(exclude={"per_region_props"}))
+    if region_props:
+        new_conf.default_private_net = region_props.default_private_net
+        new_conf.default_public_net = region_props.default_public_net
+        new_conf.private_net_proxy = region_props.private_net_proxy
+        new_conf.per_user_limits = region_props.per_user_limits
+    return new_conf
+
+
+def get_project_resources(
+    *,
+    provider_conf: Openstack,
     project_conf: Project,
     region: RegionCreateExtended,
     trusted_idps: List[Issuer],
     projects: List[ProjectCreate],
 ) -> None:
-    default_private_net = project_conf.default_private_net
-    default_public_net = project_conf.default_public_net
-    proxy = project_conf.private_net_proxy
-    per_user_limits = project_conf.per_user_limits
+    # Find region props matching current region.
     region_props = next(
         filter(
             lambda x: x.region_name == region.name,
@@ -264,34 +279,31 @@ def get_per_project_details(
         ),
         None,
     )
-
-    if region_props is not None:
-        default_private_net = region_props.default_private_net
-        default_public_net = region_props.default_public_net
-        proxy = region_props.private_net_proxy
-        per_user_limits = region_props.per_user_limits
+    proj_conf = get_project_conf_params(
+        project_conf=project_conf, region_props=region_props
+    )
 
     trusted_idp = get_identity_provider_for_project(
-        provider_trusted_idps=os_conf.identity_providers,
+        provider_trusted_idps=provider_conf.identity_providers,
         issuers=trusted_idps,
-        project=project_conf,
+        project=proj_conf,
     )
     if trusted_idp is None:
-        logger.error(f"Skipping project {project_conf.id}.")
+        logger.error(f"Skipping project {proj_conf.id}.")
         return
 
     logger.info(
         f"Connecting through IDP {trusted_idp.endpoint} to openstack "
-        f"'{os_conf.name}' and region '{region.name}'. "
-        f"Accessing with project ID: {project_conf.id}"
+        f"'{provider_conf.name}' and region '{region.name}'. "
+        f"Accessing with project ID: {proj_conf.id}"
     )
     conn = connect(
-        auth_url=os_conf.auth_url,
+        auth_url=provider_conf.auth_url,
         auth_type="v3oidcaccesstoken",
         identity_provider=trusted_idp.relationship.idp_name,
         protocol=trusted_idp.relationship.protocol,
         access_token=trusted_idp.token,
-        project_id=project_conf.id,
+        project_id=proj_conf.id,
         region_name=region.name,
         timeout=TIMEOUT,
     )
@@ -304,13 +316,16 @@ def get_per_project_details(
         endpoint=conn.compute.get_endpoint(), name=ComputeServiceName.OPENSTACK_NOVA
     )
     compute_service.flavors = get_flavors(conn)
-    compute_service.images = get_images(conn, tags=os_conf.image_tags)
+    compute_service.images = get_images(conn, tags=provider_conf.image_tags)
     compute_service.quotas = [get_compute_quotas(conn)]
-    if per_user_limits is not None and per_user_limits.compute is not None:
+    if (
+        proj_conf.per_user_limits is not None
+        and proj_conf.per_user_limits.compute is not None
+    ):
         compute_service.quotas.append(
             ComputeQuotaCreateExtended(
-                **per_user_limits.compute.dict(exclude_none=True),
-                project=project_conf.id,
+                **proj_conf.per_user_limits.compute.dict(exclude_none=True),
+                project=proj_conf.id,
             )
         )
 
@@ -340,11 +355,14 @@ def get_per_project_details(
         endpoint=endpoint, name=BlockStorageServiceName.OPENSTACK_CINDER
     )
     block_storage_service.quotas = [get_block_storage_quotas(conn)]
-    if per_user_limits is not None and per_user_limits.block_storage is not None:
+    if (
+        proj_conf.per_user_limits is not None
+        and proj_conf.per_user_limits.block_storage is not None
+    ):
         block_storage_service.quotas.append(
             BlockStorageQuotaCreateExtended(
-                **per_user_limits.block_storage.dict(exclude_none=True),
-                project=project_conf.id,
+                **proj_conf.per_user_limits.block_storage.dict(exclude_none=True),
+                project=proj_conf.id,
             )
         )
 
@@ -363,17 +381,20 @@ def get_per_project_details(
     )
     network_service.networks = get_networks(
         conn,
-        default_private_net=default_private_net,
-        default_public_net=default_public_net,
-        proxy=proxy,
-        tags=os_conf.network_tags,
+        default_private_net=proj_conf.default_private_net,
+        default_public_net=proj_conf.default_public_net,
+        proxy=proj_conf.private_net_proxy,
+        tags=provider_conf.network_tags,
     )
     network_service.quotas = [get_network_quotas(conn)]
-    if per_user_limits is not None and per_user_limits.network is not None:
+    if (
+        proj_conf.per_user_limits is not None
+        and proj_conf.per_user_limits.network is not None
+    ):
         network_service.quotas.append(
             NetworkQuotaCreateExtended(
-                **per_user_limits.compute.dict(exclude_none=True),
-                project=project_conf.id,
+                **proj_conf.per_user_limits.compute.dict(exclude_none=True),
+                project=proj_conf.id,
             )
         )
 
@@ -390,7 +411,7 @@ def get_per_project_details(
 
     # Retrieve provider's identity service.
     identity_service = IdentityServiceCreate(
-        endpoint=os_conf.auth_url,
+        endpoint=provider_conf.auth_url,
         name=IdentityServiceName.OPENSTACK_KEYSTONE,
     )
     with region_lock:
@@ -435,8 +456,8 @@ def get_provider(
         thread_pool = ThreadPoolExecutor(max_workers=len(os_conf.projects))
         for project_conf in os_conf.projects:
             thread_pool.submit(
-                get_per_project_details,
-                os_conf=os_conf,
+                get_project_resources,
+                provider_conf=os_conf,
                 project_conf=project_conf,
                 region=region,
                 trusted_idps=trust_idps,
