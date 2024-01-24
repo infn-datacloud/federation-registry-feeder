@@ -139,7 +139,7 @@ def test_retrieve_networks_with_proxy(
     networks = [network_base]
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
-    proxy = PrivateNetProxy(ip=random_ip("v4"), user=random_lower_string())
+    proxy = PrivateNetProxy(ip=random_ip(), user=random_lower_string())
     data = get_networks(mock_conn, proxy=proxy)
 
     assert len(data) == len(networks)

@@ -32,7 +32,9 @@ def random_image_os_type() -> str:
     return choice([i.value for i in ImageOS])
 
 
-def random_ip(version: str) -> Union[ipaddress.IPv4Address, ipaddress.IPv6Address]:
+def random_ip(
+    version: str = "v4",
+) -> Union[ipaddress.IPv4Address, ipaddress.IPv6Address]:
     if version == "v4":
         return ipaddress.IPv4Address(randint(0, 2**32 - 1))
     elif version == "v6":

@@ -14,7 +14,7 @@ def limits() -> Limits:
 
 @pytest.fixture
 def net_proxy() -> PrivateNetProxy:
-    return PrivateNetProxy(ip=random_ip("v4"), user=random_lower_string())
+    return PrivateNetProxy(ip=random_ip(), user=random_lower_string())
 
 
 @pytest.fixture

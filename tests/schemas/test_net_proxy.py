@@ -30,7 +30,7 @@ def test_net_proxy_schema(ipv: str) -> None:
 def test_net_proxy_invalid_schema(missing_arg: str) -> None:
     """Create a PrivateNetProxy."""
     d = {
-        "ip": None if missing_arg == "ip" else random_ip(version="v4"),
+        "ip": None if missing_arg == "ip" else random_ip(),
         "user": None if missing_arg == "user" else random_lower_string(),
     }
     with pytest.raises(ValueError):
