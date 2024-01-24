@@ -150,11 +150,11 @@ def is_default_network(
     default_public_net: Optional[str] = None,
 ) -> bool:
     """Detect if this network is the default one."""
-    if (network.is_shared and default_public_net == network.name) or (
-        not network.is_shared and default_private_net == network.name
-    ):
-        return True
-    return False
+    return (
+        (network.is_shared and default_public_net == network.name)
+        or (not network.is_shared and default_private_net == network.name)
+        or network.is_default
+    )
 
 
 def get_networks(
@@ -174,17 +174,16 @@ def get_networks(
         logger.debug(f"Network received data={network!r}")
         project = None
         if not network.is_shared:
-            project = conn.current_project_id
+            project = network.project_id
         data = network.to_dict()
         data["uuid"] = data.pop("id")
         if data.get("description") is None:
             data["description"] = ""
-        if data.get("is_default") is None:
-            data["is_default"] = is_default_network(
-                network, default_private_net, default_public_net
-            )
-        if proxy is not None:
-            data["proxy_ip"] = proxy.ip
+        data["is_default"] = is_default_network(
+            network, default_private_net, default_public_net
+        )
+        if proxy:
+            data["proxy_ip"] = str(proxy.ip)
             data["proxy_user"] = proxy.user
         logger.debug(f"Network manipulated data={data}")
         networks.append(NetworkCreateExtended(**data, project=project))
