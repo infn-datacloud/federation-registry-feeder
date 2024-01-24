@@ -22,6 +22,7 @@ from app.provider.schemas_extended import (
     SLACreateExtended,
     UserGroupCreateExtended,
 )
+from app.quota.schemas import ComputeQuotaBase
 from app.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
@@ -206,46 +207,6 @@ def get_project(conn: Connection) -> ProjectCreate:
     return ProjectCreate(**data)
 
 
-def update_issuer_auth_method(*, issuer: Issuer, auth_methods: List[TrustedIDP]):
-    for auth_method in auth_methods:
-        if auth_method.endpoint == issuer.endpoint:
-            issuer.relationship = auth_method
-            return issuer
-    logger.error(
-        f"No identity provider matching endpoint {issuer.endpoint} in provider "
-        f"trusted identity providers {[i.endpoint for i in auth_methods]}"
-    )
-    raise ValueError(
-        f"No identity provider matching endpoint `{issuer.endpoint}` in provider "
-        f"trusted identity providers {[i.endpoint for i in auth_methods]}"
-    )
-
-
-def get_identity_provider_for_project(
-    *, issuers: List[Issuer], provider_trusted_idps: List[TrustedIDP], project: Project
-) -> Issuer:
-    """Find the identity provider with an SLA matching the one of target project.
-
-    For each sla of each user group of each issuer listed in the yaml file, find the one
-    matching the SLA of the target project. Add project id to SLA's project list if not
-    present.
-    """
-    for issuer in issuers:
-        for user_group in issuer.user_groups:
-            for sla in user_group.slas:
-                if sla.doc_uuid == project.sla:
-                    # Found matching SLA.
-                    if project.id not in sla.projects:
-                        sla.projects.append(project.id)
-                    return update_issuer_auth_method(
-                        issuer=issuer, auth_methods=provider_trusted_idps
-                    )
-    logger.error(f"No SLA matching doc_uuid `{project.sla}` in project configuration")
-    raise ValueError(
-        f"No SLA matching doc_uuid `{project.sla}` in project configuration"
-    )
-
-
 def get_project_conf_params(
     *, project_conf: Project, region_props: PerRegionProps
 ) -> Project:
@@ -263,12 +224,74 @@ def get_project_conf_params(
     return new_conf
 
 
+def update_issuer_auth_method(*, issuer: Issuer, auth_methods: List[TrustedIDP]):
+    for auth_method in auth_methods:
+        if auth_method.endpoint == issuer.endpoint:
+            issuer.relationship = auth_method
+            return issuer
+    raise ValueError(
+        f"No identity provider matching endpoint `{issuer.endpoint}` in provider "
+        f"trusted identity providers {[i.endpoint for i in auth_methods]}"
+    )
+
+
+def get_identity_provider_for_project(
+    *, issuers: List[Issuer], trusted_idps: List[TrustedIDP], project: Project
+) -> Issuer:
+    """Find the identity provider with an SLA matching the one of target project.
+
+    For each sla of each user group of each issuer listed in the yaml file, find the one
+    matching the SLA of the target project. Add project id to SLA's project list if not
+    present.
+    """
+    for issuer in issuers:
+        for user_group in issuer.user_groups:
+            for sla in user_group.slas:
+                if sla.doc_uuid == project.sla:
+                    # Found matching SLA.
+                    if project.id not in sla.projects:
+                        sla.projects.append(project.id)
+                    return update_issuer_auth_method(
+                        issuer=issuer, auth_methods=trusted_idps
+                    )
+    raise ValueError(
+        f"No SLA matching doc_uuid `{project.sla}` in project configuration"
+    )
+
+
+def get_compute_service(
+    conn: Connection,
+    *,
+    tags: List[str],
+    per_user_limits: Optional[ComputeQuotaBase],
+    project_id: str,
+) -> ComputeServiceCreateExtended:
+    """Create region's compute service.
+
+    Retrieve flavors, images and current project corresponding quotas.
+    Add them to the compute service.
+    """
+    compute_service = ComputeServiceCreateExtended(
+        endpoint=conn.compute.get_endpoint(), name=ComputeServiceName.OPENSTACK_NOVA
+    )
+    compute_service.flavors = get_flavors(conn)
+    compute_service.images = get_images(conn, tags=tags)
+    compute_service.quotas = [get_compute_quotas(conn)]
+    if per_user_limits:
+        compute_service.quotas.append(
+            ComputeQuotaCreateExtended(
+                **per_user_limits.dict(exclude_none=True), project=project_id
+            )
+        )
+    return compute_service
+
+
 def get_project_resources(
     *,
     provider_conf: Openstack,
     project_conf: Project,
     region: RegionCreateExtended,
-    trusted_idps: List[Issuer],
+    issuers: List[Issuer],
     projects: List[ProjectCreate],
 ) -> None:
     # Find region props matching current region.
@@ -283,12 +306,14 @@ def get_project_resources(
         project_conf=project_conf, region_props=region_props
     )
 
-    trusted_idp = get_identity_provider_for_project(
-        provider_trusted_idps=provider_conf.identity_providers,
-        issuers=trusted_idps,
-        project=proj_conf,
-    )
-    if trusted_idp is None:
+    try:
+        trusted_idp = get_identity_provider_for_project(
+            issuers=issuers,
+            trusted_idps=provider_conf.identity_providers,
+            project=proj_conf,
+        )
+    except ValueError as e:
+        logger.error(e)
         logger.error(f"Skipping project {proj_conf.id}.")
         return
 
@@ -309,25 +334,12 @@ def get_project_resources(
     )
     logger.info("Connected.")
 
-    # Create region's compute service.
-    # Retrieve flavors, images and current project corresponding quotas.
-    # Add them to the compute service.
-    compute_service = ComputeServiceCreateExtended(
-        endpoint=conn.compute.get_endpoint(), name=ComputeServiceName.OPENSTACK_NOVA
+    compute_service = get_compute_service(
+        conn,
+        tags=provider_conf.image_tags,
+        per_user_limits=project_conf.per_user_limits.compute,
+        project_id=project_conf.id,
     )
-    compute_service.flavors = get_flavors(conn)
-    compute_service.images = get_images(conn, tags=provider_conf.image_tags)
-    compute_service.quotas = [get_compute_quotas(conn)]
-    if (
-        proj_conf.per_user_limits is not None
-        and proj_conf.per_user_limits.compute is not None
-    ):
-        compute_service.quotas.append(
-            ComputeQuotaCreateExtended(
-                **proj_conf.per_user_limits.compute.dict(exclude_none=True),
-                project=proj_conf.id,
-            )
-        )
 
     with region_lock:
         for i, region_service in enumerate(region.compute_services):
@@ -460,7 +472,7 @@ def get_provider(
                 provider_conf=os_conf,
                 project_conf=project_conf,
                 region=region,
-                trusted_idps=trust_idps,
+                issuers=trust_idps,
                 projects=projects,
             )
         thread_pool.shutdown(wait=True)
