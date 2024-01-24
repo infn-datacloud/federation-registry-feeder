@@ -32,34 +32,6 @@ def random_image_os_type() -> str:
     return choice([i.value for i in ImageOS])
 
 
-def random_image_status(*, exclude: Optional[List[str]] = None) -> str:
-    """Return one of the possible image status types."""
-    if exclude is None:
-        exclude = []
-    choices = set(
-        [
-            "queued",
-            "saving",
-            "uploading",
-            "importing",
-            "active",
-            "deactivated",
-            "killed",
-            "deleted",
-            "pending_delete",
-        ]
-    ) - set(exclude)
-    return choice(list(choices))
-
-
-def random_image_visibility(*, exclude: Optional[List[str]] = None) -> str:
-    """Return one of the possible image visibility types."""
-    if exclude is None:
-        exclude = []
-    choices = set(["public", "private", "shared", "community"]) - set(exclude)
-    return choice(list(choices))
-
-
 def random_ip(version: str) -> Union[ipaddress.IPv4Address, ipaddress.IPv6Address]:
     if version == "v4":
         return ipaddress.IPv4Address(randint(0, 2**32 - 1))
@@ -70,14 +42,6 @@ def random_ip(version: str) -> Union[ipaddress.IPv4Address, ipaddress.IPv6Addres
 def random_lower_string() -> str:
     """Return a generic random string."""
     return "".join(choices(string.ascii_lowercase, k=32))
-
-
-def random_network_status(*, exclude: Optional[List[str]] = None) -> str:
-    """Return one of the possible network status types."""
-    if exclude is None:
-        exclude = []
-    choices = set(["active", "build", "down", "error"]) - set(exclude)
-    return choice(list(choices))
 
 
 def random_provider_type(*, exclude: Optional[List[str]] = None) -> str:
