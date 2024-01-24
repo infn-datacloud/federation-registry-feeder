@@ -65,7 +65,7 @@ def test_retrieve_idp_for_target_project(issuer: Issuer) -> None:
         protocol=random_lower_string(),
     )
     item = get_identity_provider_for_project(
-        issuers=[issuer], provider_trusted_idps=[idp], project=project
+        issuers=[issuer], trusted_idps=[idp], project=project
     )
     assert item.endpoint == issuer.endpoint
     assert item.group_claim == issuer.group_claim
@@ -86,7 +86,7 @@ def test_project_already_in_sla(issuer: Issuer) -> None:
     )
     issuer.user_groups[0].slas[0].projects.append(project.id)
     item = get_identity_provider_for_project(
-        issuers=[issuer], provider_trusted_idps=[idp], project=project
+        issuers=[issuer], trusted_idps=[idp], project=project
     )
     assert item.endpoint == issuer.endpoint
     assert item.group_claim == issuer.group_claim
@@ -107,5 +107,5 @@ def test_not_matching_sla(issuer: Issuer) -> None:
     )
     with pytest.raises(ValueError):
         get_identity_provider_for_project(
-            issuers=[issuer], provider_trusted_idps=[idp], project=project
+            issuers=[issuer], trusted_idps=[idp], project=project
         )

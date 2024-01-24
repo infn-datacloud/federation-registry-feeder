@@ -127,7 +127,7 @@ def test_retrieve_networks_with_tags(
     )
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
-    data = get_networks(mock_conn, target_tags)
+    data = get_networks(mock_conn, tags=target_tags)
     assert len(data) == len(networks)
 
 

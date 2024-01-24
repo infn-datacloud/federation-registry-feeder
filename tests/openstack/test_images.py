@@ -132,7 +132,7 @@ def test_retrieve_images_with_tags(
     )
     mock_image.images.return_value = images
     mock_conn.image = mock_image
-    data = get_images(mock_conn, target_tags)
+    data = get_images(mock_conn, tags=target_tags)
     assert len(data) == len(images)
 
 

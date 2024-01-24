@@ -85,7 +85,7 @@ def test_retrieve_block_storage_quotas(
     project_id = uuid4().hex
     type(mock_conn).current_project_id = PropertyMock(return_value=project_id)
     data = get_block_storage_quotas(mock_conn)
-    assert data.type == QuotaType.BLOCK_STORAGE
+    assert data.type == QuotaType.BLOCK_STORAGE.value
     assert not data.per_user
     assert data.gigabytes == block_storage_quotas.get("gigabytes")
     assert data.per_volume_gigabytes == block_storage_quotas.get("per_volume_gigabytes")
@@ -103,7 +103,7 @@ def test_retrieve_compute_quotas(
     project_id = uuid4().hex
     type(mock_conn).current_project_id = PropertyMock(return_value=project_id)
     data = get_compute_quotas(mock_conn)
-    assert data.type == QuotaType.COMPUTE
+    assert data.type == QuotaType.COMPUTE.value
     assert not data.per_user
     assert data.cores == compute_quotas.get("cores")
     assert data.instances == compute_quotas.get("instances")
@@ -121,7 +121,7 @@ def test_retrieve_network_quotas(
     project_id = uuid4().hex
     type(mock_conn).current_project_id = PropertyMock(return_value=project_id)
     data = get_network_quotas(mock_conn)
-    assert data.type == QuotaType.NETWORK
+    assert data.type == QuotaType.NETWORK.value
     assert not data.per_user
     assert data.ports == network_quotas.get("ports")
     assert data.networks == network_quotas.get("networks")
