@@ -36,10 +36,15 @@ class UserGroup(UserGroupBase):
 class Issuer(IdentityProviderBase):
     endpoint: AnyHttpUrl = Field(description="issuer url", alias="issuer")
     token: Optional[str] = Field(description="Access token")
-    user_groups: List[UserGroup] = Field(
-        default_factory=list, description="User groups"
-    )
+    user_groups: List[UserGroup] = Field(description="User groups")
     relationship: Optional[AuthMethodBase] = Field(default=None, description="")
+
+    @validator("user_groups")
+    @classmethod
+    def not_empty_list(cls, v: Optional[List[UserGroup]]) -> List[UserGroup]:
+        if not v or len(v) == 0:
+            raise ValueError("At least one user group must be specified.")
+        return v
 
     @validator("token", pre=True, always=True)
     @classmethod
