@@ -202,29 +202,44 @@ def get_project(conn: Connection) -> ProjectCreate:
     return ProjectCreate(**data)
 
 
-def get_correct_idp_and_user_group_for_project(
-    *,
-    trusted_idps: List[Issuer],
-    os_conf_auth_methods: List[TrustedIDP],
-    project_conf: Project,
-) -> Issuer:
-    for trusted_idp in trusted_idps:
-        for user_group in trusted_idp.user_groups:
-            for sla in user_group.slas:
-                if sla.doc_uuid == project_conf.sla:
-                    if project_conf.id not in sla.projects:
-                        sla.projects.append(project_conf.id)
-                        for auth_method in os_conf_auth_methods:
-                            if auth_method.endpoint == trusted_idp.endpoint:
-                                trusted_idp.relationship = auth_method
-                                return trusted_idp
-                    return trusted_idp
-
+def update_issuer_auth_method(*, issuer: Issuer, auth_methods: List[TrustedIDP]):
+    for auth_method in auth_methods:
+        if auth_method.endpoint == issuer.endpoint:
+            issuer.relationship = auth_method
+            return issuer
     logger.error(
-        "Configuration error: No matching Identity Provider "
-        f"for project {project_conf.id}"
+        f"No identity provider matching endpoint {issuer.endpoint} in provider "
+        f"trusted identity providers {[i.endpoint for i in auth_methods]}"
     )
-    raise
+    raise ValueError(
+        f"No identity provider matching endpoint `{issuer.endpoint}` in provider "
+        f"trusted identity providers {[i.endpoint for i in auth_methods]}"
+    )
+
+
+def get_identity_provider_for_project(
+    *, issuers: List[Issuer], provider_trusted_idps: List[TrustedIDP], project: Project
+) -> Issuer:
+    """Find the identity provider with an SLA matching the one of target project.
+
+    For each sla of each user group of each issuer listed in the yaml file, find the one
+    matching the SLA of the target project. Add project id to SLA's project list if not
+    present.
+    """
+    for issuer in issuers:
+        for user_group in issuer.user_groups:
+            for sla in user_group.slas:
+                if sla.doc_uuid == project.sla:
+                    # Found matching SLA.
+                    if project.id not in sla.projects:
+                        sla.projects.append(project.id)
+                    return update_issuer_auth_method(
+                        issuer=issuer, auth_methods=provider_trusted_idps
+                    )
+    logger.error(f"No SLA matching doc_uuid `{project.sla}` in project configuration")
+    raise ValueError(
+        f"No SLA matching doc_uuid `{project.sla}` in project configuration"
+    )
 
 
 def get_per_project_details(
@@ -252,10 +267,10 @@ def get_per_project_details(
         proxy = region_props.private_net_proxy
         per_user_limits = region_props.per_user_limits
 
-    trusted_idp = get_correct_idp_and_user_group_for_project(
-        os_conf_auth_methods=os_conf.identity_providers,
-        trusted_idps=trusted_idps,
-        project_conf=project_conf,
+    trusted_idp = get_identity_provider_for_project(
+        provider_trusted_idps=os_conf.identity_providers,
+        issuers=trusted_idps,
+        project=project_conf,
     )
     if trusted_idp is None:
         logger.error(f"Skipping project {project_conf.id}.")
