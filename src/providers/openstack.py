@@ -105,7 +105,7 @@ def get_flavors(conn: Connection) -> List[FlavorCreateExtended]:
 
 
 def get_image_projects(
-    conn: Connection, image: Image, projects: List[str]
+    conn: Connection, *, image: Image, projects: List[str]
 ) -> List[str]:
     """Retrieve project ids having access to target image."""
     projects = set(projects)
@@ -117,7 +117,7 @@ def get_image_projects(
 
 
 def get_images(
-    conn: Connection, tags: Optional[List[str]] = None
+    conn: Connection, *, tags: Optional[List[str]] = None
 ) -> List[ImageCreateExtended]:
     if tags is None:
         tags = []
@@ -133,7 +133,7 @@ def get_images(
             projects = [image.owner_id]
             is_public = False
         if image.visibility == "shared":
-            projects = get_image_projects(conn, image, projects)
+            projects = get_image_projects(conn, image=image, projects=projects)
         data = image.to_dict()
         data["uuid"] = data.pop("id")
         if data.get("description") is None:
@@ -145,6 +145,7 @@ def get_images(
 
 
 def is_default_network(
+    *,
     network: Network,
     default_private_net: Optional[str] = None,
     default_public_net: Optional[str] = None,
@@ -159,6 +160,7 @@ def is_default_network(
 
 def get_networks(
     conn: Connection,
+    *,
     default_private_net: Optional[str] = None,
     default_public_net: Optional[str] = None,
     proxy: Optional[PrivateNetProxy] = None,
@@ -180,7 +182,9 @@ def get_networks(
         if data.get("description") is None:
             data["description"] = ""
         data["is_default"] = is_default_network(
-            network, default_private_net, default_public_net
+            network=network,
+            default_private_net=default_private_net,
+            default_public_net=default_public_net,
         )
         if proxy:
             data["proxy_ip"] = str(proxy.ip)
