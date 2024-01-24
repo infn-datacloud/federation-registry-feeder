@@ -42,6 +42,10 @@ from src.models.provider import PrivateNetProxy, Project
 from src.providers.core import (
     get_identity_provider_for_project,
     get_project_conf_params,
+    update_region_block_storage_services,
+    update_region_compute_services,
+    update_region_identity_services,
+    update_region_network_services,
 )
 
 TIMEOUT = 2  # s
@@ -323,13 +327,7 @@ def connect_to_provider(
 
 def get_provider_resources(
     *, provider_conf: Openstack, project_conf: Project, idp: Issuer, region_name: str
-) -> Tuple[
-    ProjectCreate,
-    BlockStorageServiceCreateExtended,
-    ComputeServiceCreateExtended,
-    IdentityServiceCreate,
-    NetworkServiceCreateExtended,
-]:
+) -> Tuple[ProjectCreate, RegionCreateExtended]:
     conn = connect_to_provider(
         provider_conf=provider_conf,
         idp=idp,
@@ -369,27 +367,28 @@ def get_provider_resources(
     conn.close()
     logger.info("Connection closed")
 
-    return (
-        project,
-        block_storage_service,
-        compute_service,
-        identity_service,
-        network_service,
+    region = RegionCreateExtended(
+        name=region_name,
+        block_storage_services=[block_storage_service],
+        compute_services=[compute_service],
+        identity_services=[identity_service],
+        network_services=[network_service],
     )
+    return project, region
 
 
 def get_project_resources(
     *,
     provider_conf: Openstack,
     project_conf: Project,
-    region: RegionCreateExtended,
     issuers: List[Issuer],
-    projects: List[ProjectCreate],
+    out_region: RegionCreateExtended,
+    out_projects: List[ProjectCreate],
 ) -> None:
     # Find region props matching current region.
     region_props = next(
         filter(
-            lambda x: x.region_name == region.name,
+            lambda x: x.region_name == out_region.name,
             project_conf.per_region_props,
         ),
         None,
@@ -409,61 +408,34 @@ def get_project_resources(
         logger.error(f"Skipping project {proj_conf.id}.")
         return
 
-    (
-        project,
-        block_storage_service,
-        compute_service,
-        identity_service,
-        network_service,
-    ) = get_provider_resources(
+    project, region = get_provider_resources(
         provider_conf=provider_conf,
         project_conf=proj_conf,
         idp=trusted_idp,
-        region_name=region.name,
+        region_name=out_region.name,
     )
 
     with region_lock:
-        for i, region_service in enumerate(region.block_storage_services):
-            if region_service.endpoint == block_storage_service.endpoint:
-                region.block_storage_services[i].quotas += block_storage_service.quotas
-                break
-        else:
-            region.block_storage_services.append(block_storage_service)
-
-        for i, region_service in enumerate(region.compute_services):
-            if region_service.endpoint == compute_service.endpoint:
-                uuids = [j.uuid for j in region_service.flavors]
-                region.compute_services[i].flavors += list(
-                    filter(lambda x: x.uuid not in uuids, compute_service.flavors)
-                )
-                uuids = [j.uuid for j in region_service.images]
-                region.compute_services[i].images += list(
-                    filter(lambda x: x.uuid not in uuids, compute_service.images)
-                )
-                region.compute_services[i].quotas += compute_service.quotas
-                break
-        else:
-            region.compute_services.append(compute_service)
-
-        for region_service in region.identity_services:
-            if region_service.endpoint == identity_service.endpoint:
-                break
-        else:
-            region.identity_services.append(identity_service)
-
-        for i, region_service in enumerate(region.network_services):
-            if region_service.endpoint == network_service.endpoint:
-                uuids = [j.uuid for j in region_service.networks]
-                region.network_services[i].networks += list(
-                    filter(lambda x: x.uuid not in uuids, network_service.networks)
-                )
-                break
-        else:
-            region.network_services.append(network_service)
+        update_region_block_storage_services(
+            current_services=out_region.block_storage_services,
+            new_service=region.block_storage_services[0],  # TODO May be empty list
+        )
+        update_region_compute_services(
+            current_services=out_region.compute_services,
+            new_service=region.compute_services[0],  # TODO May be empty list
+        )
+        update_region_identity_services(
+            current_services=out_region.identity_services,
+            new_service=region.identity_services[0],  # TODO May be empty list
+        )
+        update_region_network_services(
+            current_services=out_region.network_services,
+            new_service=region.network_services[0],  # TODO May be empty list
+        )
 
     with projects_lock:
-        if project.uuid not in [i.uuid for i in projects]:
-            projects.append(project)
+        if project.uuid not in [i.uuid for i in out_projects]:
+            out_projects.append(project)
 
 
 def get_provider(

@@ -48,7 +48,7 @@ def network_data() -> Dict[str, Any]:
         "is_default": False,
         "is_router_external": getrandbits(1),
         "is_shared": getrandbits(1),
-        "mtu": randint(0, 100),
+        "mtu": randint(1, 100),
     }
 
 

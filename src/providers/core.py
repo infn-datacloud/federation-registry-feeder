@@ -1,5 +1,12 @@
 from typing import List
 
+from app.provider.schemas_extended import (
+    BlockStorageServiceCreateExtended,
+    ComputeServiceCreateExtended,
+    IdentityServiceCreate,
+    NetworkServiceCreateExtended,
+)
+
 from src.models.identity_provider import Issuer
 from src.models.provider import PerRegionProps, Project, TrustedIDP
 
@@ -54,3 +61,73 @@ def update_issuer_auth_method(*, issuer: Issuer, auth_methods: List[TrustedIDP])
         f"No identity provider matching endpoint `{issuer.endpoint}` in provider "
         f"trusted identity providers {[i.endpoint for i in auth_methods]}"
     )
+
+
+def update_region_block_storage_services(
+    *,
+    current_services: List[BlockStorageServiceCreateExtended],
+    new_service: BlockStorageServiceCreateExtended,
+) -> None:
+    for service in current_services:
+        if service.endpoint == new_service.endpoint:
+            service.quotas += new_service.quotas
+            break
+    else:
+        current_services.append(new_service)
+
+
+def update_region_compute_services(
+    *,
+    current_services: List[ComputeServiceCreateExtended],
+    new_service: ComputeServiceCreateExtended,
+) -> None:
+    for service in current_services:
+        if service.endpoint == new_service.endpoint:
+            curr_uuids = [i.uuid for i in service.flavors]
+            service.flavors += list(
+                filter(
+                    lambda x, uuids=curr_uuids: x.uuid not in uuids,
+                    new_service.flavors,
+                )
+            )
+            curr_uuids = [i.uuid for i in service.images]
+            service.images += list(
+                filter(
+                    lambda x, uuids=curr_uuids: x.uuid not in uuids,
+                    new_service.images,
+                )
+            )
+            service.quotas += new_service.quotas
+            break
+    else:
+        current_services.append(new_service)
+
+
+def update_region_identity_services(
+    *, current_services: List[IdentityServiceCreate], new_service: IdentityServiceCreate
+) -> None:
+    for service in current_services:
+        if service.endpoint == new_service.endpoint:
+            break
+    else:
+        current_services.append(new_service)
+
+
+def update_region_network_services(
+    *,
+    current_services: List[NetworkServiceCreateExtended],
+    new_service: NetworkServiceCreateExtended,
+) -> None:
+    for service in current_services:
+        if service.endpoint == new_service.endpoint:
+            curr_uuids = [i.uuid for i in service.networks]
+            service.networks += list(
+                filter(
+                    lambda x, uuids=curr_uuids: x.uuid not in uuids,
+                    new_service.networks,
+                )
+            )
+            service.quotas += new_service.quotas
+            break
+    else:
+        current_services.append(new_service)

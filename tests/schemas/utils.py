@@ -7,13 +7,29 @@ from typing import List, Optional, Tuple, Union
 
 from app.image.enum import ImageOS
 from app.provider.enum import ProviderType
+from app.service.enum import (
+    BlockStorageServiceName,
+    ComputeServiceName,
+    IdentityServiceName,
+    NetworkServiceName,
+)
 from pycountry import countries
 from pydantic import AnyHttpUrl
+
+
+def random_block_storage_service_name() -> str:
+    """Return one of the possible BlockStorageService names."""
+    return choice([i.value for i in BlockStorageServiceName])
 
 
 def random_country() -> str:
     """Return random country."""
     return choice([i.name for i in countries])
+
+
+def random_compute_service_name() -> str:
+    """Return one of the possible ComputeService names."""
+    return choice([i.value for i in ComputeServiceName])
 
 
 def random_date() -> date:
@@ -25,6 +41,11 @@ def random_date() -> date:
 def random_float(start: int, end: int) -> float:
     """Return a random float between start and end (included)."""
     return randint(start, end - 1) + random()
+
+
+def random_identity_service_name() -> str:
+    """Return one of the possible IdentityService names."""
+    return choice([i.value for i in IdentityServiceName])
 
 
 def random_image_os_type() -> str:
@@ -44,6 +65,11 @@ def random_ip(
 def random_lower_string() -> str:
     """Return a generic random string."""
     return "".join(choices(string.ascii_lowercase, k=32))
+
+
+def random_network_service_name() -> str:
+    """Return one of the possible NetworkService names."""
+    return choice([i.value for i in NetworkServiceName])
 
 
 def random_provider_type(*, exclude: Optional[List[str]] = None) -> str:

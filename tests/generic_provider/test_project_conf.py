@@ -5,8 +5,13 @@ import pytest
 from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
 from pytest_cases import parametrize, parametrize_with_cases
 
-from src.models.provider import Limits, PerRegionProps, PrivateNetProxy, Project
-from src.providers.openstack import get_project_conf_params
+from src.models.provider import (
+    Limits,
+    PerRegionProps,
+    PrivateNetProxy,
+    Project,
+)
+from src.providers.core import get_project_conf_params
 from tests.schemas.utils import random_ip, random_lower_string
 
 
