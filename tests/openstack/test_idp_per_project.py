@@ -4,7 +4,7 @@ import pytest
 
 from src.models.identity_provider import SLA, Issuer, UserGroup
 from src.models.provider import Project, TrustedIDP
-from src.providers.openstack import (
+from src.providers.core import (
     get_identity_provider_for_project,
     update_issuer_auth_method,
 )

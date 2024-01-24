@@ -2,7 +2,7 @@ import copy
 import os
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from app.provider.enum import ProviderStatus
 from app.provider.schemas_extended import (
@@ -38,7 +38,11 @@ from openstack.network.v2.network import Network
 from src.logger import logger
 from src.models.config import Openstack
 from src.models.identity_provider import Issuer
-from src.models.provider import PerRegionProps, PrivateNetProxy, Project, TrustedIDP
+from src.models.provider import PrivateNetProxy, Project
+from src.providers.core import (
+    get_identity_provider_for_project,
+    get_project_conf_params,
+)
 
 TIMEOUT = 2  # s
 
@@ -207,58 +211,6 @@ def get_project(conn: Connection) -> ProjectCreate:
     return ProjectCreate(**data)
 
 
-def get_project_conf_params(
-    *, project_conf: Project, region_props: PerRegionProps
-) -> Project:
-    """Get project parameters defined in the yaml file.
-
-    If the `per_region` attribute has been defined, override values if the region name
-    matches the current region.
-    """
-    new_conf = Project(**project_conf.dict(exclude={"per_region_props"}))
-    if region_props:
-        new_conf.default_private_net = region_props.default_private_net
-        new_conf.default_public_net = region_props.default_public_net
-        new_conf.private_net_proxy = region_props.private_net_proxy
-        new_conf.per_user_limits = region_props.per_user_limits
-    return new_conf
-
-
-def update_issuer_auth_method(*, issuer: Issuer, auth_methods: List[TrustedIDP]):
-    for auth_method in auth_methods:
-        if auth_method.endpoint == issuer.endpoint:
-            issuer.relationship = auth_method
-            return issuer
-    raise ValueError(
-        f"No identity provider matching endpoint `{issuer.endpoint}` in provider "
-        f"trusted identity providers {[i.endpoint for i in auth_methods]}"
-    )
-
-
-def get_identity_provider_for_project(
-    *, issuers: List[Issuer], trusted_idps: List[TrustedIDP], project: Project
-) -> Issuer:
-    """Find the identity provider with an SLA matching the one of target project.
-
-    For each sla of each user group of each issuer listed in the yaml file, find the one
-    matching the SLA of the target project. Add project id to SLA's project list if not
-    present.
-    """
-    for issuer in issuers:
-        for user_group in issuer.user_groups:
-            for sla in user_group.slas:
-                if sla.doc_uuid == project.sla:
-                    # Found matching SLA.
-                    if project.id not in sla.projects:
-                        sla.projects.append(project.id)
-                    return update_issuer_auth_method(
-                        issuer=issuer, auth_methods=trusted_idps
-                    )
-    raise ValueError(
-        f"No SLA matching doc_uuid `{project.sla}` in project configuration"
-    )
-
-
 def get_compute_service(
     conn: Connection,
     *,
@@ -369,6 +321,63 @@ def connect_to_provider(
     return conn
 
 
+def get_provider_resources(
+    *, provider_conf: Openstack, project_conf: Project, idp: Issuer, region_name: str
+) -> Tuple[
+    ProjectCreate,
+    BlockStorageServiceCreateExtended,
+    ComputeServiceCreateExtended,
+    IdentityServiceCreate,
+    NetworkServiceCreateExtended,
+]:
+    conn = connect_to_provider(
+        provider_conf=provider_conf,
+        idp=idp,
+        project_id=project_conf.id,
+        region_name=region_name,
+    )
+
+    # Create project entity
+    project = get_project(conn)
+
+    # Retrieve provider services (block_storage, compute, identity and network)
+    block_storage_service = get_block_storage_service(
+        conn,
+        per_user_limits=project_conf.per_user_limits.block_storage,
+        project_id=project_conf.id,
+    )
+    compute_service = get_compute_service(
+        conn,
+        per_user_limits=project_conf.per_user_limits.compute,
+        project_id=project_conf.id,
+        tags=provider_conf.image_tags,
+    )
+    identity_service = IdentityServiceCreate(
+        endpoint=provider_conf.auth_url,
+        name=IdentityServiceName.OPENSTACK_KEYSTONE,
+    )
+    network_service = get_network_service(
+        conn,
+        per_user_limits=project_conf.per_user_limits.network,
+        project_id=project_conf.id,
+        tags=provider_conf.network_tags,
+        default_private_net=project_conf.default_private_net,
+        default_public_net=project_conf.default_public_net,
+        proxy=project_conf.private_net_proxy,
+    )
+
+    conn.close()
+    logger.info("Connection closed")
+
+    return (
+        project,
+        block_storage_service,
+        compute_service,
+        identity_service,
+        network_service,
+    )
+
+
 def get_project_resources(
     *,
     provider_conf: Openstack,
@@ -400,44 +409,18 @@ def get_project_resources(
         logger.error(f"Skipping project {proj_conf.id}.")
         return
 
-    conn = connect_to_provider(
+    (
+        project,
+        block_storage_service,
+        compute_service,
+        identity_service,
+        network_service,
+    ) = get_provider_resources(
         provider_conf=provider_conf,
+        project_conf=proj_conf,
         idp=trusted_idp,
-        project_id=project_conf.id,
         region_name=region.name,
     )
-
-    # Create project entity
-    project = get_project(conn)
-
-    # Retrieve provider services (block_storage, compute, identity and network)
-    block_storage_service = get_block_storage_service(
-        conn,
-        per_user_limits=project_conf.per_user_limits.block_storage,
-        project_id=project_conf.id,
-    )
-    compute_service = get_compute_service(
-        conn,
-        per_user_limits=project_conf.per_user_limits.compute,
-        project_id=project_conf.id,
-        tags=provider_conf.image_tags,
-    )
-    identity_service = IdentityServiceCreate(
-        endpoint=provider_conf.auth_url,
-        name=IdentityServiceName.OPENSTACK_KEYSTONE,
-    )
-    network_service = get_network_service(
-        conn,
-        per_user_limits=project_conf.per_user_limits.network,
-        project_id=project_conf.id,
-        tags=provider_conf.network_tags,
-        default_private_net=proj_conf.default_private_net,
-        default_public_net=proj_conf.default_public_net,
-        proxy=proj_conf.private_net_proxy,
-    )
-
-    conn.close()
-    logger.info("Connection closed")
 
     with region_lock:
         for i, region_service in enumerate(region.block_storage_services):
