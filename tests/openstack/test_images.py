@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -30,6 +30,12 @@ def case_tags(tags: int) -> List[str]:
         return ["one", "two"]
     if tags == 3:
         return ["one-two"]
+
+
+@case(tags=["no_tags"])
+@parametrize(empty_list=[True, False])
+def case_empty_tag_list(empty_list: bool) -> Optional[List]:
+    return [] if empty_list else None
 
 
 @case(tags=["acceptance_status"])
@@ -91,11 +97,14 @@ def image(i: Image) -> Image:
 
 @patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
-def test_retrieve_images(mock_conn, mock_image, image: Image) -> None:
+@parametrize_with_cases("tags", cases=".", has_tag="no_tags")
+def test_retrieve_images(
+    mock_conn, mock_image, image: Image, tags: Optional[List]
+) -> None:
     images = list(filter(lambda x: x.status == "active", [image]))
     mock_image.images.return_value = images
     mock_conn.image = mock_image
-    data = get_images(mock_conn)
+    data = get_images(mock_conn, tags=tags)
 
     assert len(data) == len(images)
     if len(data) > 0:
