@@ -1,7 +1,8 @@
-from typing import Union
+from typing import Tuple, Union
 from unittest.mock import patch
 from uuid import uuid4
 
+import pytest
 from app.auth_method.schemas import AuthMethodBase
 from keystoneauth1.exceptions.auth_plugins import NoMatchingPlugin
 from keystoneauth1.exceptions.connection import ConnectFailure
@@ -42,10 +43,8 @@ def case_exception(
         return NotFound()
 
 
-@patch("src.providers.openstack.connect")
-@parametrize_with_cases("exception", cases=".")
-def test_fail_connection(mock_func, exception) -> None:
-    mock_func.side_effect = exception
+@pytest.fixture
+def configurations() -> Tuple[Openstack, Issuer, Project, str]:
     project_id = uuid4()
     start_date, end_date = random_start_end_dates()
     sla = SLA(
@@ -77,9 +76,38 @@ def test_fail_connection(mock_func, exception) -> None:
         identity_providers=[trusted_idp],
         projects=[project],
     )
+    region_name = random_lower_string()
+    return provider_conf, issuer, project, region_name
+
+
+@patch("src.providers.openstack.connect")
+@parametrize_with_cases("exception", cases=".")
+def test_fail_connection(
+    mock_func,
+    exception: Union[ConnectFailure, Unauthorized, NoMatchingPlugin, NotFound],
+    configurations: Tuple[Openstack, Issuer, Project, str],
+) -> None:
+    mock_func.side_effect = exception
+    (provider_conf, issuer, project, region_name) = configurations
     assert not connect_to_provider(
         provider_conf=provider_conf,
         idp=issuer,
         project_id=project.id,
-        region_name=random_lower_string(),
+        region_name=region_name,
     )
+
+
+def test_connection(configurations: Tuple[Openstack, Issuer, Project, str]) -> None:
+    (provider_conf, issuer, project, region_name) = configurations
+    conn = connect_to_provider(
+        provider_conf=provider_conf,
+        idp=issuer,
+        project_id=project.id,
+        region_name=region_name,
+    )
+    assert conn.auth.get("auth_url") == provider_conf.auth_url
+    assert conn.auth.get("identity_provider") == issuer.relationship.idp_name
+    assert conn.auth.get("protocol") == issuer.relationship.protocol
+    assert conn.auth.get("access_token") == issuer.token
+    assert conn.auth.get("project_id") == project.id
+    assert conn._compute_region == region_name
