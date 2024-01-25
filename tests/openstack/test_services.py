@@ -12,6 +12,7 @@ from app.service.enum import (
     NetworkServiceName,
     ServiceType,
 )
+from keystoneauth1.exceptions.catalog import EndpointNotFound
 from openstack.block_storage.v3.quota_set import QuotaSet as BlockStorageQuotaSet
 from openstack.compute.v2.flavor import Flavor
 from openstack.compute.v2.quota_set import QuotaSet as ComputeQuotaSet
@@ -34,6 +35,12 @@ from tests.schemas.utils import (
     random_lower_string,
     random_url,
 )
+
+
+@case(tags=["endpoint_resp"])
+@parametrize(raise_exc=[True, False])
+def case_raise_exc(raise_exc: bool) -> bool:
+    return raise_exc
 
 
 @case(tags=["user_quotas"])
@@ -202,10 +209,16 @@ def proxy() -> PrivateNetProxy:
     return PrivateNetProxy(ip=random_ip(), user=random_lower_string())
 
 
-@patch("src.providers.openstack.Connection.block_storage")
 @patch("src.providers.openstack.Connection")
-def test_no_block_storage_service(mock_conn, mock_block_storage) -> None:
-    mock_block_storage.get_endpoint.return_value = None
+@parametrize_with_cases("raised_err", cases=".", has_tag="endpoint_resp")
+def test_no_block_storage_service(mock_conn, raised_err: bool) -> None:
+    with patch(
+        "src.providers.openstack.Connection.block_storage"
+    ) as mock_block_storage:
+        if raised_err:
+            mock_block_storage.get_endpoint.side_effect = EndpointNotFound()
+        else:
+            mock_block_storage.get_endpoint.return_value = None
     mock_conn.block_storage = mock_block_storage
     assert not get_block_storage_service(
         mock_conn, per_user_limits=None, project_id=uuid4().hex
@@ -242,14 +255,18 @@ def test_retrieve_block_storage_service(
         assert item.quotas[1].per_user
 
 
-@patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
-def test_no_compute_service(mock_conn, mock_compute) -> None:
-    mock_compute.get_endpoint.return_value = None
-    mock_conn.compute = mock_compute
-    assert not get_compute_service(
-        mock_conn, per_user_limits=None, project_id=uuid4().hex, tags=[]
-    )
+@parametrize_with_cases("raised_err", cases=".", has_tag="endpoint_resp")
+def test_no_compute_service(mock_conn, raised_err: bool) -> None:
+    with patch("src.providers.openstack.Connection.compute") as mock_compute:
+        if raised_err:
+            mock_compute.get_endpoint.side_effect = EndpointNotFound()
+        else:
+            mock_compute.get_endpoint.return_value = None
+        mock_conn.compute = mock_compute
+        assert not get_compute_service(
+            mock_conn, per_user_limits=None, project_id=uuid4().hex, tags=[]
+        )
 
 
 @patch("src.providers.openstack.Connection.compute")
@@ -332,10 +349,14 @@ def test_retrieve_compute_service_with_images(
     assert len(item.images) == len(images)
 
 
-@patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
-def test_no_network_service(mock_conn, mock_network) -> None:
-    mock_network.get_endpoint.return_value = None
+@parametrize_with_cases("raised_err", cases=".", has_tag="endpoint_resp")
+def test_no_network_service(mock_conn, raised_err: bool) -> None:
+    with patch("src.providers.openstack.Connection.network") as mock_network:
+        if raised_err:
+            mock_network.get_endpoint.side_effect = EndpointNotFound()
+        else:
+            mock_network.get_endpoint.return_value = None
     mock_conn.network = mock_network
     assert not get_network_service(
         mock_conn,
