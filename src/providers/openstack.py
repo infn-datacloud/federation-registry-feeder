@@ -215,20 +215,54 @@ def get_project(conn: Connection) -> ProjectCreate:
     return ProjectCreate(**data)
 
 
+def get_block_storage_service(
+    conn: Connection,
+    *,
+    per_user_limits: Optional[BlockStorageQuotaBase],
+    project_id: str,
+) -> Optional[BlockStorageServiceCreateExtended]:
+    """Retrieve project's block storage service.
+
+    Remove last part which corresponds to the project ID.
+    Retrieve current project corresponding quotas.
+    Add them to the block storage service.
+    """
+    endpoint = conn.block_storage.get_endpoint()
+    if not endpoint:
+        return None
+
+    block_storage_service = BlockStorageServiceCreateExtended(
+        endpoint=os.path.dirname(endpoint),
+        name=BlockStorageServiceName.OPENSTACK_CINDER,
+    )
+    block_storage_service.quotas = [get_block_storage_quotas(conn)]
+    if per_user_limits:
+        block_storage_service.quotas.append(
+            BlockStorageQuotaCreateExtended(
+                **per_user_limits.dict(exclude_none=True), project=project_id
+            )
+        )
+    return block_storage_service
+
+
 def get_compute_service(
     conn: Connection,
     *,
     per_user_limits: Optional[ComputeQuotaBase],
     project_id: str,
     tags: List[str],
-) -> ComputeServiceCreateExtended:
+) -> Optional[ComputeServiceCreateExtended]:
     """Create region's compute service.
 
     Retrieve flavors, images and current project corresponding quotas.
     Add them to the compute service.
     """
+    endpoint = conn.compute.get_endpoint()
+    if not endpoint:
+        return None
+
     compute_service = ComputeServiceCreateExtended(
-        endpoint=conn.compute.get_endpoint(), name=ComputeServiceName.OPENSTACK_NOVA
+        endpoint=endpoint, name=ComputeServiceName.OPENSTACK_NOVA
     )
     compute_service.flavors = get_flavors(conn)
     compute_service.images = get_images(conn, tags=tags)
@@ -242,33 +276,6 @@ def get_compute_service(
     return compute_service
 
 
-def get_block_storage_service(
-    conn: Connection,
-    *,
-    per_user_limits: Optional[BlockStorageQuotaBase],
-    project_id: str,
-) -> BlockStorageServiceCreateExtended:
-    """Retrieve project's block storage service.
-
-    Remove last part which corresponds to the project ID.
-    Retrieve current project corresponding quotas.
-    Add them to the block storage service.
-    """
-    endpoint = conn.block_storage.get_endpoint()
-    endpoint = os.path.dirname(endpoint)
-    block_storage_service = BlockStorageServiceCreateExtended(
-        endpoint=endpoint, name=BlockStorageServiceName.OPENSTACK_CINDER
-    )
-    block_storage_service.quotas = [get_block_storage_quotas(conn)]
-    if per_user_limits:
-        block_storage_service.quotas.append(
-            BlockStorageQuotaCreateExtended(
-                **per_user_limits.dict(exclude_none=True), project=project_id
-            )
-        )
-    return block_storage_service
-
-
 def get_network_service(
     conn: Connection,
     *,
@@ -278,11 +285,14 @@ def get_network_service(
     default_private_net: Optional[str],
     default_public_net: Optional[str],
     proxy: Optional[PrivateNetProxy],
-) -> NetworkServiceCreateExtended:
+) -> Optional[NetworkServiceCreateExtended]:
     """Retrieve region's network service."""
+    endpoint = conn.network.get_endpoint()
+    if not endpoint:
+        return None
+
     network_service = NetworkServiceCreateExtended(
-        endpoint=conn.network.get_endpoint(),
-        name=NetworkServiceName.OPENSTACK_NEUTRON,
+        endpoint=endpoint, name=NetworkServiceName.OPENSTACK_NEUTRON
     )
     network_service.networks = get_networks(
         conn,
@@ -295,8 +305,7 @@ def get_network_service(
     if per_user_limits:
         network_service.quotas.append(
             NetworkQuotaCreateExtended(
-                **per_user_limits.dict(exclude_none=True),
-                project=project_id,
+                **per_user_limits.dict(exclude_none=True), project=project_id
             )
         )
     return network_service
@@ -444,7 +453,7 @@ def get_provider(
     """Generate an Openstack virtual provider, reading information from a real openstack
     instance.
     """
-    if os_conf.status != ProviderStatus.ACTIVE:
+    if os_conf.status != ProviderStatus.ACTIVE.value:
         logger.info(f"Provider={os_conf.name} not active: {os_conf.status}")
         return ProviderCreateExtended(
             name=os_conf.name,
