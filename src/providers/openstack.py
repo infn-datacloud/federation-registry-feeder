@@ -29,6 +29,10 @@ from app.service.enum import (
     IdentityServiceName,
     NetworkServiceName,
 )
+from keystoneauth1.exceptions.auth_plugins import NoMatchingPlugin
+from keystoneauth1.exceptions.catalog import EndpointNotFound
+from keystoneauth1.exceptions.connection import ConnectFailure
+from keystoneauth1.exceptions.http import NotFound, Unauthorized
 from openstack import connect
 from openstack.compute.v2.flavor import Flavor
 from openstack.connection import Connection
@@ -227,7 +231,11 @@ def get_block_storage_service(
     Retrieve current project corresponding quotas.
     Add them to the block storage service.
     """
-    endpoint = conn.block_storage.get_endpoint()
+    try:
+        endpoint = conn.block_storage.get_endpoint()
+    except EndpointNotFound as e:
+        logger.error(e)
+        return None
     if not endpoint:
         return None
 
@@ -257,7 +265,11 @@ def get_compute_service(
     Retrieve flavors, images and current project corresponding quotas.
     Add them to the compute service.
     """
-    endpoint = conn.compute.get_endpoint()
+    try:
+        endpoint = conn.compute.get_endpoint()
+    except EndpointNotFound as e:
+        logger.error(e)
+        return None
     if not endpoint:
         return None
 
@@ -287,7 +299,11 @@ def get_network_service(
     proxy: Optional[PrivateNetProxy],
 ) -> Optional[NetworkServiceCreateExtended]:
     """Retrieve region's network service."""
-    endpoint = conn.network.get_endpoint()
+    try:
+        endpoint = conn.network.get_endpoint()
+    except EndpointNotFound as e:
+        logger.error(e)
+        return None
     if not endpoint:
         return None
 
@@ -313,36 +329,43 @@ def get_network_service(
 
 def connect_to_provider(
     *, provider_conf: Openstack, idp: Issuer, project_id: str, region_name: str
-) -> Connection:
+) -> Optional[Connection]:
     """Connect to Openstack provider"""
     logger.info(
         f"Connecting through IDP {idp.endpoint} to openstack "
         f"'{provider_conf.name}' and region '{region_name}'. "
         f"Accessing with project ID: {project_id}"
     )
-    conn = connect(
-        auth_url=provider_conf.auth_url,
-        auth_type="v3oidcaccesstoken",
-        identity_provider=idp.relationship.idp_name,
-        protocol=idp.relationship.protocol,
-        access_token=idp.token,
-        project_id=project_id,
-        region_name=region_name,
-        timeout=TIMEOUT,
-    )
+    auth_type = "v3oidcaccesstoken"
+    try:
+        conn = connect(
+            auth_url=provider_conf.auth_url,
+            auth_type=auth_type,
+            identity_provider=idp.relationship.idp_name,
+            protocol=idp.relationship.protocol,
+            access_token=idp.token,
+            project_id=project_id,
+            region_name=region_name,
+            timeout=TIMEOUT,
+        )
+    except (ConnectFailure, Unauthorized, NoMatchingPlugin, NotFound) as e:
+        logger.error(e)
+        return None
     logger.info("Connected.")
     return conn
 
 
 def get_provider_resources(
     *, provider_conf: Openstack, project_conf: Project, idp: Issuer, region_name: str
-) -> Tuple[ProjectCreate, RegionCreateExtended]:
+) -> Optional[Tuple[ProjectCreate, RegionCreateExtended]]:
     conn = connect_to_provider(
         provider_conf=provider_conf,
         idp=idp,
         project_id=project_conf.id,
         region_name=region_name,
     )
+    if not conn:
+        return None
 
     # Create project entity
     project = get_project(conn)
