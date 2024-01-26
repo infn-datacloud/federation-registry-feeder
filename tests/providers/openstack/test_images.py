@@ -8,7 +8,7 @@ from openstack.image.v2.member import Member
 from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.providers.openstack import get_images
-from tests.openstack.utils import random_image_status, random_image_visibility
+from tests.providers.openstack.utils import random_image_status, random_image_visibility
 from tests.schemas.utils import random_image_os_type, random_lower_string
 
 

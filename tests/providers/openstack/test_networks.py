@@ -9,7 +9,7 @@ from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.models.provider import PrivateNetProxy
 from src.providers.openstack import get_networks
-from tests.openstack.utils import random_network_status
+from tests.providers.openstack.utils import random_network_status
 from tests.schemas.utils import random_ip, random_lower_string
 
 

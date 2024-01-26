@@ -27,7 +27,7 @@ from src.providers.openstack import (
     get_compute_service,
     get_network_service,
 )
-from tests.openstack.utils import random_image_visibility
+from tests.providers.openstack.utils import random_image_visibility
 from tests.schemas.utils import (
     random_float,
     random_image_os_type,
