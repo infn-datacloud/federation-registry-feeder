@@ -23,7 +23,7 @@ from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.models.identity_provider import Issuer
 from src.models.provider import Openstack, Project, TrustedIDP
-from src.providers.openstack import get_provider_resources
+from src.providers.openstack import get_data_from_openstack
 from tests.schemas.utils import random_lower_string, random_start_end_dates, random_url
 
 
@@ -113,7 +113,7 @@ def test_no_connection(
         mock_network_service.side_effect = ConnectFailure()
 
     (provider_conf, issuer, project_conf, region_name, token) = configurations
-    resp = get_provider_resources(
+    resp = get_data_from_openstack(
         provider_conf=provider_conf,
         project_conf=project_conf,
         identity_provider=issuer,
@@ -155,7 +155,7 @@ def test_retrieve_resources(
         mock_compute_service.return_value = None
     elif absent == "network":
         mock_network_service.return_value = None
-    resp = get_provider_resources(
+    resp = get_data_from_openstack(
         provider_conf=provider_conf,
         project_conf=project_conf,
         identity_provider=issuer,

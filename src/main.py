@@ -9,7 +9,7 @@ from src.config import get_settings
 from src.logger import logger
 from src.models.identity_provider import Issuer
 from src.models.provider import Openstack
-from src.providers.openstack import get_provider
+from src.providers.core import get_provider
 from src.utils import (
     get_conf_files,
     infer_service_endpoints,
