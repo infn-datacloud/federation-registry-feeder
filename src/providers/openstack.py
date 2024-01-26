@@ -44,6 +44,7 @@ from src.models.config import Openstack
 from src.models.identity_provider import Issuer
 from src.models.provider import PrivateNetProxy, Project
 from src.providers.core import (
+    filter_projects_on_compute_resources,
     get_identity_provider_for_project,
     get_project_conf_params,
     update_region_block_storage_services,
@@ -522,6 +523,11 @@ def get_provider(
         thread_pool.shutdown(wait=True)
         regions.append(region)
 
+    for region in regions:
+        filter_projects_on_compute_resources(
+            region=region, include_projects=[i.uuid for i in projects]
+        )
+
     # Filter on IDPs and user groups with SLAs
     # belonging to at least one project
     for idp in trust_idps:
@@ -537,20 +543,6 @@ def get_provider(
                     user_groups.append(new_group)
         idp.user_groups = user_groups
     identity_providers = list(filter(lambda idp: len(idp.user_groups) > 0, trust_idps))
-
-    # Remove from flavors and images' projects the ones
-    # that have not been imported in the Federation Registry
-    projects_uuid = [i.uuid for i in projects]
-    for region in regions:
-        for service in region.compute_services:
-            for flavor in service.flavors:
-                flavor.projects = list(
-                    filter(lambda x: x in projects_uuid, flavor.projects)
-                )
-            for image in service.images:
-                image.projects = list(
-                    filter(lambda x: x in projects_uuid, image.projects)
-                )
 
     return ProviderCreateExtended(
         name=os_conf.name,

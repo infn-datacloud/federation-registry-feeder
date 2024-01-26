@@ -5,10 +5,26 @@ from app.provider.schemas_extended import (
     ComputeServiceCreateExtended,
     IdentityServiceCreate,
     NetworkServiceCreateExtended,
+    RegionCreateExtended,
 )
 
 from src.models.identity_provider import Issuer
 from src.models.provider import PerRegionProps, Project, TrustedIDP
+
+
+def filter_projects_on_compute_resources(
+    *, region: RegionCreateExtended, include_projects: List[str]
+) -> None:
+    """Remove from compute resources projects not imported in the Federation-Registry"""
+    for service in region.compute_services:
+        for flavor in service.flavors:
+            flavor.projects = list(
+                filter(lambda x: x in include_projects, flavor.projects)
+            )
+        for image in service.images:
+            image.projects = list(
+                filter(lambda x: x in include_projects, image.projects)
+            )
 
 
 def get_identity_provider_for_project(
