@@ -3,8 +3,8 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from app.auth_method.schemas import AuthMethodBase
 from app.provider.schemas_extended import (
+    AuthMethodCreate,
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
     IdentityProviderCreateExtended,
@@ -22,7 +22,7 @@ from keystoneauth1.exceptions.connection import ConnectFailure
 from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.models.identity_provider import Issuer
-from src.models.provider import Openstack, Project, TrustedIDP
+from src.models.provider import AuthMethod, Openstack, Project
 from src.providers.openstack import get_data_from_openstack
 from tests.schemas.utils import random_lower_string, random_start_end_dates, random_url
 
@@ -49,7 +49,7 @@ def configurations() -> (
         doc_uuid=uuid4(), start_date=start_date, end_date=end_date, project=project_id
     )
     user_group = UserGroupCreateExtended(name=random_lower_string(), sla=sla)
-    relationship = AuthMethodBase(
+    relationship = AuthMethodCreate(
         idp_name=random_lower_string(), protocol=random_lower_string()
     )
     issuer = IdentityProviderCreateExtended(
@@ -58,7 +58,7 @@ def configurations() -> (
         relationship=relationship,
         user_groups=[user_group],
     )
-    trusted_idp = TrustedIDP(
+    trusted_idp = AuthMethod(
         endpoint=issuer.endpoint,
         name=relationship.idp_name,
         protocol=relationship.protocol,

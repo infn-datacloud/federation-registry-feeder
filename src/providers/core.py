@@ -19,7 +19,7 @@ from app.provider.schemas_extended import (
 
 from src.logger import logger
 from src.models.identity_provider import SLA, Issuer, UserGroup
-from src.models.provider import PerRegionProps, Project, Provider, TrustedIDP
+from src.models.provider import AuthMethod, PerRegionProps, Project, Provider
 from src.providers.openstack import get_data_from_openstack
 
 projects_lock = Lock()
@@ -43,7 +43,7 @@ def filter_projects_on_compute_resources(
 
 
 def get_identity_provider_info_for_project(
-    *, issuers: List[Issuer], trusted_issuers: List[TrustedIDP], project: Project
+    *, issuers: List[Issuer], auth_methods: List[AuthMethod], project: Project
 ) -> Tuple[IdentityProviderCreateExtended, str]:
     """Find the identity provider with an SLA matching the one of target project.
 
@@ -56,7 +56,7 @@ def get_identity_provider_info_for_project(
             for sla in user_group.slas:
                 if sla.doc_uuid == project.sla:
                     return get_identity_provider_with_auth_method(
-                        auth_methods=trusted_issuers,
+                        auth_methods=auth_methods,
                         issuer=issuer,
                         user_group=user_group,
                         sla=sla,
@@ -69,7 +69,7 @@ def get_identity_provider_info_for_project(
 
 def get_identity_provider_with_auth_method(
     *,
-    auth_methods: List[TrustedIDP],
+    auth_methods: List[AuthMethod],
     issuer: Issuer,
     user_group: UserGroup,
     sla: SLA,
@@ -223,7 +223,7 @@ def get_project_resources(
     try:
         identity_provider, token = get_identity_provider_info_for_project(
             issuers=issuers,
-            trusted_issuers=provider_conf.identity_providers,
+            auth_methods=provider_conf.identity_providers,
             project=proj_conf,
         )
     except ValueError as e:

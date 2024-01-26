@@ -3,13 +3,13 @@ from uuid import uuid4
 import pytest
 from pytest_cases import case, parametrize, parametrize_with_cases
 
-from src.models.provider import Project, Provider, Region, TrustedIDP
+from src.models.provider import AuthMethod, Project, Provider, Region
 from tests.schemas.utils import random_lower_string, random_provider_type, random_url
 
 
 @pytest.fixture
-def identity_provider() -> TrustedIDP:
-    return TrustedIDP(
+def identity_provider() -> AuthMethod:
+    return AuthMethod(
         protocol=random_lower_string(),
         name=random_lower_string(),
         endpoint=random_url(),
@@ -50,7 +50,7 @@ def case_invalid_attr(attr: bool) -> bool:
 
 @parametrize_with_cases("attr", cases=".", has_tag="valid")
 def test_provider_schema(
-    attr: str, identity_provider: TrustedIDP, project: Project, region: Region
+    attr: str, identity_provider: AuthMethod, project: Project, region: Region
 ) -> None:
     """Create an SLA with or without regions."""
     d = {
@@ -79,7 +79,7 @@ def test_provider_schema(
 
 @parametrize_with_cases("attr", cases=".", has_tag="invalid")
 def test_provider_invalid_schema(
-    attr: str, identity_provider: TrustedIDP, project: Project, region: Region
+    attr: str, identity_provider: AuthMethod, project: Project, region: Region
 ) -> None:
     """SLA with invalid projects list.
 

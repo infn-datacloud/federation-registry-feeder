@@ -4,13 +4,13 @@ import pytest
 from app.provider.enum import ProviderType
 from pytest_cases import case, parametrize, parametrize_with_cases
 
-from src.models.provider import Kubernetes, Project, Region, TrustedIDP
+from src.models.provider import AuthMethod, Kubernetes, Project, Region
 from tests.schemas.utils import random_lower_string, random_provider_type, random_url
 
 
 @pytest.fixture
-def identity_provider() -> TrustedIDP:
-    return TrustedIDP(
+def identity_provider() -> AuthMethod:
+    return AuthMethod(
         protocol=random_lower_string(),
         name=random_lower_string(),
         endpoint=random_url(),
@@ -47,7 +47,7 @@ def case_invalid_attr(attr: bool) -> bool:
 @parametrize_with_cases("attr", cases=".", has_tag="valid")
 def test_openstack_schema(
     attr: str,
-    identity_provider: TrustedIDP,
+    identity_provider: AuthMethod,
     project: Project,
     region: Region,
     default_region: Region,
@@ -79,7 +79,7 @@ def test_openstack_schema(
 
 @parametrize_with_cases("attr", cases=".", has_tag="invalid")
 def test_openstack_invalid_schema(
-    attr: str, identity_provider: TrustedIDP, project: Project, region: Region
+    attr: str, identity_provider: AuthMethod, project: Project, region: Region
 ) -> None:
     """SLA with invalid projects list.
 
