@@ -47,7 +47,6 @@ def case_default_attr(default_attr: bool) -> bool:
 def network_data() -> Dict[str, Any]:
     return {
         "id": uuid4().hex,
-        "description": random_lower_string(),
         "name": random_lower_string(),
         "status": "active",
         "project_id": uuid4().hex,
@@ -71,6 +70,13 @@ def network_disabled() -> Network:
 
 
 @pytest.fixture
+def network_with_desc() -> Network:
+    d = network_data()
+    d["description"] = random_lower_string()
+    return Network(**d)
+
+
+@pytest.fixture
 @parametrize_with_cases("is_shared", cases=".", has_tag="is_shared")
 def network_shared(is_shared: bool) -> Network:
     d = network_data()
@@ -87,7 +93,7 @@ def network_with_tags(tags: List[str]) -> Network:
 
 
 @pytest.fixture
-@parametrize(i=[network_disabled, network_shared])
+@parametrize(i=[network_disabled, network_shared, network_with_desc])
 def network(i: Network) -> Network:
     return i
 
@@ -106,7 +112,7 @@ def test_retrieve_networks(
     assert len(data) == len(networks)
     if len(data) > 0:
         item = data[0]
-        assert item.description == network.description
+        assert item.description == (network.description if network.description else "")
         assert item.uuid == network.id
         assert item.name == network.name
         assert item.is_shared == network.is_shared

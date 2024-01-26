@@ -130,8 +130,8 @@ def get_images(
             projects = get_image_projects(conn, image=image, projects=projects)
         data = image.to_dict()
         data["uuid"] = data.pop("id")
-        if data.get("description") is None:
-            data["description"] = ""
+        # Openstack image object does not have `description` field
+        data["description"] = ""
         data["is_public"] = is_public
         logger.debug(f"Image manipulated data={data}")
         images.append(ImageCreateExtended(**data, projects=list(projects)))

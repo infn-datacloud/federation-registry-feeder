@@ -14,7 +14,6 @@ from tests.schemas.utils import random_float, random_lower_string
 def flavor_data() -> Dict[str, Any]:
     return {
         "name": random_lower_string(),
-        "description": random_lower_string(),
         "disk": randint(0, 100),
         "is_public": getrandbits(1),
         "ram": randint(0, 100),
@@ -62,6 +61,13 @@ def flavor_disabled() -> Flavor:
 
 
 @pytest.fixture
+def flavor_with_desc() -> Flavor:
+    d = flavor_data()
+    d["description"] = random_lower_string()
+    return Flavor(**d)
+
+
+@pytest.fixture
 @parametrize_with_cases("public", cases=".", has_tag="public")
 def flavor_no_extra_specs(public: bool) -> Flavor:
     d = flavor_data()
@@ -78,7 +84,14 @@ def flavor_with_extra_specs(extra_specs: Dict[str, Any]) -> Flavor:
 
 
 @pytest.fixture
-@parametrize(f=[flavor_disabled, flavor_with_extra_specs, flavor_no_extra_specs])
+@parametrize(
+    f=[
+        flavor_disabled,
+        flavor_with_extra_specs,
+        flavor_no_extra_specs,
+        flavor_with_desc,
+    ]
+)
 def flavor(f: Flavor) -> Flavor:
     return f
 
@@ -98,7 +111,7 @@ def test_retrieve_flavors(mock_conn, mock_compute, flavor: Flavor) -> None:
     assert len(data) == len(flavors)
     if len(data) > 0:
         item = data[0]
-        assert item.description == flavor.description
+        assert item.description == (flavor.description if flavor.description else "")
         assert item.uuid == flavor.id
         assert item.name == flavor.name
         assert item.disk == flavor.disk

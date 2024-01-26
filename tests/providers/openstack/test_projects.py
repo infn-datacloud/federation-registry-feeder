@@ -3,16 +3,24 @@ from uuid import uuid4
 
 import pytest
 from openstack.identity.v3.project import Project
+from pytest_cases import parametrize, parametrize_with_cases
 
 from src.providers.openstack import get_project
 from tests.schemas.utils import random_lower_string
 
 
+@parametrize(with_desc=[True, False])
+def case_with_desc(with_desc: bool) -> bool:
+    return with_desc
+
+
 @pytest.fixture
-def project() -> Project:
-    return Project(
-        id=uuid4().hex, name=random_lower_string(), description=random_lower_string()
-    )
+@parametrize_with_cases("with_desc", cases=".")
+def project(with_desc) -> Project:
+    d = {"id": uuid4().hex, "name": random_lower_string()}
+    if with_desc:
+        d["description"] = random_lower_string()
+    return Project(**d)
 
 
 @patch("src.providers.openstack.Connection.identity")
@@ -22,6 +30,6 @@ def test_retrieve_project(mock_conn, mock_identity, project: Project) -> None:
     mock_conn.identity = mock_identity
     type(mock_conn).current_project_id = PropertyMock(return_value=project.id)
     item = get_project(mock_conn)
-    assert item.description == project.description
+    assert item.description == (project.description if project.description else "")
     assert item.uuid == project.id
     assert item.name == project.name
