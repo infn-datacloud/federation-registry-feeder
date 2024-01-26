@@ -1,9 +1,7 @@
 import subprocess
-from typing import List, Optional
+from typing import List
 
-from app.auth_method.schemas import AuthMethodBase
-from app.identity_provider.schemas import IdentityProviderBase
-from app.provider.schemas_extended import find_duplicates
+from app.provider.schemas_extended import IdentityProviderCreate, find_duplicates
 from app.sla.schemas import SLABase
 from app.user_group.schemas import UserGroupBase
 from pydantic import AnyHttpUrl, Field, validator
@@ -33,24 +31,24 @@ class UserGroup(UserGroupBase):
         return v
 
 
-class Issuer(IdentityProviderBase):
+class Issuer(IdentityProviderCreate):
     endpoint: AnyHttpUrl = Field(description="issuer url", alias="issuer")
-    token: Optional[str] = Field(description="Access token")
+    token: str = Field(default="", description="Access token")
     user_groups: List[UserGroup] = Field(description="User groups")
-    relationship: Optional[AuthMethodBase] = Field(default=None, description="")
 
     @validator("user_groups")
     @classmethod
-    def not_empty_list(cls, v: Optional[List[UserGroup]]) -> List[UserGroup]:
-        if not v or len(v) == 0:
-            raise ValueError("At least one user group must be specified.")
+    def validate_user_groups(cls, v: List[UserGroup]) -> List[UserGroup]:
+        """Verify the list is not empty and there are no duplicates."""
+        find_duplicates(v, "name")
+        assert len(v), "Identity provider's user group list can't be empty"
         return v
 
     @validator("token", pre=True, always=True)
     @classmethod
-    def get_token(cls, v, values):
+    def get_token(cls, v: str, values) -> str:
         # Generate token
-        if not v:
+        if v == "":
             settings = get_settings()
             token_cmd = subprocess.run(
                 [
@@ -67,4 +65,5 @@ class Issuer(IdentityProviderBase):
                 raise ValueError(
                     token_cmd.stderr if token_cmd.stderr else token_cmd.stdout
                 )
+            return token_cmd.stdout.strip("\n")
         return v
