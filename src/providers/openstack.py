@@ -357,7 +357,15 @@ def connect_to_provider(
 
 def get_provider_resources(
     *, provider_conf: Openstack, project_conf: Project, idp: Issuer, region_name: str
-) -> Optional[Tuple[ProjectCreate, RegionCreateExtended]]:
+) -> Optional[
+    Tuple[
+        ProjectCreate,
+        Optional[BlockStorageServiceCreateExtended],
+        Optional[ComputeServiceCreateExtended],
+        IdentityServiceCreate,
+        Optional[NetworkServiceCreateExtended],
+    ]
+]:
     conn = connect_to_provider(
         provider_conf=provider_conf,
         idp=idp,
@@ -367,46 +375,49 @@ def get_provider_resources(
     if not conn:
         return None
 
-    # Create project entity
-    project = get_project(conn)
+    try:
+        # Create project entity
+        project = get_project(conn)
 
-    # Retrieve provider services (block_storage, compute, identity and network)
-    block_storage_service = get_block_storage_service(
-        conn,
-        per_user_limits=project_conf.per_user_limits.block_storage,
-        project_id=project_conf.id,
-    )
-    compute_service = get_compute_service(
-        conn,
-        per_user_limits=project_conf.per_user_limits.compute,
-        project_id=project_conf.id,
-        tags=provider_conf.image_tags,
-    )
-    identity_service = IdentityServiceCreate(
-        endpoint=provider_conf.auth_url,
-        name=IdentityServiceName.OPENSTACK_KEYSTONE,
-    )
-    network_service = get_network_service(
-        conn,
-        per_user_limits=project_conf.per_user_limits.network,
-        project_id=project_conf.id,
-        tags=provider_conf.network_tags,
-        default_private_net=project_conf.default_private_net,
-        default_public_net=project_conf.default_public_net,
-        proxy=project_conf.private_net_proxy,
-    )
+        # Retrieve provider services (block_storage, compute, identity and network)
+        block_storage_service = get_block_storage_service(
+            conn,
+            per_user_limits=project_conf.per_user_limits.block_storage,
+            project_id=project_conf.id,
+        )
+        compute_service = get_compute_service(
+            conn,
+            per_user_limits=project_conf.per_user_limits.compute,
+            project_id=project_conf.id,
+            tags=provider_conf.image_tags,
+        )
+        identity_service = IdentityServiceCreate(
+            endpoint=provider_conf.auth_url,
+            name=IdentityServiceName.OPENSTACK_KEYSTONE,
+        )
+        network_service = get_network_service(
+            conn,
+            per_user_limits=project_conf.per_user_limits.network,
+            project_id=project_conf.id,
+            tags=provider_conf.network_tags,
+            default_private_net=project_conf.default_private_net,
+            default_public_net=project_conf.default_public_net,
+            proxy=project_conf.private_net_proxy,
+        )
 
-    conn.close()
-    logger.info("Connection closed")
+        conn.close()
+        logger.info("Connection closed")
+    except ConnectFailure:
+        logger.error("Connection closed unexpectedly.")
+        return None
 
-    region = RegionCreateExtended(
-        name=region_name,
-        block_storage_services=[block_storage_service],
-        compute_services=[compute_service],
-        identity_services=[identity_service],
-        network_services=[network_service],
+    return (
+        project,
+        block_storage_service,
+        compute_service,
+        identity_service,
+        network_service,
     )
-    return project, region
 
 
 def get_project_resources(
@@ -438,31 +449,37 @@ def get_project_resources(
     except ValueError as e:
         logger.error(e)
         logger.error(f"Skipping project {proj_conf.id}.")
-        return
+        return None
 
-    project, region = get_provider_resources(
+    resp = get_provider_resources(
         provider_conf=provider_conf,
         project_conf=proj_conf,
         idp=trusted_idp,
         region_name=out_region.name,
     )
+    if not resp:
+        return None
 
+    (
+        project,
+        block_storage_service,
+        compute_service,
+        identity_service,
+        network_service,
+    ) = resp
     with region_lock:
         update_region_block_storage_services(
             current_services=out_region.block_storage_services,
-            new_service=region.block_storage_services[0],  # TODO May be empty list
+            new_service=block_storage_service,
         )
         update_region_compute_services(
-            current_services=out_region.compute_services,
-            new_service=region.compute_services[0],  # TODO May be empty list
+            current_services=out_region.compute_services, new_service=compute_service
         )
         update_region_identity_services(
-            current_services=out_region.identity_services,
-            new_service=region.identity_services[0],  # TODO May be empty list
+            current_services=out_region.identity_services, new_service=identity_service
         )
         update_region_network_services(
-            current_services=out_region.network_services,
-            new_service=region.network_services[0],  # TODO May be empty list
+            current_services=out_region.network_services, new_service=network_service
         )
 
     with projects_lock:
