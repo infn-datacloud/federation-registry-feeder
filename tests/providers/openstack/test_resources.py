@@ -7,8 +7,11 @@ from app.auth_method.schemas import AuthMethodBase
 from app.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
+    IdentityProviderCreateExtended,
     NetworkServiceCreateExtended,
     ProjectCreate,
+    SLACreateExtended,
+    UserGroupCreateExtended,
 )
 from app.service.enum import (
     BlockStorageServiceName,
@@ -18,7 +21,7 @@ from app.service.enum import (
 from keystoneauth1.exceptions.connection import ConnectFailure
 from pytest_cases import case, parametrize, parametrize_with_cases
 
-from src.models.identity_provider import SLA, Issuer, UserGroup
+from src.models.identity_provider import Issuer
 from src.models.provider import Openstack, Project, TrustedIDP
 from src.providers.openstack import get_provider_resources
 from tests.schemas.utils import random_lower_string, random_start_end_dates, random_url
@@ -37,23 +40,21 @@ def case_absent_item(item: str) -> str:
 
 
 @pytest.fixture
-def configurations() -> Tuple[Openstack, Issuer, Project, str]:
+def configurations() -> (
+    Tuple[Openstack, IdentityProviderCreateExtended, Project, str, str]
+):
     project_id = uuid4()
     start_date, end_date = random_start_end_dates()
-    sla = SLA(
-        doc_uuid=uuid4(),
-        start_date=start_date,
-        end_date=end_date,
-        projects=[project_id],
+    sla = SLACreateExtended(
+        doc_uuid=uuid4(), start_date=start_date, end_date=end_date, project=project_id
     )
-    user_group = UserGroup(name=random_lower_string(), slas=[sla])
+    user_group = UserGroupCreateExtended(name=random_lower_string(), sla=sla)
     relationship = AuthMethodBase(
         idp_name=random_lower_string(), protocol=random_lower_string()
     )
-    issuer = Issuer(
-        issuer=random_url(),
+    issuer = IdentityProviderCreateExtended(
+        endpoint=random_url(),
         group_claim=random_lower_string(),
-        token=random_lower_string(),
         relationship=relationship,
         user_groups=[user_group],
     )
@@ -70,7 +71,8 @@ def configurations() -> Tuple[Openstack, Issuer, Project, str]:
         projects=[project],
     )
     region_name = random_lower_string()
-    return provider_conf, issuer, project, region_name
+    token = random_lower_string()
+    return provider_conf, issuer, project, region_name, token
 
 
 @patch("src.providers.openstack.get_network_service")
@@ -110,12 +112,13 @@ def test_no_connection(
     elif fail_point == "network":
         mock_network_service.side_effect = ConnectFailure()
 
-    (provider_conf, issuer, project_conf, region_name) = configurations
+    (provider_conf, issuer, project_conf, region_name, token) = configurations
     resp = get_provider_resources(
         provider_conf=provider_conf,
         project_conf=project_conf,
-        idp=issuer,
+        identity_provider=issuer,
         region_name=region_name,
+        token=token,
     )
     assert not resp
 
@@ -133,7 +136,7 @@ def test_retrieve_resources(
     configurations: Tuple[Openstack, Issuer, Project, str],
     absent: str,
 ) -> None:
-    (provider_conf, issuer, project_conf, region_name) = configurations
+    (provider_conf, issuer, project_conf, region_name, token) = configurations
     mock_project.return_value = ProjectCreate(
         uuid=project_conf.id, name=random_lower_string()
     )
@@ -155,8 +158,9 @@ def test_retrieve_resources(
     resp = get_provider_resources(
         provider_conf=provider_conf,
         project_conf=project_conf,
-        idp=issuer,
+        identity_provider=issuer,
         region_name=region_name,
+        token=token,
     )
     assert resp
 

@@ -4,12 +4,17 @@ from uuid import uuid4
 
 import pytest
 from app.auth_method.schemas import AuthMethodBase
+from app.provider.schemas_extended import (
+    IdentityProviderCreateExtended,
+    SLACreateExtended,
+    UserGroupCreateExtended,
+)
 from keystoneauth1.exceptions.auth_plugins import NoMatchingPlugin
 from keystoneauth1.exceptions.connection import ConnectFailure
 from keystoneauth1.exceptions.http import NotFound, Unauthorized
 from pytest_cases import parametrize, parametrize_with_cases
 
-from src.models.identity_provider import SLA, Issuer, UserGroup
+from src.models.identity_provider import Issuer
 from src.models.provider import Openstack, Project, TrustedIDP
 from src.providers.openstack import connect_to_provider
 from tests.schemas.utils import random_lower_string, random_start_end_dates, random_url
@@ -44,23 +49,21 @@ def case_exception(
 
 
 @pytest.fixture
-def configurations() -> Tuple[Openstack, Issuer, Project, str]:
+def configurations() -> (
+    Tuple[Openstack, IdentityProviderCreateExtended, Project, str, str]
+):
     project_id = uuid4()
     start_date, end_date = random_start_end_dates()
-    sla = SLA(
-        doc_uuid=uuid4(),
-        start_date=start_date,
-        end_date=end_date,
-        projects=[project_id],
+    sla = SLACreateExtended(
+        doc_uuid=uuid4(), start_date=start_date, end_date=end_date, project=project_id
     )
-    user_group = UserGroup(name=random_lower_string(), slas=[sla])
+    user_group = UserGroupCreateExtended(name=random_lower_string(), sla=sla)
     relationship = AuthMethodBase(
         idp_name=random_lower_string(), protocol=random_lower_string()
     )
-    issuer = Issuer(
-        issuer=random_url(),
+    issuer = IdentityProviderCreateExtended(
+        endpoint=random_url(),
         group_claim=random_lower_string(),
-        token=random_lower_string(),
         relationship=relationship,
         user_groups=[user_group],
     )
@@ -77,7 +80,8 @@ def configurations() -> Tuple[Openstack, Issuer, Project, str]:
         projects=[project],
     )
     region_name = random_lower_string()
-    return provider_conf, issuer, project, region_name
+    token = random_lower_string()
+    return provider_conf, issuer, project, region_name, token
 
 
 @patch("src.providers.openstack.connect")
@@ -88,26 +92,28 @@ def test_fail_connection(
     configurations: Tuple[Openstack, Issuer, Project, str],
 ) -> None:
     mock_func.side_effect = exception
-    (provider_conf, issuer, project, region_name) = configurations
+    (provider_conf, idp, project, region_name, token) = configurations
     assert not connect_to_provider(
         provider_conf=provider_conf,
-        idp=issuer,
+        idp=idp,
         project_id=project.id,
         region_name=region_name,
+        token=token,
     )
 
 
 def test_connection(configurations: Tuple[Openstack, Issuer, Project, str]) -> None:
-    (provider_conf, issuer, project, region_name) = configurations
+    (provider_conf, idp, project, region_name, token) = configurations
     conn = connect_to_provider(
         provider_conf=provider_conf,
-        idp=issuer,
+        idp=idp,
         project_id=project.id,
         region_name=region_name,
+        token=token,
     )
     assert conn.auth.get("auth_url") == provider_conf.auth_url
-    assert conn.auth.get("identity_provider") == issuer.relationship.idp_name
-    assert conn.auth.get("protocol") == issuer.relationship.protocol
-    assert conn.auth.get("access_token") == issuer.token
+    assert conn.auth.get("identity_provider") == idp.relationship.idp_name
+    assert conn.auth.get("protocol") == idp.relationship.protocol
+    assert conn.auth.get("access_token") == token
     assert conn.auth.get("project_id") == project.id
     assert conn._compute_region == region_name

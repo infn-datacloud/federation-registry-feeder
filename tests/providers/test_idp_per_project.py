@@ -5,8 +5,8 @@ import pytest
 from src.models.identity_provider import SLA, Issuer, UserGroup
 from src.models.provider import Project, TrustedIDP
 from src.providers.core import (
-    get_identity_provider_for_project,
-    update_issuer_auth_method,
+    get_identity_provider_info_for_project,
+    get_identity_provider_with_auth_method,
 )
 from tests.schemas.utils import random_lower_string, random_start_end_dates, random_url
 
@@ -32,16 +32,23 @@ def issuer(user_group: UserGroup) -> Issuer:
     )
 
 
-def test_update_issuer(issuer: Issuer) -> None:
+def test_get_ipd_with_auth_method(issuer: Issuer) -> None:
     idp = TrustedIDP(
         endpoint=issuer.endpoint,
         name=random_lower_string(),
         protocol=random_lower_string(),
     )
-    item = update_issuer_auth_method(issuer=issuer, auth_methods=[idp])
+    user_group = issuer.user_groups[0]
+    sla = user_group.slas[0]
+    item = get_identity_provider_with_auth_method(
+        auth_methods=[idp],
+        issuer=issuer,
+        user_group=user_group,
+        sla=sla,
+        project=uuid4().hex,
+    )
     assert item.endpoint == issuer.endpoint
     assert item.group_claim == issuer.group_claim
-    assert item.token == issuer.token
     assert item.relationship
     assert item.relationship.idp_name == idp.idp_name
     assert item.relationship.protocol == idp.protocol
@@ -53,8 +60,16 @@ def test_fail_update_issuer(issuer: Issuer) -> None:
         name=random_lower_string(),
         protocol=random_lower_string(),
     )
+    user_group = issuer.user_groups[0]
+    sla = user_group.slas[0]
     with pytest.raises(ValueError):
-        update_issuer_auth_method(issuer=issuer, auth_methods=[idp])
+        get_identity_provider_with_auth_method(
+            auth_methods=[idp],
+            issuer=issuer,
+            user_group=user_group,
+            sla=sla,
+            project=uuid4().hex,
+        )
 
 
 def test_retrieve_idp_for_target_project(issuer: Issuer) -> None:
@@ -64,41 +79,19 @@ def test_retrieve_idp_for_target_project(issuer: Issuer) -> None:
         name=random_lower_string(),
         protocol=random_lower_string(),
     )
-    item = get_identity_provider_for_project(
-        issuers=[issuer], trusted_idps=[idp], project=project
+    item, token = get_identity_provider_info_for_project(
+        issuers=[issuer], trusted_issuers=[idp], project=project
     )
+    assert token == issuer.token
     assert item.endpoint == issuer.endpoint
     assert item.group_claim == issuer.group_claim
-    assert item.token == issuer.token
     assert item.relationship
     assert item.relationship.idp_name == idp.idp_name
     assert item.relationship.protocol == idp.protocol
-    assert len(item.user_groups[0].slas[0].projects) == 1
-    assert item.user_groups[0].slas[0].projects[0] == project.id
+    assert item.user_groups[0].sla.project == project.id
 
 
-def test_project_already_in_sla(issuer: Issuer) -> None:
-    project = Project(id=uuid4(), sla=issuer.user_groups[0].slas[0].doc_uuid)
-    idp = TrustedIDP(
-        endpoint=issuer.endpoint,
-        name=random_lower_string(),
-        protocol=random_lower_string(),
-    )
-    issuer.user_groups[0].slas[0].projects.append(project.id)
-    item = get_identity_provider_for_project(
-        issuers=[issuer], trusted_idps=[idp], project=project
-    )
-    assert item.endpoint == issuer.endpoint
-    assert item.group_claim == issuer.group_claim
-    assert item.token == issuer.token
-    assert item.relationship
-    assert item.relationship.idp_name == idp.idp_name
-    assert item.relationship.protocol == idp.protocol
-    assert len(item.user_groups[0].slas[0].projects) == 1
-    assert item.user_groups[0].slas[0].projects[0] == project.id
-
-
-def test_not_matching_sla(issuer: Issuer) -> None:
+def test_no_matching_sla(issuer: Issuer) -> None:
     project = Project(id=uuid4(), sla=uuid4())
     idp = TrustedIDP(
         endpoint=issuer.endpoint,
@@ -106,6 +99,6 @@ def test_not_matching_sla(issuer: Issuer) -> None:
         protocol=random_lower_string(),
     )
     with pytest.raises(ValueError):
-        get_identity_provider_for_project(
-            issuers=[issuer], trusted_idps=[idp], project=project
+        get_identity_provider_info_for_project(
+            issuers=[issuer], trusted_issuers=[idp], project=project
         )

@@ -1,14 +1,17 @@
-from typing import List
+from typing import List, Tuple
 
 from app.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
+    IdentityProviderCreateExtended,
     IdentityServiceCreate,
     NetworkServiceCreateExtended,
     RegionCreateExtended,
+    SLACreateExtended,
+    UserGroupCreateExtended,
 )
 
-from src.models.identity_provider import Issuer
+from src.models.identity_provider import SLA, Issuer, UserGroup
 from src.models.provider import PerRegionProps, Project, TrustedIDP
 
 
@@ -27,9 +30,9 @@ def filter_projects_on_compute_resources(
             )
 
 
-def get_identity_provider_for_project(
-    *, issuers: List[Issuer], trusted_idps: List[TrustedIDP], project: Project
-) -> Issuer:
+def get_identity_provider_info_for_project(
+    *, issuers: List[Issuer], trusted_issuers: List[TrustedIDP], project: Project
+) -> Tuple[IdentityProviderCreateExtended, str]:
     """Find the identity provider with an SLA matching the one of target project.
 
     For each sla of each user group of each issuer listed in the yaml file, find the one
@@ -40,14 +43,42 @@ def get_identity_provider_for_project(
         for user_group in issuer.user_groups:
             for sla in user_group.slas:
                 if sla.doc_uuid == project.sla:
-                    # Found matching SLA.
-                    if project.id not in sla.projects:
-                        sla.projects.append(project.id)
-                    return update_issuer_auth_method(
-                        issuer=issuer, auth_methods=trusted_idps
-                    )
+                    return get_identity_provider_with_auth_method(
+                        auth_methods=trusted_issuers,
+                        issuer=issuer,
+                        user_group=user_group,
+                        sla=sla,
+                        project=project.id,
+                    ), issuer.token
     raise ValueError(
         f"No SLA matching doc_uuid `{project.sla}` in project configuration"
+    )
+
+
+def get_identity_provider_with_auth_method(
+    *,
+    auth_methods: List[TrustedIDP],
+    issuer: Issuer,
+    user_group: UserGroup,
+    sla: SLA,
+    project: str,
+) -> IdentityProviderCreateExtended:
+    for auth_method in auth_methods:
+        if auth_method.endpoint == issuer.endpoint:
+            sla = SLACreateExtended(**sla.dict(), project=project)
+            user_group = UserGroupCreateExtended(
+                description=user_group.description, name=user_group.name, sla=sla
+            )
+            return IdentityProviderCreateExtended(
+                description=issuer.description,
+                group_claim=issuer.group_claim,
+                endpoint=issuer.endpoint,
+                relationship=auth_method,
+                user_groups=[user_group],
+            )
+    raise ValueError(
+        f"No identity provider matching endpoint `{issuer.endpoint}` in provider "
+        f"trusted identity providers {[i.endpoint for i in auth_methods]}"
     )
 
 
@@ -68,15 +99,22 @@ def get_project_conf_params(
     return new_conf
 
 
-def update_issuer_auth_method(*, issuer: Issuer, auth_methods: List[TrustedIDP]):
-    for auth_method in auth_methods:
-        if auth_method.endpoint == issuer.endpoint:
-            issuer.relationship = auth_method
-            return issuer
-    raise ValueError(
-        f"No identity provider matching endpoint `{issuer.endpoint}` in provider "
-        f"trusted identity providers {[i.endpoint for i in auth_methods]}"
-    )
+def update_identity_providers(
+    *,
+    current_issuers: List[IdentityProviderCreateExtended],
+    new_issuer: IdentityProviderCreateExtended,
+) -> None:
+    try:
+        idx = [i.endpoint for i in current_issuers].index(new_issuer.endpoint)
+    except ValueError:
+        idx = -1
+
+    if idx == -1:
+        current_issuers.append(new_issuer)
+    else:
+        # Add new user group since for each provider a user group can have just one SLA
+        # pointing to one project.
+        current_issuers[idx].user_groups.append(new_issuer.user_groups[0])
 
 
 def update_region_block_storage_services(

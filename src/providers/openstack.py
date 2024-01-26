@@ -11,6 +11,7 @@ from app.provider.schemas_extended import (
     ComputeQuotaCreateExtended,
     ComputeServiceCreateExtended,
     FlavorCreateExtended,
+    IdentityProviderCreateExtended,
     IdentityServiceCreate,
     ImageCreateExtended,
     NetworkCreateExtended,
@@ -19,8 +20,6 @@ from app.provider.schemas_extended import (
     ProjectCreate,
     ProviderCreateExtended,
     RegionCreateExtended,
-    SLACreateExtended,
-    UserGroupCreateExtended,
 )
 from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
 from app.service.enum import (
@@ -45,8 +44,9 @@ from src.models.identity_provider import Issuer
 from src.models.provider import PrivateNetProxy, Project
 from src.providers.core import (
     filter_projects_on_compute_resources,
-    get_identity_provider_for_project,
+    get_identity_provider_info_for_project,
     get_project_conf_params,
+    update_identity_providers,
     update_region_block_storage_services,
     update_region_compute_services,
     update_region_identity_services,
@@ -57,6 +57,7 @@ TIMEOUT = 2  # s
 
 projects_lock = Lock()
 region_lock = Lock()
+issuer_lock = Lock()
 
 
 def get_block_storage_quotas(conn: Connection) -> BlockStorageQuotaCreateExtended:
@@ -329,7 +330,12 @@ def get_network_service(
 
 
 def connect_to_provider(
-    *, provider_conf: Openstack, idp: Issuer, project_id: str, region_name: str
+    *,
+    provider_conf: Openstack,
+    idp: IdentityProviderCreateExtended,
+    project_id: str,
+    region_name: str,
+    token: str,
 ) -> Optional[Connection]:
     """Connect to Openstack provider"""
     logger.info(
@@ -344,7 +350,7 @@ def connect_to_provider(
             auth_type=auth_type,
             identity_provider=idp.relationship.idp_name,
             protocol=idp.relationship.protocol,
-            access_token=idp.token,
+            access_token=token,
             project_id=project_id,
             region_name=region_name,
             timeout=TIMEOUT,
@@ -357,7 +363,12 @@ def connect_to_provider(
 
 
 def get_provider_resources(
-    *, provider_conf: Openstack, project_conf: Project, idp: Issuer, region_name: str
+    *,
+    provider_conf: Openstack,
+    project_conf: Project,
+    identity_provider: IdentityProviderCreateExtended,
+    region_name: str,
+    token: str,
 ) -> Optional[
     Tuple[
         ProjectCreate,
@@ -369,9 +380,10 @@ def get_provider_resources(
 ]:
     conn = connect_to_provider(
         provider_conf=provider_conf,
-        idp=idp,
+        idp=identity_provider,
         project_id=project_conf.id,
         region_name=region_name,
+        token=token,
     )
     if not conn:
         return None
@@ -428,6 +440,7 @@ def get_project_resources(
     issuers: List[Issuer],
     out_region: RegionCreateExtended,
     out_projects: List[ProjectCreate],
+    out_issuers: List[IdentityProviderCreateExtended],
 ) -> None:
     # Find region props matching current region.
     region_props = next(
@@ -442,9 +455,9 @@ def get_project_resources(
     )
 
     try:
-        trusted_idp = get_identity_provider_for_project(
+        identity_provider, token = get_identity_provider_info_for_project(
             issuers=issuers,
-            trusted_idps=provider_conf.identity_providers,
+            trusted_issuers=provider_conf.identity_providers,
             project=proj_conf,
         )
     except ValueError as e:
@@ -455,7 +468,8 @@ def get_project_resources(
     resp = get_provider_resources(
         provider_conf=provider_conf,
         project_conf=proj_conf,
-        idp=trusted_idp,
+        identity_provider=identity_provider,
+        token=token,
         region_name=out_region.name,
     )
     if not resp:
@@ -487,6 +501,11 @@ def get_project_resources(
         if project.uuid not in [i.uuid for i in out_projects]:
             out_projects.append(project)
 
+    with issuer_lock:
+        update_identity_providers(
+            current_issuers=out_issuers, new_issuer=identity_provider
+        )
+
 
 def get_provider(
     *, os_conf: Openstack, trusted_idps: List[Issuer]
@@ -507,6 +526,7 @@ def get_provider(
     trust_idps = copy.deepcopy(trusted_idps)
     regions: List[RegionCreateExtended] = []
     projects: List[ProjectCreate] = []
+    identity_providers: List[IdentityProviderCreateExtended] = []
 
     for region_conf in os_conf.regions:
         region = RegionCreateExtended(**region_conf.dict())
@@ -516,9 +536,10 @@ def get_provider(
                 get_project_resources,
                 provider_conf=os_conf,
                 project_conf=project_conf,
-                region=region,
                 issuers=trust_idps,
-                projects=projects,
+                out_region=region,
+                out_projects=projects,
+                out_issuers=identity_providers,
             )
         thread_pool.shutdown(wait=True)
         regions.append(region)
@@ -527,22 +548,6 @@ def get_provider(
         filter_projects_on_compute_resources(
             region=region, include_projects=[i.uuid for i in projects]
         )
-
-    # Filter on IDPs and user groups with SLAs
-    # belonging to at least one project
-    for idp in trust_idps:
-        user_groups = []
-        for user_group in idp.user_groups:
-            for sla in user_group.slas:
-                if len(sla.projects) == 1:
-                    project = sla.projects[0]
-                    new_sla = SLACreateExtended(**sla.dict(), project=project)
-                    new_group = UserGroupCreateExtended(
-                        **user_group.dict(), sla=new_sla
-                    )
-                    user_groups.append(new_group)
-        idp.user_groups = user_groups
-    identity_providers = list(filter(lambda idp: len(idp.user_groups) > 0, trust_idps))
 
     return ProviderCreateExtended(
         name=os_conf.name,
