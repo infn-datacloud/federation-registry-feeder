@@ -47,13 +47,14 @@ if __name__ == "__main__":
     config = None
     for file in yaml_files:
         config = load_config(fname=file)
-        for os_conf in config.openstack:
-            thread_pool.submit(
-                add_os_provider_to_list,
-                os_conf=os_conf,
-                trusted_idps=config.trusted_idps,
-                providers=providers,
-            )
+        if config:
+            for os_conf in config.openstack:
+                thread_pool.submit(
+                    add_os_provider_to_list,
+                    os_conf=os_conf,
+                    trusted_idps=config.trusted_idps,
+                    providers=providers,
+                )
     thread_pool.shutdown(wait=True)
 
     # Update the Federation Registry

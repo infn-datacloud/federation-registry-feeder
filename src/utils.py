@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import yaml
 from app.provider.schemas_extended import ProviderCreateExtended
@@ -36,16 +36,23 @@ def get_conf_files(*, settings: Settings) -> List[str]:
     return yaml_files
 
 
-def load_config(*, fname: str) -> SiteConfig:
+def load_config(*, fname: str) -> Optional[SiteConfig]:
     """Load provider configuration from yaml file."""
     logger.info(f"Loading provider configuration from file: {fname}")
     with open(fname) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
-    if config is None:
-        raise ValueError("Empty configuration")
-    config = SiteConfig(**config)
-    logger.info("Configuration loaded")
-    logger.debug(f"{config!r}")
+
+    if config:
+        try:
+            config = SiteConfig(**config)
+            logger.info("Configuration loaded")
+            logger.debug(f"{config!r}")
+        except ValueError as e:
+            logger.error(e)
+            config = None
+    else:
+        logger.error("Empty configuration")
+
     return config
 
 

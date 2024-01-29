@@ -1,7 +1,10 @@
 import os
 from pathlib import Path
+from subprocess import CompletedProcess
+from unittest.mock import patch
 
 import pytest
+from pytest_cases import parametrize, parametrize_with_cases
 
 from src.config import APIVersions, Settings
 from src.utils import (
@@ -10,6 +13,7 @@ from src.utils import (
     infer_service_endpoints,
     load_config,
 )
+from tests.schemas.utils import random_lower_string, random_url
 
 
 @pytest.fixture(autouse=True)
@@ -17,10 +21,9 @@ def clear_os_environment() -> None:
     os.environ.clear()
 
 
-@pytest.fixture()
-def yaml_text() -> str:
-    s = "trusted_idps:\n  - issuer: https://idp.test.com/\n  group_claim: groups"
-    return s
+@parametrize(fname=["valid_provider", "invalid_provider", "empty_provider"])
+def case_conf_fname(fname: str) -> str:
+    return fname
 
 
 def test_infer_fed_reg_urls() -> None:
@@ -60,13 +63,18 @@ def test_invalid_conf_dir() -> None:
         get_conf_files(settings=settings)
 
 
-# TODO
-# def test_load_config_yaml(tmp_path: Path, yaml_text: str) -> None:
-#     """Load provider configuration from yaml file."""
-#     fname = tmp_path / "test.config.yaml"
-#     fname.write_text(yaml_text)
-#     config = load_config(fname=fname)
-#     assert config
+@patch("src.models.identity_provider.subprocess.run")
+@parametrize_with_cases("fname", cases=".")
+def test_load_config_yaml(mock_cmd, fname: str) -> None:
+    """Load provider configuration from yaml file."""
+    mock_cmd.return_value = CompletedProcess(
+        args=["docker", "exec", random_lower_string(), "oidc-token", random_url()],
+        returncode=0,
+        stdout=random_lower_string(),
+    )
+    fpath = f"tests/configs/{fname}.config.yaml"
+    config = load_config(fname=fpath)
+    assert config if fname == "valid_provider" else not config
 
 
 def test_load_config_yaml_invalid_path() -> None:
@@ -79,8 +87,7 @@ def test_load_config_yaml_invalid_yaml(tmp_path: Path) -> None:
     """Load provider configuration from yaml file."""
     fname = tmp_path / "test.config.yaml"
     fname.write_text("")
-    with pytest.raises(ValueError):
-        load_config(fname=fname)
+    assert not load_config(fname=fname)
 
 
 def test_headers_creation() -> None:
