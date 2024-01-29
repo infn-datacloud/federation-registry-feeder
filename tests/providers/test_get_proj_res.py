@@ -1,4 +1,3 @@
-from typing import List
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -6,11 +5,9 @@ import pytest
 from app.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
-    IdentityProviderCreateExtended,
     IdentityServiceCreate,
     NetworkServiceCreateExtended,
     ProjectCreate,
-    RegionCreateExtended,
 )
 from app.service.enum import (
     BlockStorageServiceName,
@@ -28,7 +25,7 @@ from src.models.provider import (
     PerRegionProps,
     Project,
 )
-from src.providers.core import get_project_resources
+from src.providers.core import get_idp_project_and_region
 from tests.schemas.utils import random_lower_string, random_start_end_dates, random_url
 
 
@@ -48,12 +45,6 @@ def case_with_reg_props(with_reg_props: str) -> str:
 @parametrize(service=["block_storage", "compute", "network"])
 def case_with_service(service: str) -> str:
     return service
-
-
-@case(tags=["project"])
-@parametrize(used=[True, False])
-def case_project_already_used(used: bool) -> bool:
-    return used
 
 
 @pytest.fixture
@@ -116,11 +107,9 @@ def kubernetes_provider(auth_method: AuthMethod, project: Project) -> Kubernetes
 @patch("src.providers.core.get_data_from_openstack")
 @parametrize_with_cases("proj_with_reg_props", cases=".", has_tag="reg_props")
 @parametrize_with_cases("service", cases=".", has_tag="service")
-@parametrize_with_cases("proj_already_used", cases=".", has_tag="project")
 def test_retrieve_project_resources(
     mock_get_data,
     proj_with_reg_props: bool,
-    proj_already_used: bool,
     service: str,
     issuer: Issuer,
     openstack_provider: Openstack,
@@ -155,20 +144,20 @@ def test_retrieve_project_resources(
             PerRegionProps(region_name=default_region_name)
         ]
 
-    out_projects: List[ProjectCreate] = [mock_proj] if proj_already_used else []
-    out_issuers: List[IdentityProviderCreateExtended] = []
-    region = RegionCreateExtended(**provider.regions[0].dict())
-    get_project_resources(
+    resp = get_idp_project_and_region(
         provider_conf=provider,
         project_conf=provider.projects[0],
+        region_conf=provider.regions[0],
         issuers=[issuer],
-        out_region=region,
-        out_issuers=out_issuers,
-        out_projects=out_projects,
     )
+    assert resp
 
-    assert issuer.endpoint in [i.endpoint for i in out_issuers]
-    assert mock_proj in out_projects
+    idp, project, region = resp
+    assert idp
+    assert issuer.endpoint == idp.endpoint
+    assert project
+    assert mock_proj == project
+    assert region
     assert mock_identity in region.identity_services
     if service == "block_storage":
         assert mock_block_storage in region.block_storage_services
@@ -191,15 +180,13 @@ def test_no_matching_idp_when_retrieving_project_resources(
     elif provider_type == "kubernetes":
         provider = kubernetes_provider
 
-    region = RegionCreateExtended(**provider.regions[0].dict())
-    get_project_resources(
+    resp = get_idp_project_and_region(
         provider_conf=provider,
         project_conf=provider.projects[0],
+        region_conf=provider.regions[0],
         issuers=[issuer],
-        out_region=region,
-        out_issuers=[],
-        out_projects=[],
     )
+    assert not resp
 
     msg = f"Skipping project {provider.projects[0].id}."
     assert caplog.text.strip("\n").endswith(msg)
@@ -220,15 +207,13 @@ def test_no_conn_when_retrieving_project_resources(
 
     provider.identity_providers[0].endpoint = issuer.endpoint
 
-    region = RegionCreateExtended(**provider.regions[0].dict())
-    get_project_resources(
+    resp = get_idp_project_and_region(
         provider_conf=provider,
         project_conf=provider.projects[0],
+        region_conf=provider.regions[0],
         issuers=[issuer],
-        out_region=region,
-        out_issuers=[],
-        out_projects=[],
     )
+    assert not resp
 
     if provider_type == "openstack":
         msg = "Connection closed unexpectedly."

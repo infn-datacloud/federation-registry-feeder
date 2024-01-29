@@ -4,11 +4,10 @@ from app.provider.schemas_extended import (
     ComputeServiceCreateExtended,
     FlavorCreateExtended,
     ImageCreateExtended,
-    RegionCreateExtended,
 )
 from pytest_cases import case, parametrize, parametrize_with_cases
 
-from src.providers.core import filter_projects_on_compute_resources
+from src.providers.core import filter_projects_on_compute_service
 from tests.schemas.utils import (
     random_compute_service_name,
     random_lower_string,
@@ -90,20 +89,17 @@ def test_filter_projects(res_type: str, res_val: str) -> None:
         flavors=flavors,
         images=images,
     )
-    region = RegionCreateExtended(
-        name=random_lower_string(), compute_services=[compute_service]
-    )
-    filter_projects_on_compute_resources(
-        region=region, include_projects=target_projects
+    filter_projects_on_compute_service(
+        service=compute_service, include_projects=target_projects
     )
 
-    updated_flavors = region.compute_services[0].flavors
+    updated_flavors = compute_service.flavors
     if len(updated_flavors) > 0:
         projects = len(updated_flavors[0].projects)
         target_len = min(len(target_projects), len(flavors[0].projects))
         assert projects == target_len
 
-    updated_images = region.compute_services[0].images
+    updated_images = compute_service.images
     if len(updated_images) > 0:
         projects = len(updated_images[0].projects)
         target_len = min(len(target_projects), len(images[0].projects))

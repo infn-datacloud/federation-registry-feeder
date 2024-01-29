@@ -1,4 +1,5 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple
 
 import yaml
@@ -54,6 +55,13 @@ def load_config(*, fname: str) -> Optional[SiteConfig]:
         logger.error("Empty configuration")
 
     return config
+
+
+def get_site_configs(*, yaml_files: List[str]) -> List[SiteConfig]:
+    """Create a list of SiteConfig from a list of yaml files."""
+    with ThreadPoolExecutor() as executor:
+        site_configs = executor.map(load_config, yaml_files)
+    return list(filter(lambda x: x, site_configs))
 
 
 def get_read_write_headers(*, token: str) -> Tuple[Dict[str, str], Dict[str, str]]:
