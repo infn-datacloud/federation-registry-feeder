@@ -207,7 +207,7 @@ def get_project_resources(
     out_region: RegionCreateExtended,
     out_projects: List[ProjectCreate],
     out_issuers: List[IdentityProviderCreateExtended],
-) -> bool:
+) -> None:
     # Find region props matching current region.
     region_props = next(
         filter(
@@ -229,7 +229,7 @@ def get_project_resources(
     except ValueError as e:
         logger.error(e)
         logger.error(f"Skipping project {proj_conf.id}.")
-        return False
+        return None
 
     if provider_conf.type == ProviderType.OS.value:
         resp = get_data_from_openstack(
@@ -243,7 +243,7 @@ def get_project_resources(
         # Not yet implemented
         resp = None
     if not resp:
-        return False
+        return None
 
     (
         project,
@@ -275,7 +275,7 @@ def get_project_resources(
         update_identity_providers(
             current_issuers=out_issuers, new_issuer=identity_provider
         )
-    return True
+    return None
 
 
 def get_provider(
