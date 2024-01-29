@@ -22,7 +22,7 @@ from src.models.identity_provider import SLA, Issuer, UserGroup
 from src.models.provider import AuthMethod, PerRegionProps, Project, Provider
 from src.providers.openstack import get_data_from_openstack
 
-projects_lock = Lock()
+project_lock = Lock()
 region_lock = Lock()
 issuer_lock = Lock()
 
@@ -267,7 +267,7 @@ def get_project_resources(
             current_services=out_region.network_services, new_service=network_service
         )
 
-    with projects_lock:
+    with project_lock:
         if project.uuid not in [i.uuid for i in out_projects]:
             out_projects.append(project)
 

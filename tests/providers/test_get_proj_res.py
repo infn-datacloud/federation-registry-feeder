@@ -50,6 +50,12 @@ def case_with_service(service: str) -> str:
     return service
 
 
+@case(tags=["project"])
+@parametrize(used=[True, False])
+def case_project_already_used(used: bool) -> bool:
+    return used
+
+
 @pytest.fixture
 def sla() -> SLA:
     """Fixture with an SLA without projects."""
@@ -110,9 +116,11 @@ def kubernetes_provider(auth_method: AuthMethod, project: Project) -> Kubernetes
 @patch("src.providers.core.get_data_from_openstack")
 @parametrize_with_cases("proj_with_reg_props", cases=".", has_tag="reg_props")
 @parametrize_with_cases("service", cases=".", has_tag="service")
+@parametrize_with_cases("proj_already_used", cases=".", has_tag="project")
 def test_retrieve_project_resources(
     mock_get_data,
     proj_with_reg_props: bool,
+    proj_already_used: bool,
     service: str,
     issuer: Issuer,
     openstack_provider: Openstack,
@@ -147,7 +155,7 @@ def test_retrieve_project_resources(
             PerRegionProps(region_name=default_region_name)
         ]
 
-    out_projects: List[ProjectCreate] = []
+    out_projects: List[ProjectCreate] = [mock_proj] if proj_already_used else []
     out_issuers: List[IdentityProviderCreateExtended] = []
     region = RegionCreateExtended(**provider.regions[0].dict())
     get_project_resources(
