@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - devel
-      - ci
+      - pytest
   pull_request:
     types:
       - opened

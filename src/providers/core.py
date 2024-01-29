@@ -1,7 +1,7 @@
 import copy
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from app.provider.enum import ProviderStatus, ProviderType
 from app.provider.schemas_extended import (
@@ -95,7 +95,7 @@ def get_identity_provider_with_auth_method(
 
 
 def get_project_conf_params(
-    *, project_conf: Project, region_props: PerRegionProps
+    *, project_conf: Project, region_props: Optional[PerRegionProps] = None
 ) -> Project:
     """Get project parameters defined in the yaml file.
 
@@ -207,7 +207,7 @@ def get_project_resources(
     out_region: RegionCreateExtended,
     out_projects: List[ProjectCreate],
     out_issuers: List[IdentityProviderCreateExtended],
-) -> None:
+) -> bool:
     # Find region props matching current region.
     region_props = next(
         filter(
@@ -229,7 +229,7 @@ def get_project_resources(
     except ValueError as e:
         logger.error(e)
         logger.error(f"Skipping project {proj_conf.id}.")
-        return None
+        return False
 
     if provider_conf.type == ProviderType.OS.value:
         resp = get_data_from_openstack(
@@ -239,8 +239,11 @@ def get_project_resources(
             token=token,
             region_name=out_region.name,
         )
+    if provider_conf.type == ProviderType.K8S.value:
+        # Not yet implemented
+        resp = None
     if not resp:
-        return None
+        return False
 
     (
         project,
@@ -272,6 +275,7 @@ def get_project_resources(
         update_identity_providers(
             current_issuers=out_issuers, new_issuer=identity_provider
         )
+    return True
 
 
 def get_provider(
