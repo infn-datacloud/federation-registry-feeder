@@ -55,13 +55,13 @@ jobs:
 
       # Upload coverage as artifacts
       - name: Upload HTML coverage as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-coverage-${{ matrix.python-version }}-html
           path: htmlcov
 
       - name: Upload XML coverage as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-coverage-${{ matrix.python-version }}-xml
           path: coverage.xml
