@@ -1,7 +1,8 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import List
 
-from pydantic import AnyHttpUrl, BaseModel, BaseSettings, Field
+from pydantic import AnyHttpUrl, BaseModel, BaseSettings, Field, validator
 
 
 class URLs(BaseModel):
@@ -70,22 +71,33 @@ class APIVersions(BaseSettings):
 
 
 class Settings(BaseSettings):
-    FEDERATION_REGISTRY_URL: AnyHttpUrl = Field(
-        default="http://localhost:8000", description="Federation Registry base URL"
+    FED_REG_API_URL: AnyHttpUrl = Field(
+        default="http://localhost:8000/api", description="Federation Registry base URL"
     )
     BLOCK_STORAGE_VOL_LABELS: List[str] = Field(
         default_factory=list, description="List of accepted volume type labels."
     )
-    PROVIDERS_CONF_DIR: str = Field(
-        default="./providers-conf",
+    PROVIDERS_CONF_DIR: Path = Field(
+        default="providers-conf",
         description="Path to the directory containing the federated provider \
             yaml configurations.",
     )
     OIDC_AGENT_CONTAINER_NAME: str = Field(
-        default="federation-registry-feeder-oidc-agent-1",
+        default="feeder-dev-oidc-agent",
         description="Name of the container with the oidc-agent service instance.",
     )
     api_ver: APIVersions = Field(description="API versions.")
+
+    @validator("PROVIDERS_CONF_DIR")
+    @classmethod
+    def convert_path_to_str(cls, v: Path) -> str:
+        return str(v)
+
+    @validator("OIDC_AGENT_CONTAINER_NAME")
+    @classmethod
+    def invalid_empty(cls, v: str) -> str:
+        assert v != "", "Empty string is not a valid container name"
+        return v
 
     class Config:
         """Sub class to set attribute as case sensitive."""

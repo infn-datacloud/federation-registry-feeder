@@ -1,81 +1,16 @@
-import subprocess
-from typing import Any, List, Optional, Union
-from uuid import UUID
+from typing import List, Literal, Optional, Union
 
 from app.auth_method.schemas import AuthMethodBase
-from app.identity_provider.schemas import IdentityProviderBase
 from app.location.schemas import LocationBase
+from app.models import BaseNode
 from app.provider.enum import ProviderType
 from app.provider.schemas import ProviderBase
-from app.provider.schemas_extended import find_duplicates
 from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
 from app.region.schemas import RegionBase
-from app.sla.schemas import SLABase
-from app.user_group.schemas import UserGroupBase
-from config import get_settings
-from pydantic import AnyHttpUrl, BaseModel, Field, root_validator, validator
+from pydantic import AnyHttpUrl, BaseModel, Field, IPvAnyAddress, validator
 
 
-class SLA(SLABase):
-    projects: List[str] = Field(
-        default_factory=list, description="List of projects UUID"
-    )
-
-    @validator("projects", pre=True)
-    def validate_projects(cls, v):
-        v = [i.hex if isinstance(i, UUID) else i for i in v]
-        find_duplicates(v)
-        return v
-
-    @root_validator
-    def start_date_before_end_date(cls, values):
-        start = values.get("start_date")
-        end = values.get("end_date")
-        assert start < end, f"Start date {start} greater than end date {end}"
-        return values
-
-
-class UserGroup(UserGroupBase):
-    slas: List[SLA] = Field(default_factory=list, description="List of SLAs")
-
-    @validator("slas")
-    def validate_slas(cls, v):
-        find_duplicates(v, "doc_uuid")
-        assert len(v), "SLA list can't be empty"
-        return v
-
-
-class TrustedIDP(IdentityProviderBase):
-    endpoint: AnyHttpUrl = Field(description="issuer url", alias="issuer")
-    token: Optional[str] = Field(description="Access token")
-    user_groups: List[UserGroup] = Field(
-        default_factory=list, description="User groups"
-    )
-    relationship: Optional[AuthMethodBase] = Field(default=None, description="")
-
-    @validator("token", pre=True, always=True)
-    def get_token(cls, v, values):
-        # Generate token
-        if not v:
-            settings = get_settings()
-            token_cmd = subprocess.run(
-                [
-                    "docker",
-                    "exec",
-                    settings.OIDC_AGENT_CONTAINER_NAME,
-                    "oidc-token",
-                    values.get("endpoint"),
-                ],
-                capture_output=True,
-                text=True,
-            )
-            v = token_cmd.stdout.strip("\n")
-            if token_cmd.stderr:
-                raise ValueError(token_cmd.stderr)
-        return v
-
-
-class Limits(BaseModel):
+class Limits(BaseNode):
     block_storage: Optional[BlockStorageQuotaBase] = Field(
         default=None, description="Block storage per user quota"
     )
@@ -87,6 +22,7 @@ class Limits(BaseModel):
     )
 
     @validator("*")
+    @classmethod
     def set_per_user(
         cls,
         v: Optional[Union[BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase]],
@@ -97,12 +33,12 @@ class Limits(BaseModel):
         return v
 
 
-class PrivateNetProxy(BaseModel):
-    ip: str = Field(description="Proxy IP address")
+class PrivateNetProxy(BaseNode):
+    ip: IPvAnyAddress = Field(description="Proxy IP address")
     user: str = Field(description="Username to use when performing ssh operations")
 
 
-class PerRegionProps(BaseModel):
+class PerRegionProps(BaseNode):
     region_name: str = Field(description="Region name")
     default_public_net: Optional[str] = Field(
         default=None, description="Name of the default public network"
@@ -113,8 +49,8 @@ class PerRegionProps(BaseModel):
     private_net_proxy: Optional[PrivateNetProxy] = Field(
         default=None, description="Proxy details to use to access to private network"
     )
-    per_user_limits: Optional[Limits] = Field(
-        default=None,
+    per_user_limits: Limits = Field(
+        default_factory=Limits,
         description="Quota limitations to apply to users owning this project",
     )
 
@@ -130,8 +66,9 @@ class BlockStorageVolMap(BaseModel):
     ...
 
 
-class Project(BaseModel):
-    id: str = Field(default=None, description="Project unique ID or name")
+class Project(BaseNode):
+    id: str = Field(description="Project unique ID or name")
+    sla: str = Field(description="SLA document uuid")
     default_public_net: Optional[str] = Field(
         default=None, description="Name of the default public network"
     )
@@ -141,20 +78,13 @@ class Project(BaseModel):
     private_net_proxy: Optional[PrivateNetProxy] = Field(
         default=None, description="Proxy details to use to access to private network"
     )
-    per_user_limits: Optional[Limits] = Field(
-        default=None,
+    per_user_limits: Limits = Field(
+        default_factory=Limits,
         description="Quota limitations to apply to users owning this project",
     )
     per_region_props: List[PerRegionProps] = Field(
         default_factory=list, description="Region specific properties"
     )
-    sla: str = Field(description="SLA document uuid")
-
-    @validator("*", pre=True)
-    @classmethod
-    def get_str_from_uuid(cls, v: Any) -> Any:
-        """Get hex attribute from UUID values."""
-        return v.hex if isinstance(v, UUID) else v
 
 
 class Region(RegionBase):
@@ -172,12 +102,14 @@ class Provider(ProviderBase):
     regions: List[Region] = Field(
         default_factory=list, description="List of hosted regions"
     )
+    projects: List[Project] = Field(
+        description="List of projects/namespaces... belonged by this provider"
+    )
 
 
 class Openstack(Provider):
-    type: ProviderType = Field(default="openstack", description="Provider type")
-    projects: List[Project] = Field(
-        description="List of Projects belonged by this provider"
+    type: ProviderType = Field(
+        default=ProviderType.OS, description="Openstack provider type"
     )
     image_tags: List[str] = Field(
         default_factory=list, description="List of image tags to filter"
@@ -187,42 +119,33 @@ class Openstack(Provider):
     )
 
     @validator("type")
-    def type_fixed(cls, v):
+    @classmethod
+    def type_fixed(cls, v: Literal[ProviderType.OS]) -> Literal[ProviderType.OS]:
         assert v == ProviderType.OS
         return v
 
-    @validator("regions")
-    def default_region(cls, v):
+    @validator("regions", always=True)
+    @classmethod
+    def default_region(cls, v: List[Region]) -> List[Region]:
         if len(v) == 0:
             v.append(Region(name="RegionOne"))
         return v
 
 
 class Kubernetes(Provider):
-    type: ProviderType = Field(default="kubernetes", description="Provider type")
-    projects: List[Project] = Field(description="List of names")
+    type: ProviderType = Field(
+        default=ProviderType.K8S, description="Kubernetes provider type"
+    )
 
     @validator("type")
-    def type_fixed(cls, v):
+    @classmethod
+    def type_fixed(cls, v: Literal[ProviderType.K8S]) -> Literal[ProviderType.K8S]:
         assert v == ProviderType.K8S
         return v
 
-    @validator("regions")
-    def default_region(cls, v):
+    @validator("regions", always=True)
+    @classmethod
+    def default_region(cls, v: List[Region]) -> List[Region]:
         if len(v) == 0:
             v.append(Region(name="default"))
         return v
-
-
-class SiteConfig(BaseModel):
-    trusted_idps: List[TrustedIDP] = Field(
-        description="List of OIDC-Agent supported identity providers endpoints"
-    )
-    openstack: List[Openstack] = Field(
-        default_factory=list,
-        description="Openstack providers to integrate in the Federation Registry",
-    )
-    kubernetes: List[Kubernetes] = Field(
-        default_factory=list,
-        description="Openstack providers to integrate in the Federation Registry",
-    )

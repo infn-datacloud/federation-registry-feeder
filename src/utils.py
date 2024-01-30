@@ -1,12 +1,14 @@
 import os
-from typing import Dict, List, Tuple
+from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, List, Optional, Tuple
 
 import yaml
 from app.provider.schemas_extended import ProviderCreateExtended
-from config import Settings, URLs
-from crud import CRUD
-from logger import logger
-from models.provider import SiteConfig
+
+from src.config import Settings, URLs
+from src.crud import CRUD
+from src.logger import logger
+from src.models.config import SiteConfig
 
 
 def infer_service_endpoints(*, settings: Settings) -> URLs:
@@ -15,9 +17,7 @@ def infer_service_endpoints(*, settings: Settings) -> URLs:
     logger.debug(f"{settings!r}")
     d = {}
     for k, v in settings.api_ver.dict().items():
-        d[k.lower()] = os.path.join(
-            settings.FEDERATION_REGISTRY_URL, "api", f"{v}", f"{k.lower()}"
-        )
+        d[k.lower()] = os.path.join(settings.FED_REG_API_URL, f"{v}", f"{k.lower()}")
     endpoints = URLs(**d)
     logger.info("Federation-Registry endpoints detected")
     logger.debug(f"{endpoints!r}")
@@ -37,15 +37,31 @@ def get_conf_files(*, settings: Settings) -> List[str]:
     return yaml_files
 
 
-def load_config(*, fname: str) -> SiteConfig:
+def load_config(*, fname: str) -> Optional[SiteConfig]:
     """Load provider configuration from yaml file."""
     logger.info(f"Loading provider configuration from file: {fname}")
     with open(fname) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
-        config = SiteConfig(**config)
-    logger.info("Configuration loaded")
-    logger.debug(f"{config!r}")
+
+    if config:
+        try:
+            config = SiteConfig(**config)
+            logger.info("Configuration loaded")
+            logger.debug(f"{config!r}")
+        except ValueError as e:
+            logger.error(e)
+            config = None
+    else:
+        logger.error("Empty configuration")
+
     return config
+
+
+def get_site_configs(*, yaml_files: List[str]) -> List[SiteConfig]:
+    """Create a list of SiteConfig from a list of yaml files."""
+    with ThreadPoolExecutor() as executor:
+        site_configs = executor.map(lambda x: load_config(fname=x), yaml_files)
+    return list(filter(lambda x: x, site_configs))
 
 
 def get_read_write_headers(*, token: str) -> Tuple[Dict[str, str], Dict[str, str]]:
@@ -60,7 +76,7 @@ def get_read_write_headers(*, token: str) -> Tuple[Dict[str, str], Dict[str, str
 
 
 def update_database(
-    *, federation_registry_urls: URLs, items: List[ProviderCreateExtended], token: str
+    *, service_api_url: URLs, items: List[ProviderCreateExtended], token: str
 ) -> None:
     """Update the Federation-Registry data.
 
@@ -74,7 +90,7 @@ def update_database(
     """
     read_header, write_header = get_read_write_headers(token=token)
     crud = CRUD(
-        url=federation_registry_urls.providers,
+        url=service_api_url.providers,
         read_headers=read_header,
         write_headers=write_header,
     )

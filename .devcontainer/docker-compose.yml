@@ -51,7 +51,7 @@ services:
     volumes:
       - ..:/workspace:cached
     environment:
-      - FEDERATION_REGISTRY_URL=http://feeder-dev-registry
+      - FED_REG_API_URL=http://feeder-dev-registry/api
       - OIDC_AGENT_CONTAINER_NAME=feeder-dev-oidc-agent
     networks:
       - feeder-oidc-agent 
