@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 from app.provider.schemas_extended import (
@@ -9,25 +9,23 @@ from app.provider.schemas_extended import (
 )
 from fastapi import status
 from fastapi.encoders import jsonable_encoder
-from pydantic import AnyHttpUrl
+from pydantic import AnyHttpUrl, BaseModel, Field, validator
 
 from src.logger import logger
 
 TIMEOUT = 30  # s
 
 
-class CRUD:
-    def __init__(
-        self,
-        *,
-        url: AnyHttpUrl,
-        read_headers: Dict[str, str],
-        write_headers: Dict[str, str],
-    ) -> None:
-        self.read_headers = read_headers
-        self.write_headers = write_headers
-        self.multi_url = url
-        self.single_url = os.path.join(url, "{uid}")
+class CRUD(BaseModel):
+    multi_url: AnyHttpUrl = Field(alias="url")
+    read_headers: Dict[str, str]
+    write_headers: Dict[str, str]
+    single_url: Optional[AnyHttpUrl]
+
+    @validator("single_url", pre=True, always=True)
+    @classmethod
+    def build_single_url(cls, v: Optional[str], values: Dict[str, Any]) -> str:
+        return os.path.join(values.get("multi_url"), "{uid}")
 
     def read(self) -> List[ProviderRead]:
         """Retrieve all providers from the Federation-Registry."""

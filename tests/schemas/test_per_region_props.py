@@ -15,7 +15,6 @@ def test_net_proxy_schema(
     attr: str, limits: Limits, net_proxy: PrivateNetProxy
 ) -> None:
     """Create a PerRegionProps."""
-    print(net_proxy)
     d = {
         "region_name": random_lower_string(),
         "default_public_net": random_lower_string(),
