@@ -1,7 +1,9 @@
+import os
 from uuid import uuid4
 
 import pytest
 
+from src.config import APIVersions, Settings
 from src.models.identity_provider import SLA, Issuer, UserGroup
 from src.models.provider import (
     AuthMethod,
@@ -18,6 +20,21 @@ from tests.schemas.utils import (
     random_start_end_dates,
     random_url,
 )
+
+
+@pytest.fixture(autouse=True)
+def clear_os_environment() -> None:
+    os.environ.clear()
+
+
+@pytest.fixture
+def api_ver() -> APIVersions:
+    return APIVersions()
+
+
+@pytest.fixture
+def settings(api_ver: APIVersions) -> Settings:
+    return Settings(api_ver=api_ver)
 
 
 @pytest.fixture

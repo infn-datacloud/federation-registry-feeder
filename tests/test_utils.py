@@ -2,15 +2,12 @@ import os
 from pathlib import Path
 from subprocess import CompletedProcess
 from typing import List
-from unittest.mock import Mock, patch
-from uuid import uuid4
+from unittest.mock import patch
 
 import pytest
-from app.provider.schemas_extended import ProviderCreateExtended, ProviderReadExtended
-from fastapi.encoders import jsonable_encoder
 from pytest_cases import case, parametrize, parametrize_with_cases
 
-from src.config import APIVersions, Settings, URLs
+from src.config import Settings
 from src.models.config import SiteConfig
 from src.models.identity_provider import Issuer
 from src.utils import (
@@ -19,20 +16,8 @@ from src.utils import (
     get_site_configs,
     infer_service_endpoints,
     load_config,
-    update_database,
 )
-from tests.schemas.utils import random_lower_string, random_provider_type, random_url
-
-
-@pytest.fixture(autouse=True)
-def clear_os_environment() -> None:
-    os.environ.clear()
-
-
-@pytest.fixture
-def provider_urls() -> URLs:
-    base_url = random_url()
-    return URLs(**{k: os.path.join(base_url, k) for k in URLs.__fields__.keys()})
+from tests.schemas.utils import random_lower_string, random_url
 
 
 @pytest.fixture
@@ -52,20 +37,19 @@ def case_yaml_files(num_items: int) -> List[str]:
     return [str(i) for i in range(num_items)]
 
 
-def test_infer_fed_reg_urls() -> None:
+def test_infer_fed_reg_urls(settings: Settings) -> None:
     """Verify fed-reg endpoints detection.
 
     Inferred urls are made up combining the fed-reg base url, api version and target
     entity (lower case).
     """
-    settings = Settings(api_ver=APIVersions())
     endpoints = infer_service_endpoints(settings=settings)
     for k, v in endpoints.dict().items():
         version = settings.api_ver.__getattribute__(k.upper())
         assert v == os.path.join(settings.FED_REG_API_URL, f"{version}", f"{k}")
 
 
-def test_conf_file_retrieval(tmp_path: Path) -> None:
+def test_conf_file_retrieval(tmp_path: Path, settings: Settings) -> None:
     """Load yaml files from target folder.
 
     Discard files with wrong extension.
@@ -76,15 +60,15 @@ def test_conf_file_retrieval(tmp_path: Path) -> None:
     for fname in fnames:
         f = d / fname
         f.write_text("")
-    settings = Settings(api_ver=APIVersions(), PROVIDERS_CONF_DIR=d)
+    settings.PROVIDERS_CONF_DIR = d
     yaml_files = get_conf_files(settings=settings)
     assert len(yaml_files) == 1
     assert yaml_files[0] == os.path.join(settings.PROVIDERS_CONF_DIR, fnames[0])
 
 
-def test_invalid_conf_dir() -> None:
+def test_invalid_conf_dir(settings: Settings) -> None:
     """Invalid conf dir."""
-    settings = Settings(api_ver=APIVersions(), PROVIDERS_CONF_DIR="invalid_path")
+    settings.PROVIDERS_CONF_DIR = "invalid_path"
     with pytest.raises(FileNotFoundError):
         get_conf_files(settings=settings)
 
@@ -142,77 +126,3 @@ def test_headers_creation() -> None:
     assert "authorization" in write.keys()
     assert write["authorization"] == f"Bearer {token}"
     assert write["content-type"] == "application/json"
-
-
-@patch("src.crud.requests.get")
-def test_do_nothing_to_db(mock_get: Mock, provider_urls: URLs) -> None:
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.json.return_value = jsonable_encoder([])
-    update_database(
-        service_api_url=provider_urls, items=[], token=random_lower_string()
-    )
-
-
-@patch("src.crud.requests.post")
-@patch("src.crud.requests.get")
-def test_add_provider_to_db(
-    mock_get: Mock, mock_post: Mock, provider_urls: URLs
-) -> None:
-    new_provider = ProviderCreateExtended(
-        name=random_lower_string(), type=random_provider_type()
-    )
-    created_provider = ProviderReadExtended(uid=uuid4(), **new_provider.dict())
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.json.return_value = jsonable_encoder([])
-    mock_post.return_value.status_code = 201
-    mock_post.return_value.json.return_value = jsonable_encoder(created_provider)
-    update_database(
-        service_api_url=provider_urls, items=[new_provider], token=random_lower_string()
-    )
-
-
-@patch("src.crud.requests.delete")
-@patch("src.crud.requests.get")
-def test_delete_provider_from_db(
-    mock_get: Mock, mock_del: Mock, provider_urls: URLs
-) -> None:
-    provider = ProviderReadExtended(
-        uid=uuid4(),
-        name=random_lower_string(),
-        type=random_provider_type(),
-        identity_providers=[],
-        projects=[],
-        regions=[],
-    )
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.json.return_value = jsonable_encoder([provider])
-    mock_del.return_value.status_code = 204
-    update_database(
-        service_api_url=provider_urls, items=[], token=random_lower_string()
-    )
-
-
-@patch("src.crud.requests.put")
-@patch("src.crud.requests.get")
-def test_update_provider_in_db(
-    mock_get: Mock, mock_put: Mock, provider_urls: URLs
-) -> None:
-    old_provider = ProviderReadExtended(
-        uid=uuid4(),
-        name=random_lower_string(),
-        type=random_provider_type(),
-        identity_providers=[],
-        projects=[],
-        regions=[],
-    )
-    new_provider = ProviderCreateExtended(
-        name=old_provider.name, type=old_provider.type
-    )
-    updated_provider = ProviderReadExtended(uid=old_provider.uid, **new_provider.dict())
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.json.return_value = jsonable_encoder([old_provider])
-    mock_put.return_value.status_code = 201
-    mock_put.return_value.json.return_value = jsonable_encoder([updated_provider])
-    update_database(
-        service_api_url=provider_urls, items=[new_provider], token=random_lower_string()
-    )

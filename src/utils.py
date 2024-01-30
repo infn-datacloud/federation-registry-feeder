@@ -60,7 +60,7 @@ def load_config(*, fname: str) -> Optional[SiteConfig]:
 def get_site_configs(*, yaml_files: List[str]) -> List[SiteConfig]:
     """Create a list of SiteConfig from a list of yaml files."""
     with ThreadPoolExecutor() as executor:
-        site_configs = executor.map(load_config, yaml_files)
+        site_configs = executor.map(lambda x: load_config(fname=x), yaml_files)
     return list(filter(lambda x: x, site_configs))
 
 

@@ -11,9 +11,8 @@ from src.utils import (
     update_database,
 )
 
-if __name__ == "__main__":
-    logger.setLevel(logging.DEBUG)
 
+def main() -> None:
     # Load Federation Registry configuration, infer Federation Registry endpoints and
     # read all yaml files containing providers configurations.
     settings = get_settings()
@@ -22,16 +21,22 @@ if __name__ == "__main__":
     site_configs = get_site_configs(yaml_files=yaml_files)
 
     # Multithreading read.
+    providers = []
     for config in site_configs:
         with ThreadPoolExecutor() as executor:
             prov_configs = [*config.openstack, *config.kubernetes]
             issuers = config.trusted_idps
-            prov_iss_list = [(conf, issuers) for conf in prov_configs]
-            providers = executor.map(get_provider, prov_iss_list)
+            prov_iss_list = [
+                {"provider_conf": conf, "issuers": issuers} for conf in prov_configs
+            ]
+            providers = executor.map(lambda x: get_provider(**x), prov_iss_list)
+            providers = list(filter(lambda x: x, providers))
 
     # Update the Federation Registry
-    update_database(
-        service_api_url=fed_reg_endpoints,
-        token=config.trusted_idps[0].token,
-        items=providers,
-    )
+    token = site_configs[0].trusted_idps[0].token if len(site_configs) > 0 else ""
+    update_database(service_api_url=fed_reg_endpoints, token=token, items=providers)
+
+
+if __name__ == "__main__":
+    logger.setLevel(logging.DEBUG)
+    main()

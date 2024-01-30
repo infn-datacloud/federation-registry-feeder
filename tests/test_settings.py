@@ -1,4 +1,3 @@
-import os
 from random import randint
 from typing import Any, List, Literal, Tuple
 
@@ -7,11 +6,6 @@ from pydantic import ValidationError
 from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.config import APIVersions, Settings
-
-
-@pytest.fixture(autouse=True)
-def clear_os_environment() -> None:
-    os.environ.clear()
 
 
 @case(tags=["api_ver"])
@@ -88,9 +82,8 @@ def test_api_versions_invalid_attr(key: str) -> None:
         APIVersions(**d)
 
 
-def test_settings_defaults() -> None:
+def test_settings_defaults(api_ver: APIVersions) -> None:
     """Settings needs at least an APIVersions instance to work."""
-    api_ver = APIVersions()
     settings = Settings(api_ver=api_ver)
     assert settings.FED_REG_API_URL == "http://localhost:8000/api"
     assert settings.BLOCK_STORAGE_VOL_LABELS == []
@@ -100,23 +93,20 @@ def test_settings_defaults() -> None:
 
 
 @parametrize_with_cases("key, value", cases=CaseSettings)
-def test_settings_single_attr(key: str, value: Any) -> None:
+def test_settings_single_attr(api_ver: APIVersions, key: str, value: Any) -> None:
     d = {key: value}
-    api_ver = APIVersions()
     settings = Settings(api_ver=api_ver, **d)
     assert settings.__getattribute__(key) == value
 
 
-def test_settings_empty_conf_dir_path() -> None:
-    api_ver = APIVersions()
+def test_settings_empty_conf_dir_path(api_ver: APIVersions) -> None:
     settings = Settings(api_ver=api_ver, PROVIDERS_CONF_DIR="")
     assert settings.PROVIDERS_CONF_DIR == "."
 
 
 @parametrize_with_cases("key, value", cases=CaseInvalidSettings)
-def test_settings_invalid_attr(key: str, value: Any) -> None:
+def test_settings_invalid_attr(api_ver: APIVersions, key: str, value: Any) -> None:
     """Check APIVersions is case sensitive."""
     d = {key: value}
-    api_ver = APIVersions()
     with pytest.raises(ValidationError):
         Settings(api_ver=api_ver, **d)
