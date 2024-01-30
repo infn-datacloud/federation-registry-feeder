@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from app.provider.schemas_extended import (
@@ -23,7 +23,6 @@ from src.models.provider import (
     PerRegionProps,
 )
 from src.providers.core import get_idp_project_and_region
-from tests.schemas.utils import random_lower_string, random_url
 
 
 @case(tags=["type"])
@@ -48,36 +47,33 @@ def case_with_service(service: str) -> str:
 @parametrize_with_cases("proj_with_reg_props", cases=".", has_tag="reg_props")
 @parametrize_with_cases("service", cases=".", has_tag="service")
 def test_retrieve_project_resources(
-    mock_get_data,
+    mock_get_data: Mock,
     proj_with_reg_props: bool,
     service: str,
     issuer: Issuer,
     openstack_provider: Openstack,
+    project_create: ProjectCreate,
+    block_storage_service_create: BlockStorageServiceCreateExtended,
+    compute_service_create: ComputeServiceCreateExtended,
+    identity_service_create: IdentityServiceCreate,
+    network_service_create: NetworkServiceCreateExtended,
 ) -> None:
     provider = openstack_provider
     provider.projects[0].sla = issuer.user_groups[0].slas[0].doc_uuid
     default_region_name = "RegionOne"
     provider.identity_providers[0].endpoint = issuer.endpoint
 
-    mock_proj = ProjectCreate(uuid=provider.projects[0].id, name=random_lower_string())
-    mock_identity = IdentityServiceCreate(
-        endpoint=provider.auth_url, name=IdentityServiceName.OPENSTACK_KEYSTONE
-    )
-    mock_block_storage = BlockStorageServiceCreateExtended(
-        endpoint=random_url(), name=BlockStorageServiceName.OPENSTACK_CINDER
-    )
-    mock_compute = ComputeServiceCreateExtended(
-        endpoint=random_url(), name=ComputeServiceName.OPENSTACK_NOVA
-    )
-    mock_network = NetworkServiceCreateExtended(
-        endpoint=random_url(), name=NetworkServiceName.OPENSTACK_NEUTRON
-    )
+    project_create.uuid = provider.projects[0].id
+    block_storage_service_create.name = BlockStorageServiceName.OPENSTACK_CINDER
+    compute_service_create.name = ComputeServiceName.OPENSTACK_NOVA
+    identity_service_create.name = IdentityServiceName.OPENSTACK_KEYSTONE
+    network_service_create.name = NetworkServiceName.OPENSTACK_NEUTRON
     mock_get_data.return_value = (
-        mock_proj,
-        mock_block_storage if service == "block_storage" else None,
-        mock_compute if service == "compute" else None,
-        mock_identity,
-        mock_network if service == "network" else None,
+        project_create,
+        block_storage_service_create if service == "block_storage" else None,
+        compute_service_create if service == "compute" else None,
+        identity_service_create,
+        network_service_create if service == "network" else None,
     )
 
     if proj_with_reg_props:
@@ -97,15 +93,15 @@ def test_retrieve_project_resources(
     assert idp
     assert issuer.endpoint == idp.endpoint
     assert project
-    assert mock_proj == project
+    assert project_create == project
     assert region
-    assert mock_identity in region.identity_services
+    assert identity_service_create in region.identity_services
     if service == "block_storage":
-        assert mock_block_storage in region.block_storage_services
+        assert block_storage_service_create in region.block_storage_services
     if service == "compute":
-        assert mock_compute in region.compute_services
+        assert compute_service_create in region.compute_services
     if service == "network":
-        assert mock_network in region.network_services
+        assert network_service_create in region.network_services
 
 
 @parametrize_with_cases("provider_type", cases=".", has_tag="type")

@@ -1,29 +1,24 @@
-from subprocess import CompletedProcess
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
-from pytest_cases import case, parametrize, parametrize_with_cases
+from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.identity_provider import Issuer, UserGroup
 from tests.schemas.utils import random_lower_string, random_url
 
 
-@case(tags=["user_groups"])
 @parametrize(with_user_groups=[0, 1, 2])
 def case_with_user_groups(with_user_groups: int) -> int:
     return with_user_groups
 
 
 @patch("src.models.identity_provider.subprocess.run")
-def test_identity_provider_schema(mock_cmd, user_group: UserGroup) -> None:
+def test_identity_provider_schema(mock_cmd: Mock, user_group: UserGroup) -> None:
     """Create a UserGroup with or without SLAs."""
     endpoint = random_url()
     token_from_container = random_lower_string()
-    mock_cmd.return_value = CompletedProcess(
-        args=["docker", "exec", random_lower_string(), "oidc-token", endpoint],
-        returncode=0,
-        stdout=token_from_container,
-    )
+    mock_cmd.return_value.returncode = 0
+    mock_cmd.return_value.stdout = token_from_container
     d = {
         "issuer": endpoint,
         "group_claim": random_lower_string(),
@@ -38,18 +33,14 @@ def test_identity_provider_schema(mock_cmd, user_group: UserGroup) -> None:
 
 
 @patch("src.models.identity_provider.subprocess.run")
-@parametrize_with_cases("with_user_groups", cases=".", has_tag="user_groups")
+@parametrize_with_cases("with_user_groups", cases=".")
 def test_identity_provider_invalid_schema(
-    mock_cmd, user_group: UserGroup, with_user_groups: bool
+    mock_cmd: Mock, user_group: UserGroup, with_user_groups: bool
 ) -> None:
     """Create a UserGroup with or without SLAs."""
     endpoint = random_url()
-    token_from_container = random_lower_string()
-    mock_cmd.return_value = CompletedProcess(
-        args=["docker", "exec", random_lower_string(), "oidc-token", endpoint],
-        returncode=0,
-        stdout=token_from_container,
-    )
+    mock_cmd.return_value.returncode = 0
+    mock_cmd.return_value.stdout = random_lower_string()
     d = {
         "issuer": endpoint,
         "group_claim": random_lower_string(),

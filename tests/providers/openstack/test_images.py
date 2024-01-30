@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -99,7 +99,7 @@ def image(i: Image) -> Image:
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("tags", cases=".", has_tag="no_tags")
 def test_retrieve_images(
-    mock_conn, mock_image, image: Image, tags: Optional[List]
+    mock_conn: Mock, mock_image: Mock, image: Image, tags: Optional[List]
 ) -> None:
     images = list(filter(lambda x: x.status == "active", [image]))
     mock_image.images.return_value = images
@@ -133,7 +133,7 @@ def test_retrieve_images(
 @patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_images_with_tags(
-    mock_conn, mock_image, image_with_tags: Image
+    mock_conn: Mock, mock_image: Mock, image_with_tags: Image
 ) -> None:
     target_tags = ["one"]
     images = list(
@@ -149,7 +149,7 @@ def test_retrieve_images_with_tags(
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("acceptance_status", cases=".", has_tag="acceptance_status")
 def test_retrieve_images_with_shared_visibility(
-    mock_conn, mock_image, image_shared: Image, acceptance_status: str
+    mock_conn: Mock, mock_image: Mock, image_shared: Image, acceptance_status: str
 ) -> None:
     def get_allowed_members(*args, **kwargs) -> List[Member]:
         return [

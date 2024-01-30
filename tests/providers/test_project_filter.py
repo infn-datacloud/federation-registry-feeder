@@ -8,11 +8,7 @@ from app.provider.schemas_extended import (
 from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.providers.core import filter_projects_on_compute_service
-from tests.schemas.utils import (
-    random_compute_service_name,
-    random_lower_string,
-    random_url,
-)
+from tests.schemas.utils import random_lower_string
 
 
 @case(tags=["type"])
@@ -39,7 +35,9 @@ def case_resource(resource: str) -> str:
 
 @parametrize_with_cases("res_type", cases=".", has_tag="type")
 @parametrize_with_cases("res_val", cases=".", has_tag="value")
-def test_filter_projects(res_type: str, res_val: str) -> None:
+def test_filter_projects(
+    res_type: str, res_val: str, compute_service_create: ComputeServiceCreateExtended
+) -> None:
     target_projects = [uuid4().hex]
     flavors = []
     images = []
@@ -83,23 +81,19 @@ def test_filter_projects(res_type: str, res_val: str) -> None:
                 projects=[*target_projects, uuid4()],
             )
         ]
-    compute_service = ComputeServiceCreateExtended(
-        endpoint=random_url(),
-        name=random_compute_service_name(),
-        flavors=flavors,
-        images=images,
-    )
+    compute_service_create.flavors = flavors
+    compute_service_create.images = images
     filter_projects_on_compute_service(
-        service=compute_service, include_projects=target_projects
+        service=compute_service_create, include_projects=target_projects
     )
 
-    updated_flavors = compute_service.flavors
+    updated_flavors = compute_service_create.flavors
     if len(updated_flavors) > 0:
         projects = len(updated_flavors[0].projects)
         target_len = min(len(target_projects), len(flavors[0].projects))
         assert projects == target_len
 
-    updated_images = compute_service.images
+    updated_images = compute_service_create.images
     if len(updated_images) > 0:
         projects = len(updated_images[0].projects)
         target_len = min(len(target_projects), len(images[0].projects))

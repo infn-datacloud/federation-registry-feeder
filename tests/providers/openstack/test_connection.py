@@ -1,5 +1,5 @@
 from typing import Tuple, Union
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -87,7 +87,7 @@ def configurations() -> (
 @patch("src.providers.openstack.connect")
 @parametrize_with_cases("exception", cases=".")
 def test_fail_connection(
-    mock_func,
+    mock_func: Mock,
     exception: Union[ConnectFailure, Unauthorized, NoMatchingPlugin, NotFound],
     configurations: Tuple[Openstack, Issuer, Project, str],
 ) -> None:

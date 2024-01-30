@@ -3,22 +3,22 @@ from typing import Any, List, Literal, Tuple
 
 import pytest
 from pydantic import ValidationError
-from pytest_cases import case, parametrize, parametrize_with_cases
+from pytest_cases import parametrize, parametrize_with_cases
 
 from src.config import APIVersions, Settings
 
 
-@case(tags=["api_ver"])
-@parametrize(key=APIVersions.__fields__.keys())
-def case_api_version_key(key: str) -> str:
-    return key
+class CaseVersionKey:
+    @parametrize(key=APIVersions.__fields__.keys())
+    def case_api_version_key(self, key: str) -> str:
+        return key
 
 
 class CaseSettings:
     def case_fed_reg_url(
         self,
-    ) -> Tuple[Literal["FED_REG_API_URL"], Literal["http://test.url.it/api"]]:
-        return "FED_REG_API_URL", "http://test.url.it/api"
+    ) -> Tuple[Literal["FED_REG_API_URL"], Literal["https://test.url.it/api"]]:
+        return "FED_REG_API_URL", "https://test.url.it/api"
 
     def case_vol_labels_single(
         self,
@@ -65,7 +65,7 @@ def test_api_versions_defaults() -> None:
         assert v == "v1"
 
 
-@parametrize_with_cases("key", cases=".", has_tag="api_ver")
+@parametrize_with_cases("key", cases=CaseVersionKey)
 def test_api_versions_single_attr(key: str) -> None:
     """Each APIVersions key works correctly."""
     d = {key: f"v{randint(2,10)}"}
@@ -74,7 +74,7 @@ def test_api_versions_single_attr(key: str) -> None:
         assert v == d[key] if k == key else v == "v1"
 
 
-@parametrize_with_cases("key", cases=".", has_tag="api_ver")
+@parametrize_with_cases("key", cases=CaseVersionKey)
 def test_api_versions_invalid_attr(key: str) -> None:
     """Check APIVersions is case sensitive."""
     d = {key.lower(): f"v{randint(2,10)}"}

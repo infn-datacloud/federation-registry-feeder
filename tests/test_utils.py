@@ -1,8 +1,7 @@
 import os
 from pathlib import Path
-from subprocess import CompletedProcess
 from typing import List
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from pytest_cases import case, parametrize, parametrize_with_cases
@@ -16,19 +15,19 @@ from src.utils import (
     infer_service_endpoints,
     load_config,
 )
-from tests.schemas.utils import random_lower_string, random_url
+from tests.schemas.utils import random_lower_string
 
 
-@case(tags=["fname"])
-@parametrize(fname=["valid_provider", "invalid_provider", "empty_provider"])
-def case_conf_fname(fname: str) -> str:
-    return fname
+class CaseYamlFiles:
+    @case(tags=["num-items"])
+    @parametrize(num_items=[0, 1])
+    def case_yaml_files(self, num_items: int) -> List[str]:
+        return [str(i) for i in range(num_items)]
 
-
-@case(tags=["site_configs"])
-@parametrize(num_items=[0, 1])
-def case_yaml_files(num_items: int) -> List[str]:
-    return [str(i) for i in range(num_items)]
+    @case(tags=["fname"])
+    @parametrize(fname=["valid_provider", "invalid_provider", "empty_provider"])
+    def case_conf_fname(self, fname: str) -> str:
+        return fname
 
 
 def test_infer_fed_reg_urls(settings: Settings) -> None:
@@ -68,14 +67,11 @@ def test_invalid_conf_dir(settings: Settings) -> None:
 
 
 @patch("src.models.identity_provider.subprocess.run")
-@parametrize_with_cases("fname", cases=".", has_tag="fname")
-def test_load_config_yaml(mock_cmd, fname: str) -> None:
+@parametrize_with_cases("fname", cases=CaseYamlFiles, has_tag="fname")
+def test_load_config_yaml(mock_cmd: Mock, fname: str) -> None:
     """Load provider configuration from yaml file."""
-    mock_cmd.return_value = CompletedProcess(
-        args=["docker", "exec", random_lower_string(), "oidc-token", random_url()],
-        returncode=0,
-        stdout=random_lower_string(),
-    )
+    mock_cmd.return_value.returncode = 0
+    mock_cmd.return_value.stdout = random_lower_string()
     fpath = f"tests/configs/{fname}.config.yaml"
     config = load_config(fname=fpath)
     assert config if fname == "valid_provider" else not config
@@ -95,15 +91,15 @@ def test_load_config_yaml_invalid_yaml(tmp_path: Path) -> None:
 
 
 @patch("src.utils.load_config")
-@parametrize_with_cases("yaml_files", cases=".", has_tag="site_configs")
-def test_no_site_configs(mock_load_conf, yaml_files: List[str]) -> None:
+@parametrize_with_cases("yaml_files", cases=CaseYamlFiles, has_tag="num-items")
+def test_no_site_configs(mock_load_conf: Mock, yaml_files: List[str]) -> None:
     mock_load_conf.return_value = None
     site_configs = get_site_configs(yaml_files=yaml_files)
     assert len(site_configs) == 0
 
 
 @patch("src.utils.load_config")
-def test_get_site_configs(mock_load_conf, site_config: SiteConfig) -> None:
+def test_get_site_configs(mock_load_conf: Mock, site_config: SiteConfig) -> None:
     yaml_files = ["test"]
     mock_load_conf.return_value = site_config
     site_configs = get_site_configs(yaml_files=yaml_files)

@@ -1,7 +1,7 @@
 import os
 from random import getrandbits, randint
 from typing import Dict, List, Optional
-from unittest.mock import PropertyMock, patch
+from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
 import pytest
@@ -211,7 +211,7 @@ def proxy() -> PrivateNetProxy:
 
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("raised_err", cases=".", has_tag="endpoint_resp")
-def test_no_block_storage_service(mock_conn, raised_err: bool) -> None:
+def test_no_block_storage_service(mock_conn: Mock, raised_err: bool) -> None:
     with patch(
         "src.providers.openstack.Connection.block_storage"
     ) as mock_block_storage:
@@ -229,8 +229,8 @@ def test_no_block_storage_service(mock_conn, raised_err: bool) -> None:
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("with_limits", cases=".", has_tag="user_quotas")
 def test_retrieve_block_storage_service(
-    mock_conn,
-    mock_block_storage,
+    mock_conn: Mock,
+    mock_block_storage: Mock,
     block_storage_provider_quota: BlockStorageQuotaSet,
     block_storage_user_quota: BlockStorageQuotaBase,
     with_limits: bool,
@@ -257,7 +257,7 @@ def test_retrieve_block_storage_service(
 
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("raised_err", cases=".", has_tag="endpoint_resp")
-def test_no_compute_service(mock_conn, raised_err: bool) -> None:
+def test_no_compute_service(mock_conn: Mock, raised_err: bool) -> None:
     with patch("src.providers.openstack.Connection.compute") as mock_compute:
         if raised_err:
             mock_compute.get_endpoint.side_effect = EndpointNotFound()
@@ -273,8 +273,8 @@ def test_no_compute_service(mock_conn, raised_err: bool) -> None:
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("with_limits", cases=".", has_tag="user_quotas")
 def test_retrieve_compute_service(
-    mock_conn,
-    mock_compute,
+    mock_conn: Mock,
+    mock_compute: Mock,
     compute_provider_quota: ComputeQuotaSet,
     compute_user_quota: ComputeQuotaBase,
     with_limits: bool,
@@ -303,7 +303,7 @@ def test_retrieve_compute_service(
 @patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_compute_service_with_flavors(
-    mock_conn, mock_compute, flavor: Flavor
+    mock_conn: Mock, mock_compute: Mock, flavor: Flavor
 ) -> None:
     def get_allowed_project_ids(*args, **kwargs) -> List[Dict[str, str]]:
         return [{"tenant_id": uuid4().hex}]
@@ -329,7 +329,11 @@ def test_retrieve_compute_service_with_flavors(
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("tags", cases=".", has_tag="tags")
 def test_retrieve_compute_service_with_images(
-    mock_conn, mock_compute, mock_image, image: Image, tags: Optional[List[str]]
+    mock_conn: Mock,
+    mock_compute: Mock,
+    mock_image: Mock,
+    image: Image,
+    tags: Optional[List[str]],
 ) -> None:
     endpoint = random_url()
     images = list(
@@ -351,7 +355,7 @@ def test_retrieve_compute_service_with_images(
 
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("raised_err", cases=".", has_tag="endpoint_resp")
-def test_no_network_service(mock_conn, raised_err: bool) -> None:
+def test_no_network_service(mock_conn: Mock, raised_err: bool) -> None:
     with patch("src.providers.openstack.Connection.network") as mock_network:
         if raised_err:
             mock_network.get_endpoint.side_effect = EndpointNotFound()
@@ -373,8 +377,8 @@ def test_no_network_service(mock_conn, raised_err: bool) -> None:
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("with_limits", cases=".", has_tag="user_quotas")
 def test_retrieve_network_service(
-    mock_conn,
-    mock_network,
+    mock_conn: Mock,
+    mock_network: Mock,
     network_provider_quota: NetworkQuota,
     network_user_quota: NetworkQuotaBase,
     with_limits: bool,
@@ -407,7 +411,7 @@ def test_retrieve_network_service(
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("tags", cases=".", has_tag="tags")
 def test_retrieve_network_service_with_networks(
-    mock_conn, mock_network, network: Network, tags: Optional[List[str]]
+    mock_conn: Mock, mock_network: Mock, network: Network, tags: Optional[List[str]]
 ) -> None:
     endpoint = random_url()
     networks = list(
@@ -433,7 +437,11 @@ def test_retrieve_network_service_with_networks(
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("attr", cases=".", has_tag="network")
 def test_retrieve_network_service_additional_attrs(
-    mock_conn, mock_network, network: Network, proxy: PrivateNetProxy, attr: str
+    mock_conn: Mock,
+    mock_network: Mock,
+    network: Network,
+    proxy: PrivateNetProxy,
+    attr: str,
 ) -> None:
     endpoint = random_url()
     if attr == "priv_net":

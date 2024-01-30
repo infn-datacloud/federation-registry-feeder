@@ -1,6 +1,6 @@
 from random import getrandbits, randint
 from typing import Any, Dict, List, Optional
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -102,7 +102,7 @@ def network(i: Network) -> Network:
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("tags", cases=".", has_tag="no_tags")
 def test_retrieve_networks(
-    mock_conn, mock_network, network: Network, tags: Optional[List]
+    mock_conn: Mock, mock_network: Mock, network: Network, tags: Optional[List]
 ) -> None:
     networks = list(filter(lambda x: x.status == "active", [network]))
     mock_network.networks.return_value = networks
@@ -132,7 +132,7 @@ def test_retrieve_networks(
 @patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_networks_with_tags(
-    mock_conn, mock_network, network_with_tags: Network
+    mock_conn: Mock, mock_network: Mock, network_with_tags: Network
 ) -> None:
     target_tags = ["one"]
     networks = list(
@@ -149,7 +149,7 @@ def test_retrieve_networks_with_tags(
 @patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_networks_with_proxy(
-    mock_conn, mock_network, network_base: Network
+    mock_conn: Mock, mock_network: Mock, network_base: Network
 ) -> None:
     networks = [network_base]
     mock_network.networks.return_value = networks
@@ -168,7 +168,7 @@ def test_retrieve_networks_with_proxy(
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("default_attr", cases=".", has_tag="is_default")
 def test_retrieve_networks_with_default_net(
-    mock_conn, mock_network, network_shared: Network, default_attr: str
+    mock_conn: Mock, mock_network: Mock, network_shared: Network, default_attr: str
 ) -> None:
     default_private_net = network_shared.name if default_attr == "private" else None
     default_public_net = network_shared.name if default_attr == "public" else None

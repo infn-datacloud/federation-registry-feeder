@@ -1,6 +1,6 @@
 from random import randint
 from typing import Dict
-from unittest.mock import PropertyMock, patch
+from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
 import pytest
@@ -76,7 +76,7 @@ def network_quotas() -> Dict[str, int]:
 @patch("src.providers.openstack.Connection.block_storage")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_block_storage_quotas(
-    mock_conn, mock_block_storage, block_storage_quotas: Dict[str, int]
+    mock_conn: Mock, mock_block_storage: Mock, block_storage_quotas: Dict[str, int]
 ) -> None:
     mock_block_storage.get_quota_set.return_value = BlockStorageQuotaSet(
         **block_storage_quotas
@@ -96,7 +96,7 @@ def test_retrieve_block_storage_quotas(
 @patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_compute_quotas(
-    mock_conn, mock_compute, compute_quotas: Dict[str, int]
+    mock_conn: Mock, mock_compute: Mock, compute_quotas: Dict[str, int]
 ) -> None:
     mock_compute.get_quota_set.return_value = ComputeQuotaSet(**compute_quotas)
     mock_conn.compute = mock_compute
@@ -114,7 +114,7 @@ def test_retrieve_compute_quotas(
 @patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_network_quotas(
-    mock_conn, mock_network, network_quotas: Dict[str, int]
+    mock_conn: Mock, mock_network: Mock, network_quotas: Dict[str, int]
 ) -> None:
     mock_network.get_quota.return_value = NetworkQuota(**network_quotas)
     mock_conn.network = mock_network

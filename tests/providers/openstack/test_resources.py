@@ -1,5 +1,5 @@
 from typing import Tuple
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -82,25 +82,28 @@ def configurations() -> (
 @patch("src.providers.openstack.connect_to_provider")
 @parametrize_with_cases("fail_point", cases=".", has_tag="connection")
 def test_no_connection(
-    mock_conn,
-    mock_project,
-    mock_block_storage_service,
-    mock_compute_service,
-    mock_network_service,
+    mock_conn: Mock,
+    mock_project: Mock,
+    mock_block_storage_service: Mock,
+    mock_compute_service: Mock,
+    mock_network_service: Mock,
     configurations: Tuple[Openstack, Issuer, Project, str],
+    project_create: ProjectCreate,
+    block_storage_service_create: BlockStorageServiceCreateExtended,
+    compute_service_create: ComputeServiceCreateExtended,
+    network_service_create: NetworkServiceCreateExtended,
     fail_point: str,
 ) -> None:
     """Test no initial connection and connection loss during procedure"""
-    mock_project.return_value = ProjectCreate(uuid=uuid4(), name=random_lower_string())
-    mock_block_storage_service.return_value = BlockStorageServiceCreateExtended(
-        endpoint=random_url(), name=BlockStorageServiceName.OPENSTACK_CINDER
-    )
-    mock_compute_service.return_value = ComputeServiceCreateExtended(
-        endpoint=random_url(), name=ComputeServiceName.OPENSTACK_NOVA
-    )
-    mock_network_service.return_value = NetworkServiceCreateExtended(
-        endpoint=random_url(), name=NetworkServiceName.OPENSTACK_NEUTRON
-    )
+    block_storage_service_create.name = BlockStorageServiceName.OPENSTACK_CINDER
+    compute_service_create.name = ComputeServiceName.OPENSTACK_NOVA
+    network_service_create.name = NetworkServiceName.OPENSTACK_NEUTRON
+
+    mock_project.return_value = project_create
+    mock_block_storage_service.return_value = block_storage_service_create
+    mock_compute_service.return_value = compute_service_create
+    mock_network_service.return_value = network_service_create
+
     if fail_point == "connection":
         mock_conn.return_value = None
     elif fail_point == "project":
@@ -129,32 +132,35 @@ def test_no_connection(
 @patch("src.providers.openstack.get_project")
 @parametrize_with_cases("absent", cases=".", has_tag="item")
 def test_retrieve_resources(
-    mock_project,
-    mock_block_storage_service,
-    mock_compute_service,
-    mock_network_service,
+    mock_project: Mock,
+    mock_block_storage_service: Mock,
+    mock_compute_service: Mock,
+    mock_network_service: Mock,
     configurations: Tuple[Openstack, Issuer, Project, str],
+    project_create: ProjectCreate,
+    block_storage_service_create: BlockStorageServiceCreateExtended,
+    compute_service_create: ComputeServiceCreateExtended,
+    network_service_create: NetworkServiceCreateExtended,
     absent: str,
 ) -> None:
     (provider_conf, issuer, project_conf, region_name, token) = configurations
-    mock_project.return_value = ProjectCreate(
-        uuid=project_conf.id, name=random_lower_string()
+
+    project_create.uuid = project_conf.id
+    block_storage_service_create.name = BlockStorageServiceName.OPENSTACK_CINDER
+    compute_service_create.name = ComputeServiceName.OPENSTACK_NOVA
+    network_service_create.name = NetworkServiceName.OPENSTACK_NEUTRON
+
+    mock_project.return_value = project_create
+    mock_block_storage_service.return_value = (
+        None if absent == "block_storage" else block_storage_service_create
     )
-    mock_block_storage_service.return_value = BlockStorageServiceCreateExtended(
-        endpoint=random_url(), name=BlockStorageServiceName.OPENSTACK_CINDER
+    mock_compute_service.return_value = (
+        None if absent == "compute" else compute_service_create
     )
-    mock_compute_service.return_value = ComputeServiceCreateExtended(
-        endpoint=random_url(), name=ComputeServiceName.OPENSTACK_NOVA
+    mock_network_service.return_value = (
+        None if absent == "network" else network_service_create
     )
-    mock_network_service.return_value = NetworkServiceCreateExtended(
-        endpoint=random_url(), name=NetworkServiceName.OPENSTACK_NEUTRON
-    )
-    if absent == "block_storage":
-        mock_block_storage_service.return_value = None
-    elif absent == "compute":
-        mock_compute_service.return_value = None
-    elif absent == "network":
-        mock_network_service.return_value = None
+
     resp = get_data_from_openstack(
         provider_conf=provider_conf,
         project_conf=project_conf,

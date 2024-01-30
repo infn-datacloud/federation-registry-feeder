@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from app.provider.enum import ProviderStatus, ProviderType
@@ -20,7 +20,6 @@ from pytest_cases import case, parametrize, parametrize_with_cases
 from src.models.identity_provider import Issuer
 from src.models.provider import AuthMethod, Kubernetes, Openstack, Project
 from src.providers.core import get_provider
-from tests.schemas.utils import random_lower_string, random_url
 
 
 @case(tags=["type"])
@@ -66,7 +65,7 @@ def test_retrieve_empty_provider(
 @patch("src.providers.core.get_idp_project_and_region")
 @parametrize_with_cases("provider_type", cases=".", has_tag="type")
 def test_failed_retrieve_provider(
-    mock_func,
+    mock_func: Mock,
     provider_type: ProviderType,
     issuer: Issuer,
     project: Project,
@@ -97,47 +96,44 @@ def test_failed_retrieve_provider(
 @patch("src.providers.core.get_data_from_openstack")
 @parametrize_with_cases("provider_type", cases=".", has_tag="type")
 def test_retrieve_provider(
-    mock_func,
+    mock_func: Mock,
     provider_type: ProviderType,
     issuer: Issuer,
     project: Project,
     auth_method: AuthMethod,
     openstack_provider: Openstack,
     kubernetes_provider: Kubernetes,
+    project_create: ProjectCreate,
+    block_storage_service_create: BlockStorageServiceCreateExtended,
+    compute_service_create: ComputeServiceCreateExtended,
+    identity_service_create: IdentityServiceCreate,
+    network_service_create: NetworkServiceCreateExtended,
 ) -> None:
     if provider_type == ProviderType.OS:
         provider = openstack_provider
+        project_create.uuid = project.id
+        block_storage_service_create.name = BlockStorageServiceName.OPENSTACK_CINDER
+        compute_service_create.name = ComputeServiceName.OPENSTACK_NOVA
+        identity_service_create.name = IdentityServiceName.OPENSTACK_KEYSTONE
+        network_service_create.name = NetworkServiceName.OPENSTACK_NEUTRON
+
         mock_func.return_value = (
-            ProjectCreate(uuid=project.id, name=random_lower_string()),
-            BlockStorageServiceCreateExtended(
-                endpoint=random_url(), name=BlockStorageServiceName.OPENSTACK_CINDER
-            ),
-            ComputeServiceCreateExtended(
-                endpoint=random_url(), name=ComputeServiceName.OPENSTACK_NOVA
-            ),
-            IdentityServiceCreate(
-                endpoint=random_url(), name=IdentityServiceName.OPENSTACK_KEYSTONE
-            ),
-            NetworkServiceCreateExtended(
-                endpoint=random_url(), name=NetworkServiceName.OPENSTACK_NEUTRON
-            ),
+            project_create,
+            block_storage_service_create,
+            compute_service_create,
+            identity_service_create,
+            network_service_create,
         )
     elif provider_type == ProviderType.K8S:
         provider = kubernetes_provider
+        project_create.uuid = project.id
+
         mock_func.return_value = (
-            ProjectCreate(uuid=project.id, name=random_lower_string()),
-            BlockStorageServiceCreateExtended(
-                endpoint=random_url(), name=BlockStorageServiceName.OPENSTACK_CINDER
-            ),
-            ComputeServiceCreateExtended(
-                endpoint=random_url(), name=ComputeServiceName.OPENSTACK_NOVA
-            ),
-            IdentityServiceCreate(
-                endpoint=random_url(), name=IdentityServiceName.OPENSTACK_KEYSTONE
-            ),
-            NetworkServiceCreateExtended(
-                endpoint=random_url(), name=NetworkServiceName.OPENSTACK_NEUTRON
-            ),
+            project_create,
+            block_storage_service_create,
+            compute_service_create,
+            identity_service_create,
+            network_service_create,
         )
         pytest.skip("Not yet implemented.")
 

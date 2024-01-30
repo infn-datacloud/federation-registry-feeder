@@ -1,6 +1,6 @@
 from random import getrandbits, randint
 from typing import Any, Dict, List
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -98,7 +98,7 @@ def flavor(f: Flavor) -> Flavor:
 
 @patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
-def test_retrieve_flavors(mock_conn, mock_compute, flavor: Flavor) -> None:
+def test_retrieve_flavors(mock_conn: Mock, mock_compute: Mock, flavor: Flavor) -> None:
     def get_allowed_project_ids(*args, **kwargs) -> List[Dict[str, str]]:
         return [{"tenant_id": uuid4().hex}]
 

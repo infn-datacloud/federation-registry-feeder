@@ -1,4 +1,4 @@
-from unittest.mock import PropertyMock, patch
+from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
 import pytest
@@ -25,7 +25,9 @@ def project(with_desc) -> Project:
 
 @patch("src.providers.openstack.Connection.identity")
 @patch("src.providers.openstack.Connection")
-def test_retrieve_project(mock_conn, mock_identity, project: Project) -> None:
+def test_retrieve_project(
+    mock_conn: Mock, mock_identity: Mock, project: Project
+) -> None:
     mock_identity.get_project.return_value = project
     mock_conn.identity = mock_identity
     type(mock_conn).current_project_id = PropertyMock(return_value=project.id)
