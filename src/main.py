@@ -16,7 +16,6 @@ def main() -> None:
     # Load Federation Registry configuration, infer Federation Registry endpoints and
     # read all yaml files containing providers configurations.
     settings = get_settings()
-    fed_reg_endpoints = infer_service_endpoints(settings=settings)
     yaml_files = get_conf_files(settings=settings)
     site_configs = get_site_configs(yaml_files=yaml_files)
 
@@ -34,6 +33,7 @@ def main() -> None:
 
     # Update the Federation Registry
     token = site_configs[0].trusted_idps[0].token if len(site_configs) > 0 else ""
+    fed_reg_endpoints = infer_service_endpoints(settings=settings)
     update_database(service_api_url=fed_reg_endpoints, token=token, items=providers)
 
 

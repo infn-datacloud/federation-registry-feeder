@@ -9,7 +9,6 @@ from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.config import Settings
 from src.models.config import SiteConfig
-from src.models.identity_provider import Issuer
 from src.utils import (
     get_conf_files,
     get_read_write_headers,
@@ -18,11 +17,6 @@ from src.utils import (
     load_config,
 )
 from tests.schemas.utils import random_lower_string, random_url
-
-
-@pytest.fixture
-def config(issuer: Issuer) -> SiteConfig:
-    return SiteConfig(trusted_idps=[issuer])
 
 
 @case(tags=["fname"])
@@ -109,9 +103,9 @@ def test_no_site_configs(mock_load_conf, yaml_files: List[str]) -> None:
 
 
 @patch("src.utils.load_config")
-def test_get_site_configs(mock_load_conf, config: SiteConfig) -> None:
+def test_get_site_configs(mock_load_conf, site_config: SiteConfig) -> None:
     yaml_files = ["test"]
-    mock_load_conf.return_value = config
+    mock_load_conf.return_value = site_config
     site_configs = get_site_configs(yaml_files=yaml_files)
     assert len(site_configs) == len(yaml_files)
 

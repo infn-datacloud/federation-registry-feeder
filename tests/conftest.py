@@ -2,8 +2,10 @@ import os
 from uuid import uuid4
 
 import pytest
+from app.provider.schemas_extended import ProviderCreateExtended
 
-from src.config import APIVersions, Settings
+from src.config import APIVersions, Settings, URLs
+from src.models.config import SiteConfig
 from src.models.identity_provider import SLA, Issuer, UserGroup
 from src.models.provider import (
     AuthMethod,
@@ -17,6 +19,7 @@ from src.models.provider import (
 from tests.schemas.utils import (
     random_ip,
     random_lower_string,
+    random_provider_type,
     random_start_end_dates,
     random_url,
 )
@@ -35,6 +38,12 @@ def api_ver() -> APIVersions:
 @pytest.fixture
 def settings(api_ver: APIVersions) -> Settings:
     return Settings(api_ver=api_ver)
+
+
+@pytest.fixture
+def service_endpoints() -> URLs:
+    base_url = random_url()
+    return URLs(**{k: os.path.join(base_url, k) for k in URLs.__fields__.keys()})
 
 
 @pytest.fixture
@@ -107,4 +116,16 @@ def kubernetes_provider(auth_method: AuthMethod, project: Project) -> Kubernetes
         auth_url=random_url(),
         identity_providers=[auth_method],
         projects=[project],
+    )
+
+
+@pytest.fixture
+def site_config(issuer: Issuer) -> SiteConfig:
+    return SiteConfig(trusted_idps=[issuer])
+
+
+@pytest.fixture
+def provider_create() -> ProviderCreateExtended:
+    return ProviderCreateExtended(
+        name=random_lower_string(), type=random_provider_type()
     )
