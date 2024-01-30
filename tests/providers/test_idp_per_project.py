@@ -2,34 +2,13 @@ from uuid import uuid4
 
 import pytest
 
-from src.models.identity_provider import SLA, Issuer, UserGroup
+from src.models.identity_provider import Issuer
 from src.models.provider import AuthMethod, Project
 from src.providers.core import (
     get_identity_provider_info_for_project,
     get_identity_provider_with_auth_method,
 )
-from tests.schemas.utils import random_lower_string, random_start_end_dates, random_url
-
-
-@pytest.fixture
-def sla() -> SLA:
-    start_date, end_date = random_start_end_dates()
-    return SLA(doc_uuid=uuid4(), start_date=start_date, end_date=end_date)
-
-
-@pytest.fixture
-def user_group(sla: SLA) -> UserGroup:
-    return UserGroup(name=random_lower_string(), slas=[sla])
-
-
-@pytest.fixture
-def issuer(user_group: UserGroup) -> Issuer:
-    return Issuer(
-        issuer=random_url(),
-        group_claim=random_lower_string(),
-        token=random_lower_string(),
-        user_groups=[user_group],
-    )
+from tests.schemas.utils import random_lower_string, random_url
 
 
 def test_get_ipd_with_auth_method(issuer: Issuer) -> None:

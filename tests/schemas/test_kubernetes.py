@@ -1,30 +1,9 @@
-from uuid import uuid4
-
 import pytest
 from app.provider.enum import ProviderType
 from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.models.provider import AuthMethod, Kubernetes, Project, Region
 from tests.schemas.utils import random_lower_string, random_provider_type, random_url
-
-
-@pytest.fixture
-def identity_provider() -> AuthMethod:
-    return AuthMethod(
-        protocol=random_lower_string(),
-        name=random_lower_string(),
-        endpoint=random_url(),
-    )
-
-
-@pytest.fixture
-def project() -> Project:
-    return Project(id=uuid4(), sla=uuid4())
-
-
-@pytest.fixture
-def region() -> Region:
-    return Region(name=random_lower_string())
 
 
 @pytest.fixture
@@ -47,7 +26,7 @@ def case_invalid_attr(attr: bool) -> bool:
 @parametrize_with_cases("attr", cases=".", has_tag="valid")
 def test_openstack_schema(
     attr: str,
-    identity_provider: AuthMethod,
+    auth_method: AuthMethod,
     project: Project,
     region: Region,
     default_region: Region,
@@ -57,7 +36,7 @@ def test_openstack_schema(
         "name": random_lower_string(),
         "type": ProviderType.K8S,
         "auth_url": random_url(),
-        "identity_providers": [identity_provider],
+        "identity_providers": [auth_method],
         "projects": [project],
     }
     if attr == "regions":
@@ -79,7 +58,7 @@ def test_openstack_schema(
 
 @parametrize_with_cases("attr", cases=".", has_tag="invalid")
 def test_openstack_invalid_schema(
-    attr: str, identity_provider: AuthMethod, project: Project, region: Region
+    attr: str, auth_method: AuthMethod, project: Project, region: Region
 ) -> None:
     """SLA with invalid projects list.
 
@@ -93,7 +72,7 @@ def test_openstack_invalid_schema(
         if attr == "type"
         else ProviderType.K8S,
         "auth_url": None if attr == "auth_url" else random_url(),
-        "identity_providers": [identity_provider],
+        "identity_providers": [auth_method],
         "projects": [project],
     }
     if attr == "regions_none":

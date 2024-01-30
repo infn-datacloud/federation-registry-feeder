@@ -1,31 +1,17 @@
 from subprocess import CompletedProcess
 from unittest.mock import patch
-from uuid import uuid4
 
 import pytest
 from pytest_cases import case, parametrize, parametrize_with_cases
 
-from src.models.identity_provider import SLA, Issuer, UserGroup
-from tests.schemas.utils import random_lower_string, random_start_end_dates, random_url
+from src.models.identity_provider import Issuer, UserGroup
+from tests.schemas.utils import random_lower_string, random_url
 
 
 @case(tags=["user_groups"])
 @parametrize(with_user_groups=[0, 1, 2])
 def case_with_user_groups(with_user_groups: int) -> int:
     return with_user_groups
-
-
-@pytest.fixture
-def sla() -> SLA:
-    """Fixture with an SLA without projects."""
-    start_date, end_date = random_start_end_dates()
-    return SLA(doc_uuid=uuid4(), start_date=start_date, end_date=end_date)
-
-
-@pytest.fixture
-def user_group(sla: SLA) -> UserGroup:
-    """Fixture with an UserGroup without projects."""
-    return UserGroup(name=random_lower_string(), slas=[sla])
 
 
 @patch("src.models.identity_provider.subprocess.run")

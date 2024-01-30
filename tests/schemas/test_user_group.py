@@ -1,18 +1,8 @@
-from uuid import uuid4
-
 import pytest
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.identity_provider import SLA, UserGroup
-from tests.schemas.utils import random_lower_string, random_start_end_dates
-
-
-@pytest.fixture
-def sla() -> SLA:
-    """Fixture with an SLA without projects."""
-    start_date, end_date = random_start_end_dates()
-    d = {"doc_uuid": uuid4(), "start_date": start_date, "end_date": end_date}
-    return SLA(**d)
+from tests.schemas.utils import random_lower_string
 
 
 @parametrize(with_slas=[True, False])

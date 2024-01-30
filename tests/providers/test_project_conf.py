@@ -1,5 +1,4 @@
 from random import randint
-from uuid import uuid4
 
 import pytest
 from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
@@ -74,29 +73,28 @@ def region_props() -> PerRegionProps:
 
 
 @pytest.fixture
-def project() -> Project:
-    return Project(
-        id=uuid4(),
-        sla=uuid4(),
-        default_public_net=random_lower_string(),
-        default_private_net=random_lower_string(),
-        private_net_proxy=get_private_net_proxy(),
-        per_user_limits=get_per_user_limits(),
-    )
+def project_with_specifics(project: Project) -> Project:
+    project.default_public_net = random_lower_string()
+    project.default_private_net = random_lower_string()
+    project.private_net_proxy = get_private_net_proxy()
+    project.per_user_limits = get_per_user_limits()
+    return project
 
 
 @parametrize_with_cases("with_per_region_props", cases=".")
 def test_project_conf_based_on_region(
-    project: Project, with_per_region_props: bool, region_props: PerRegionProps
+    project_with_specifics: Project,
+    with_per_region_props: bool,
+    region_props: PerRegionProps,
 ) -> None:
-    original_per_project_len = len(project.per_region_props)
+    original_per_project_len = len(project_with_specifics.per_region_props)
     new_conf = get_project_conf_params(
-        project_conf=project,
+        project_conf=project_with_specifics,
         region_props=region_props if with_per_region_props else None,
     )
-    assert new_conf.id == project.id
-    assert new_conf.description == project.description
-    assert new_conf.sla == project.sla
+    assert new_conf.id == project_with_specifics.id
+    assert new_conf.description == project_with_specifics.description
+    assert new_conf.sla == project_with_specifics.sla
     if with_per_region_props:
         assert new_conf.default_private_net == region_props.default_private_net
         assert new_conf.default_public_net == region_props.default_public_net
@@ -113,15 +111,23 @@ def test_project_conf_based_on_region(
                 new_conf.per_user_limits.network == region_props.per_user_limits.network
             )
     else:
-        assert new_conf.default_private_net == project.default_private_net
-        assert new_conf.default_public_net == project.default_public_net
-        assert new_conf.private_net_proxy == project.private_net_proxy
+        assert (
+            new_conf.default_private_net == project_with_specifics.default_private_net
+        )
+        assert new_conf.default_public_net == project_with_specifics.default_public_net
+        assert new_conf.private_net_proxy == project_with_specifics.private_net_proxy
         if new_conf.per_user_limits:
             assert (
                 new_conf.per_user_limits.block_storage
-                == project.per_user_limits.block_storage
+                == project_with_specifics.per_user_limits.block_storage
             )
-            assert new_conf.per_user_limits.compute == project.per_user_limits.compute
-            assert new_conf.per_user_limits.network == project.per_user_limits.network
+            assert (
+                new_conf.per_user_limits.compute
+                == project_with_specifics.per_user_limits.compute
+            )
+            assert (
+                new_conf.per_user_limits.network
+                == project_with_specifics.per_user_limits.network
+            )
     assert len(new_conf.per_region_props) == 0
-    assert len(project.per_region_props) == original_per_project_len
+    assert len(project_with_specifics.per_region_props) == original_per_project_len

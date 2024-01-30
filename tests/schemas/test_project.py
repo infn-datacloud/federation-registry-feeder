@@ -4,17 +4,7 @@ import pytest
 from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.models.provider import Limits, PerRegionProps, PrivateNetProxy, Project
-from tests.schemas.utils import random_ip, random_lower_string
-
-
-@pytest.fixture
-def limits() -> Limits:
-    return Limits()
-
-
-@pytest.fixture
-def net_proxy() -> PrivateNetProxy:
-    return PrivateNetProxy(ip=random_ip(), user=random_lower_string())
+from tests.schemas.utils import random_lower_string
 
 
 @pytest.fixture

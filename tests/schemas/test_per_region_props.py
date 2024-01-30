@@ -2,21 +2,11 @@ import pytest
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.provider import Limits, PerRegionProps, PrivateNetProxy
-from tests.schemas.utils import random_ip, random_lower_string
-
-
-@pytest.fixture
-def limits() -> Limits:
-    return Limits()
-
-
-@pytest.fixture
-def net_proxy() -> PrivateNetProxy:
-    return PrivateNetProxy(ip=random_ip(), user=random_lower_string())
+from tests.schemas.utils import random_lower_string
 
 
 @parametrize(attr=["private_net_proxy", "per_user_limits"])
-def case_net_proxy(attr: bool) -> bool:
+def case_attr(attr: bool) -> bool:
     return attr
 
 
@@ -25,6 +15,7 @@ def test_net_proxy_schema(
     attr: str, limits: Limits, net_proxy: PrivateNetProxy
 ) -> None:
     """Create a PerRegionProps."""
+    print(net_proxy)
     d = {
         "region_name": random_lower_string(),
         "default_public_net": random_lower_string(),
