@@ -118,71 +118,77 @@ def update_identity_providers(
 def update_region_block_storage_services(
     *,
     current_services: List[BlockStorageServiceCreateExtended],
-    new_service: BlockStorageServiceCreateExtended,
+    new_services: List[BlockStorageServiceCreateExtended],
 ) -> None:
-    for service in current_services:
-        if service.endpoint == new_service.endpoint:
-            service.quotas += new_service.quotas
-            break
-    else:
-        current_services.append(new_service)
+    for new_service in new_services:
+        for service in current_services:
+            if service.endpoint == new_service.endpoint:
+                service.quotas += new_service.quotas
+                break
+        else:
+            current_services.append(new_service)
 
 
 def update_region_compute_services(
     *,
     current_services: List[ComputeServiceCreateExtended],
-    new_service: ComputeServiceCreateExtended,
+    new_services: List[ComputeServiceCreateExtended],
 ) -> None:
-    for service in current_services:
-        if service.endpoint == new_service.endpoint:
-            curr_uuids = [i.uuid for i in service.flavors]
-            service.flavors += list(
-                filter(
-                    lambda x, uuids=curr_uuids: x.uuid not in uuids,
-                    new_service.flavors,
+    for new_service in new_services:
+        for service in current_services:
+            if service.endpoint == new_service.endpoint:
+                curr_uuids = [i.uuid for i in service.flavors]
+                service.flavors += list(
+                    filter(
+                        lambda x, uuids=curr_uuids: x.uuid not in uuids,
+                        new_service.flavors,
+                    )
                 )
-            )
-            curr_uuids = [i.uuid for i in service.images]
-            service.images += list(
-                filter(
-                    lambda x, uuids=curr_uuids: x.uuid not in uuids,
-                    new_service.images,
+                curr_uuids = [i.uuid for i in service.images]
+                service.images += list(
+                    filter(
+                        lambda x, uuids=curr_uuids: x.uuid not in uuids,
+                        new_service.images,
+                    )
                 )
-            )
-            service.quotas += new_service.quotas
-            break
-    else:
-        current_services.append(new_service)
+                service.quotas += new_service.quotas
+                break
+        else:
+            current_services.append(new_service)
 
 
 def update_region_identity_services(
-    *, current_services: List[IdentityServiceCreate], new_service: IdentityServiceCreate
+    *,
+    current_services: List[IdentityServiceCreate],
+    new_services: List[IdentityServiceCreate],
 ) -> None:
-    for service in current_services:
-        if service.endpoint == new_service.endpoint:
-            break
-    else:
-        current_services.append(new_service)
+    for new_service in new_services:
+        for service in current_services:
+            if service.endpoint == new_service.endpoint:
+                break
+        else:
+            current_services.append(new_service)
 
 
 def update_region_network_services(
     *,
     current_services: List[NetworkServiceCreateExtended],
-    new_service: NetworkServiceCreateExtended,
+    new_services: List[NetworkServiceCreateExtended],
 ) -> None:
-    for service in current_services:
-        if service.endpoint == new_service.endpoint:
-            curr_uuids = [i.uuid for i in service.networks]
-            service.networks += list(
-                filter(
-                    lambda x, uuids=curr_uuids: x.uuid not in uuids,
-                    new_service.networks,
+    for new_service in new_services:
+        for service in current_services:
+            if service.endpoint == new_service.endpoint:
+                curr_uuids = [i.uuid for i in service.networks]
+                service.networks += list(
+                    filter(
+                        lambda x, uuids=curr_uuids: x.uuid not in uuids,
+                        new_service.networks,
+                    )
                 )
-            )
-            service.quotas += new_service.quotas
-            break
-    else:
-        current_services.append(new_service)
+                service.quotas += new_service.quotas
+                break
+        else:
+            current_services.append(new_service)
 
 
 def update_regions(
@@ -190,28 +196,30 @@ def update_regions(
 ) -> List[RegionCreateExtended]:
     d = {}
     for new_region in new_regions:
-        filter_projects_on_compute_service(
-            service=new_region.compute_services[0], include_projects=include_projects
-        )
+        if len(new_region.compute_services) > 0:
+            filter_projects_on_compute_service(
+                service=new_region.compute_services[0],
+                include_projects=include_projects,
+            )
         current_region: RegionCreateExtended = d.get(new_region.name)
         if not current_region:
             d[new_region.name] = new_region
         else:
             update_region_block_storage_services(
                 current_services=current_region.block_storage_services,
-                new_service=new_region.block_storage_services[0],
+                new_services=new_region.block_storage_services,
             )
             update_region_compute_services(
                 current_services=current_region.compute_services,
-                new_service=new_region.compute_services[0],
+                new_services=new_region.compute_services,
             )
             update_region_identity_services(
                 current_services=current_region.identity_services,
-                new_service=new_region.identity_services[0],
+                new_services=new_region.identity_services,
             )
             update_region_network_services(
                 current_services=current_region.network_services,
-                new_service=new_region.network_services[0],
+                new_services=new_region.network_services,
             )
     return list(d.values())
 

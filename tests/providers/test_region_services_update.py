@@ -112,7 +112,7 @@ def test_update_region_block_storage_service(
     )
     current_services = [copy.deepcopy(old_srv)]
     update_region_block_storage_services(
-        current_services=current_services, new_service=new_srv
+        current_services=current_services, new_services=[new_srv]
     )
     if equal_endpoint:
         assert len(current_services) == 1
@@ -152,7 +152,7 @@ def test_update_region_compute_service(equal_endpoint: bool, with_quota: bool) -
     )
     current_services = [copy.deepcopy(old_srv)]
     update_region_compute_services(
-        current_services=current_services, new_service=new_srv
+        current_services=current_services, new_services=[new_srv]
     )
     if equal_endpoint:
         assert len(current_services) == 1
@@ -189,7 +189,7 @@ def test_update_region_identity_service(equal_endpoint: bool) -> None:
     )
     current_services = [copy.deepcopy(old_srv)]
     update_region_identity_services(
-        current_services=current_services, new_service=new_srv
+        current_services=current_services, new_services=[new_srv]
     )
     if equal_endpoint:
         assert len(current_services) == 1
@@ -225,7 +225,7 @@ def test_update_region_network_service(equal_endpoint: bool, with_quota: bool) -
     )
     current_services = [copy.deepcopy(old_srv)]
     update_region_network_services(
-        current_services=current_services, new_service=new_srv
+        current_services=current_services, new_services=[new_srv]
     )
     if equal_endpoint:
         assert len(current_services) == 1
@@ -264,7 +264,7 @@ def test_update_region_compute_service_with_flavors(equal: bool) -> None:
     )
     current_services = [copy.deepcopy(old_srv)]
     update_region_compute_services(
-        current_services=current_services, new_service=new_srv
+        current_services=current_services, new_services=[new_srv]
     )
     assert len(current_services) == 1
     assert len(current_services[0].flavors) == (1 if equal else 2)
@@ -282,7 +282,7 @@ def test_update_region_compute_service_with_images(equal: bool) -> None:
     )
     current_services = [copy.deepcopy(old_srv)]
     update_region_compute_services(
-        current_services=current_services, new_service=new_srv
+        current_services=current_services, new_services=[new_srv]
     )
     assert len(current_services) == 1
     assert len(current_services[0].images) == (1 if equal else 2)
@@ -300,7 +300,7 @@ def test_update_region_network_service_with_networks(equal: bool) -> None:
     )
     current_services = [copy.deepcopy(old_srv)]
     update_region_network_services(
-        current_services=current_services, new_service=new_srv
+        current_services=current_services, new_services=[new_srv]
     )
     assert len(current_services) == 1
     assert len(current_services[0].networks) == (1 if equal else 2)
