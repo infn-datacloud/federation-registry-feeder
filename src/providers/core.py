@@ -308,20 +308,30 @@ def get_provider(
     inputs = []
     for region_conf in provider_conf.regions:
         for project_conf in provider_conf.projects:
-            inputs.append((provider_conf, region_conf, project_conf, issuers))
+            inputs.append(
+                {
+                    "provider_conf": provider_conf,
+                    "region_conf": region_conf,
+                    "project_conf": project_conf,
+                    "issuers": issuers,
+                }
+            )
 
     with ThreadPoolExecutor() as executor:
-        responses = executor.map(get_idp_project_and_region, inputs)
+        responses = executor.map(lambda x: get_idp_project_and_region(**x), inputs)
     responses = list(filter(lambda x: x, responses))
-    (identity_providers, projects, regions) = responses
 
-    projects = list({i.uuid: i for i in projects}.values())
+    identity_providers = []
+    projects = []
+    regions = []
+    if len(responses) > 0:
+        (identity_providers, projects, regions) = zip(*responses)
 
-    update_identity_providers(new_issuers=identity_providers)
-
-    regions = update_regions(
-        new_regions=regions, include_projects=[i.uuid for i in projects]
-    )
+        projects = list({i.uuid: i for i in projects}.values())
+        identity_providers = update_identity_providers(new_issuers=identity_providers)
+        regions = update_regions(
+            new_regions=regions, include_projects=[i.uuid for i in projects]
+        )
 
     return ProviderCreateExtended(
         name=provider_conf.name,
