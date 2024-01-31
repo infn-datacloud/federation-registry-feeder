@@ -13,7 +13,7 @@ from pydantic import AnyHttpUrl, BaseModel, Field, validator
 
 from src.logger import logger
 
-TIMEOUT = 2  # s
+TIMEOUT = 30  # s
 
 
 class CRUD(BaseModel):
