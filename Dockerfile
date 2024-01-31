@@ -29,4 +29,6 @@ RUN apt-get update \
 RUN pip install --user --upgrade pip==20.2.4 \
     && pip install --user --no-cache-dir --upgrade -r /app/requirements.txt
 
+ENV PYTHONPATH="${PYTHONPATH}:/app/src"
+
 COPY ./src /app/src
