@@ -26,7 +26,7 @@ RUN apt-get update \
     && apt-get clean
 
 # Upgrade pip and install requirements
-RUN pip install --user --upgrade pip \
+RUN pip install --user --upgrade pip==20.2.4 \
     && pip install --user --no-cache-dir --upgrade -r /app/requirements.txt
 
 COPY ./src /app/src
