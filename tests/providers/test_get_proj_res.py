@@ -1,6 +1,7 @@
 from unittest.mock import Mock, patch
 
 import pytest
+from app.provider.enum import ProviderType
 from app.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
@@ -17,18 +18,9 @@ from app.service.enum import (
 from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.models.identity_provider import Issuer
-from src.models.provider import (
-    Kubernetes,
-    Openstack,
-    PerRegionProps,
-)
+from src.models.provider import Kubernetes, Openstack, PerRegionProps
 from src.providers.core import get_idp_project_and_region
-
-
-@case(tags=["type"])
-@parametrize(type=["openstack", "kubernetes"])
-def case_provider_type(type: str) -> str:
-    return type
+from tests.providers.test_get_provider import CaseProvider
 
 
 @case(tags=["reg_props"])
@@ -104,7 +96,7 @@ def test_retrieve_project_resources(
         assert network_service_create in region.network_services
 
 
-@parametrize_with_cases("provider_type", cases=".", has_tag="type")
+@parametrize_with_cases("provider_type", cases=CaseProvider, has_tag="type")
 def test_no_matching_idp_when_retrieving_project_resources(
     caplog: pytest.LogCaptureFixture,
     provider_type: str,
@@ -112,9 +104,9 @@ def test_no_matching_idp_when_retrieving_project_resources(
     openstack_provider: Openstack,
     kubernetes_provider: Kubernetes,
 ) -> None:
-    if provider_type == "openstack":
+    if provider_type == ProviderType.OS:
         provider = openstack_provider
-    elif provider_type == "kubernetes":
+    elif provider_type == ProviderType.K8S:
         provider = kubernetes_provider
 
     resp = get_idp_project_and_region(
@@ -129,7 +121,7 @@ def test_no_matching_idp_when_retrieving_project_resources(
     assert caplog.text.strip("\n").endswith(msg)
 
 
-@parametrize_with_cases("provider_type", cases=".", has_tag="type")
+@parametrize_with_cases("provider_type", cases=CaseProvider, has_tag="type")
 def test_no_conn_when_retrieving_project_resources(
     caplog: pytest.LogCaptureFixture,
     provider_type: str,
@@ -137,9 +129,9 @@ def test_no_conn_when_retrieving_project_resources(
     openstack_provider: Openstack,
     kubernetes_provider: Kubernetes,
 ) -> None:
-    if provider_type == "openstack":
+    if provider_type == ProviderType.OS:
         provider = openstack_provider
-    elif provider_type == "kubernetes":
+    elif provider_type == ProviderType.K8S:
         provider = kubernetes_provider
 
     provider.projects[0].sla = issuer.user_groups[0].slas[0].doc_uuid
@@ -153,6 +145,6 @@ def test_no_conn_when_retrieving_project_resources(
     )
     assert not resp
 
-    if provider_type == "openstack":
+    if provider_type == ProviderType.OS:
         msg = "Connection closed unexpectedly."
         assert caplog.text.strip("\n").endswith(msg)

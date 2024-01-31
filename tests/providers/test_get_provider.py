@@ -22,20 +22,20 @@ from src.models.provider import AuthMethod, Kubernetes, Openstack, Project
 from src.providers.core import get_provider
 
 
-@case(tags=["type"])
-@parametrize(type=[ProviderType.OS, ProviderType.K8S])
-def case_provider_type(type: ProviderType) -> ProviderType:
-    return type
+class CaseProvider:
+    @case(tags=["type"])
+    @parametrize(type=[ProviderType.OS, ProviderType.K8S])
+    def case_provider_type(self, type: ProviderType) -> ProviderType:
+        return type
+
+    @case(tags=["status"])
+    @parametrize(status=[ProviderStatus.ACTIVE, ProviderStatus.MAINTENANCE])
+    def case_provider_status(self, status: ProviderStatus) -> ProviderStatus:
+        return status
 
 
-@case(tags=["status"])
-@parametrize(status=[ProviderStatus.ACTIVE, ProviderStatus.MAINTENANCE])
-def case_provider_status(status: ProviderStatus) -> ProviderStatus:
-    return status
-
-
-@parametrize_with_cases("provider_type", cases=".", has_tag="type")
-@parametrize_with_cases("provider_status", cases=".", has_tag="status")
+@parametrize_with_cases("provider_type", cases=CaseProvider, has_tag="type")
+@parametrize_with_cases("provider_status", cases=CaseProvider, has_tag="status")
 def test_retrieve_empty_provider(
     provider_type: ProviderType,
     provider_status: ProviderStatus,
@@ -63,7 +63,7 @@ def test_retrieve_empty_provider(
 
 
 @patch("src.providers.core.get_idp_project_and_region")
-@parametrize_with_cases("provider_type", cases=".", has_tag="type")
+@parametrize_with_cases("provider_type", cases=CaseProvider, has_tag="type")
 def test_failed_retrieve_provider(
     mock_func: Mock,
     provider_type: ProviderType,
@@ -94,7 +94,7 @@ def test_failed_retrieve_provider(
 
 
 @patch("src.providers.core.get_data_from_openstack")
-@parametrize_with_cases("provider_type", cases=".", has_tag="type")
+@parametrize_with_cases("provider_type", cases=CaseProvider, has_tag="type")
 def test_retrieve_provider(
     mock_func: Mock,
     provider_type: ProviderType,
