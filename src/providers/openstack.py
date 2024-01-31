@@ -405,6 +405,9 @@ def get_data_from_openstack(
     except ConnectFailure:
         logger.error("Connection closed unexpectedly.")
         return None
+    except Unauthorized:
+        logger.error("Unauthorized to read project info.")
+        return None
 
     return (
         project,
