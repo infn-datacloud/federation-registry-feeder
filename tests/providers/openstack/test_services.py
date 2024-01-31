@@ -455,7 +455,7 @@ def test_retrieve_network_service_additional_attrs(
     mock_network.get_endpoint.return_value = endpoint
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
-    type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
+    type(mock_conn).current_project_id = PropertyMock(return_value=network.project_id)
 
     item = get_network_service(
         mock_conn,

@@ -1,6 +1,6 @@
 from random import getrandbits, randint
 from typing import Any, Dict, List, Optional
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
 import pytest
@@ -107,6 +107,7 @@ def test_retrieve_networks(
     networks = list(filter(lambda x: x.status == "active", [network]))
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
+    type(mock_conn).current_project_id = PropertyMock(return_value=network.project_id)
     data = get_networks(mock_conn, tags=tags)
 
     assert len(data) == len(networks)
@@ -142,6 +143,9 @@ def test_retrieve_networks_with_tags(
     )
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=network_with_tags.project_id
+    )
     data = get_networks(mock_conn, tags=target_tags)
     assert len(data) == len(networks)
 
@@ -154,6 +158,9 @@ def test_retrieve_networks_with_proxy(
     networks = [network_base]
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=network_base.project_id
+    )
     proxy = PrivateNetProxy(ip=random_ip(), user=random_lower_string())
     data = get_networks(mock_conn, proxy=proxy)
 
@@ -177,6 +184,9 @@ def test_retrieve_networks_with_default_net(
     networks = [network_shared]
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=network_shared.project_id
+    )
     data = get_networks(
         mock_conn,
         default_private_net=default_private_net,
@@ -194,3 +204,17 @@ def test_retrieve_networks_with_default_net(
             )
             or network_shared.is_default
         )
+
+
+@patch("src.providers.openstack.Connection.network")
+@patch("src.providers.openstack.Connection")
+def test_not_owned_private_net(
+    mock_conn: Mock, mock_network: Mock, network_base: Network
+) -> None:
+    network_base.is_shared = False
+    networks = [network_base]
+    mock_network.networks.return_value = networks
+    mock_conn.network = mock_network
+    type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
+    data = get_networks(mock_conn)
+    assert len(data) == 0
