@@ -145,7 +145,7 @@ def is_default_network(
     default_public_net: Optional[str] = None,
 ) -> bool:
     """Detect if this network is the default one."""
-    return (
+    return bool(
         (network.is_shared and default_public_net == network.name)
         or (not network.is_shared and default_private_net == network.name)
         or network.is_default
