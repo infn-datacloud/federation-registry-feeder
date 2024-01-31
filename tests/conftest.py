@@ -14,6 +14,7 @@ from app.provider.schemas_extended import (
 from pytest_cases import parametrize
 
 from src.config import APIVersions, Settings, URLs
+from src.crud import CRUD
 from src.models.config import SiteConfig
 from src.models.identity_provider import SLA, Issuer, UserGroup
 from src.models.provider import (
@@ -25,6 +26,7 @@ from src.models.provider import (
     Project,
     Region,
 )
+from src.utils import get_read_write_headers
 from tests.schemas.utils import (
     random_block_storage_service_name,
     random_compute_service_name,
@@ -41,6 +43,12 @@ from tests.schemas.utils import (
 @pytest.fixture(autouse=True)
 def clear_os_environment() -> None:
     os.environ.clear()
+
+
+@pytest.fixture
+def crud() -> CRUD:
+    read_header, write_header = get_read_write_headers(token=random_lower_string())
+    return CRUD(url=random_url(), read_headers=read_header, write_headers=write_header)
 
 
 @pytest.fixture
