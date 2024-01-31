@@ -19,17 +19,19 @@ def main() -> None:
     yaml_files = get_conf_files(settings=settings)
     site_configs = get_site_configs(yaml_files=yaml_files)
 
+    prov_iss_list = []
+    for config in site_configs:
+        prov_configs = [*config.openstack, *config.kubernetes]
+        issuers = config.trusted_idps
+        prov_iss_list += [
+            {"provider_conf": conf, "issuers": issuers} for conf in prov_configs
+        ]
+
     # Multithreading read.
     providers = []
-    for config in site_configs:
-        with ThreadPoolExecutor() as executor:
-            prov_configs = [*config.openstack, *config.kubernetes]
-            issuers = config.trusted_idps
-            prov_iss_list = [
-                {"provider_conf": conf, "issuers": issuers} for conf in prov_configs
-            ]
-            providers = executor.map(lambda x: get_provider(**x), prov_iss_list)
-            providers = list(filter(lambda x: x, providers))
+    with ThreadPoolExecutor() as executor:
+        providers = executor.map(lambda x: get_provider(**x), prov_iss_list)
+    providers = list(filter(lambda x: x, providers))
 
     # Update the Federation Registry
     token = site_configs[0].trusted_idps[0].token if len(site_configs) > 0 else ""
