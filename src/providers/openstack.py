@@ -170,7 +170,10 @@ def get_networks(
         logger.debug(f"Network received data={network!r}")
         project = None
         if not network.is_shared:
-            project = network.project_id
+            if conn.current_project_id != network.project_id:
+                continue
+            else:
+                project = network.project_id
         data = network.to_dict()
         data["uuid"] = data.pop("id")
         if data.get("description") is None:
