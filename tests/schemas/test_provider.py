@@ -1,46 +1,85 @@
+import copy
+from typing import Any, Dict, List, Literal, Tuple
+from uuid import uuid4
+
 import pytest
-from pytest_cases import case, parametrize, parametrize_with_cases
+from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.provider import AuthMethod, Project, Provider, Region
 from tests.schemas.utils import random_lower_string, random_provider_type, random_url
 
 
-@case(tags=["valid"])
-@parametrize(attr=["regions"])  # TODO: Add BlockStorageVolMap
-def case_valid_attr(attr: bool) -> bool:
-    return attr
+class CaseValidAttr:
+    def case_regions(self, region: Region) -> Tuple[Literal["regions"], List[Region]]:
+        return "regions", [region]
+
+    # TODO: Add BlockStorageVolMap case
 
 
-@case(tags=["invalid"])
-@parametrize(
-    attr=[
-        "auth_url",
-        "identity_providers_none",
-        "identity_providers_single",
-        "projects_none",
-        "projects_single",
-        "regions_none",
-        "regions_single",
-    ]
-)
-def case_invalid_attr(attr: bool) -> bool:
-    return attr
+class CaseInvalidAttr:
+    @parametrize(attr=["auth_url", "identity_providers", "projects", "regions"])
+    def case_none(self, attr: str) -> Tuple[str, None]:
+        return attr, None
+
+    def case_single_auth_method(
+        self, auth_method: AuthMethod
+    ) -> Tuple[Literal["identity_providers"], AuthMethod]:
+        return "identity_providers", auth_method
+
+    def case_single_project(
+        self, project: Project
+    ) -> Tuple[Literal["projects"], Project]:
+        return "projects", project
+
+    def case_single_region(self, region: Region) -> Tuple[Literal["regions"], Region]:
+        return "regions", region
+
+    @parametrize(diff_attr=["endpoint", "idp_name"])
+    def case_duplicated_auth_methods(
+        self, diff_attr: str, auth_method: AuthMethod
+    ) -> Tuple[Literal["identity_providers"], AuthMethod]:
+        auth_method2 = copy.deepcopy(auth_method)
+        if diff_attr == "endpoint":
+            auth_method2.endpoint = random_url()
+        elif diff_attr == "idp_name":
+            auth_method2.idp_name = random_lower_string()
+        return "identity_providers", [auth_method, auth_method2]
+
+    @parametrize(diff_attr=["id", "sla"])
+    def case_duplicated_projects(
+        self, diff_attr: str, project: Project
+    ) -> Tuple[Literal["projects"], Project]:
+        project2 = copy.deepcopy(project)
+        if diff_attr == "endpoint":
+            project2.id = uuid4()
+        elif diff_attr == "idp_name":
+            project2.sla = uuid4()
+        return "projects", [project, project2]
+
+    def case_duplicated_regions(
+        self, region: Region
+    ) -> Tuple[Literal["regions"], Region]:
+        return "regions", [region, region]
 
 
-@parametrize_with_cases("attr", cases=".", has_tag="valid")
-def test_provider_schema(
-    attr: str, auth_method: AuthMethod, project: Project, region: Region
-) -> None:
-    """Create an SLA with or without regions."""
-    d = {
+def provider_dict() -> Dict[str, Any]:
+    """Dict with Provider minimal attributes."""
+    return {
         "name": random_lower_string(),
         "type": random_provider_type(),
         "auth_url": random_url(),
-        "identity_providers": [auth_method],
-        "projects": [project],
     }
-    if attr == "regions":
-        d["regions"] = [region]
+
+
+@parametrize_with_cases("key, value", cases=CaseValidAttr)
+def test_provider_schema(
+    auth_method: AuthMethod, project: Project, key: str, value: Any
+) -> None:
+    """Valid Provider schema with or without regions."""
+    d = provider_dict()
+    d["identity_providers"] = [auth_method]
+    d["projects"] = [project]
+    d[key] = value
     item = Provider(**d)
     assert item.name == d.get("name")
     assert item.type == d.get("type").value
@@ -56,30 +95,17 @@ def test_provider_schema(
     assert item.regions == regions
 
 
-@parametrize_with_cases("attr", cases=".", has_tag="invalid")
+@parametrize_with_cases("key, value", cases=CaseInvalidAttr)
 def test_provider_invalid_schema(
-    attr: str, auth_method: AuthMethod, project: Project, region: Region
+    auth_method: AuthMethod, project: Project, key: str, value: Any
 ) -> None:
-    """SLA with invalid projects list.
+    """Invalid Provider schema.
 
-    Duplicated values.
-    None value: if the projects key is omitted as in the previous test, by default it
-    is an empty list.
+    Missing required values, duplicated values and single values instead of lists.
     """
-    d = {
-        "name": random_lower_string(),
-        "type": random_provider_type(),
-        "auth_url": None if attr == "auth_url" else random_url(),
-        "projects": [project],
-    }
-    if attr.endswith("_none"):
-        attr = attr[: -len("_none")]
-        d[attr] = None
-    elif attr == "identity_providers_single":
-        d["identity_providers"] = auth_method
-    elif attr == "projects_single":
-        d["projects"] = project
-    elif attr == "regions_single":
-        d["regions"] = region
+    d = provider_dict()
+    d["identity_providers"] = [auth_method]
+    d["projects"] = [project]
+    d[key] = value
     with pytest.raises(ValueError):
         Provider(**d)

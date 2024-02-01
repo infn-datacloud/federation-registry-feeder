@@ -1,3 +1,4 @@
+from typing import Any, Dict
 from uuid import uuid4
 
 import pytest
@@ -7,16 +8,25 @@ from src.models.identity_provider import SLA
 from tests.schemas.utils import random_start_end_dates
 
 
-@parametrize(with_projects=[True, False])
-def case_with_projects(with_projects: bool) -> bool:
-    return with_projects
+class CaseWithProjects:
+    @parametrize(with_projects=[True, False])
+    def case_with_projects(self, with_projects: bool) -> bool:
+        return with_projects
+
+
+def sla_dict() -> Dict[str, Any]:
+    """Dict with SLA minimal attributes."""
+    start_date, end_date = random_start_end_dates()
+    return {"doc_uuid": uuid4(), "start_date": start_date, "end_date": end_date}
 
 
 @parametrize_with_cases("with_projects", cases=".")
 def test_sla_schema(with_projects: bool) -> None:
-    """Create an SLA with or without projects."""
-    start_date, end_date = random_start_end_dates()
-    d = {"doc_uuid": uuid4(), "start_date": start_date, "end_date": end_date}
+    """Valid AuthMethod schema.
+
+    With or without projects.
+    """
+    d = sla_dict()
     if with_projects:
         d["projects"] = [uuid4()]
     item = SLA(**d)
@@ -28,19 +38,14 @@ def test_sla_schema(with_projects: bool) -> None:
 
 @parametrize_with_cases("with_projects", cases=".")
 def test_sla_invalid_schema(with_projects: bool) -> None:
-    """SLA with invalid projects list.
+    """Invalid SLA schema.
 
-    Duplicated values.
+    The projects list contains duplicated values or it received a None value.
     None value: if the projects key is omitted as in the previous test, by default it
     is an empty list.
     """
-    start_date, end_date = random_start_end_dates()
     proj = uuid4()
-    d = {
-        "doc_uuid": uuid4(),
-        "start_date": start_date,
-        "end_date": end_date,
-        "projects": [proj, proj] if with_projects else None,
-    }
+    d = sla_dict()
+    d["projects"] = [proj, proj] if with_projects else None
     with pytest.raises(ValueError):
         SLA(**d)

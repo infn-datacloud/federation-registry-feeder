@@ -1,15 +1,17 @@
 from random import randint
+from typing import Literal, Tuple, Union
 
 import pytest
+from app.quota.enum import QuotaType
 from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
-from pytest_cases import parametrize, parametrize_with_cases
+from pytest_cases import parametrize_with_cases
 
 from src.models.provider import Limits
 
 
 @pytest.fixture
 def block_storage_quota() -> BlockStorageQuotaBase:
-    """Fixture with an SLA without projects."""
+    """Fixture with a BlockStorageQuotaBase."""
     return BlockStorageQuotaBase(
         gigabytes=randint(0, 100),
         per_volume_gigabytes=randint(0, 100),
@@ -19,7 +21,7 @@ def block_storage_quota() -> BlockStorageQuotaBase:
 
 @pytest.fixture
 def compute_quota() -> ComputeQuotaBase:
-    """Fixture with an SLA without projects."""
+    """Fixture with a ComputeQuotaBase."""
     return ComputeQuotaBase(
         cores=randint(0, 100),
         instances=randint(0, 100),
@@ -29,7 +31,7 @@ def compute_quota() -> ComputeQuotaBase:
 
 @pytest.fixture
 def network_quota() -> NetworkQuotaBase:
-    """Fixture with an SLA without projects."""
+    """Fixture with a NetworkQuotaBase."""
     return NetworkQuotaBase(
         public_ips=randint(0, 100),
         networks=randint(0, 100),
@@ -39,40 +41,48 @@ def network_quota() -> NetworkQuotaBase:
     )
 
 
-@parametrize(type=["block_storage", "compute", "network"])
-def case_quota_type(type: str) -> str:
-    return type
+class CaseQuotaType:
+    def case_block_storage_quota(
+        self, block_storage_quota: BlockStorageQuotaBase
+    ) -> Tuple[Literal[QuotaType.BLOCK_STORAGE], BlockStorageQuotaBase]:
+        return QuotaType.BLOCK_STORAGE, block_storage_quota
+
+    def case_compute_quota(
+        self, compute_quota: ComputeQuotaBase
+    ) -> Tuple[Literal[QuotaType.COMPUTE], ComputeQuotaBase]:
+        return QuotaType.COMPUTE, compute_quota
+
+    def case_network_quota(
+        self, network_quota: NetworkQuotaBase
+    ) -> Tuple[Literal[QuotaType.NETWORK], NetworkQuotaBase]:
+        return QuotaType.NETWORK, network_quota
 
 
-@parametrize_with_cases("qtype", cases=".")
+@parametrize_with_cases("key, value", cases=CaseQuotaType)
 def test_limit_schema(
-    qtype: str,
-    block_storage_quota: BlockStorageQuotaBase,
-    compute_quota: ComputeQuotaBase,
-    network_quota: NetworkQuotaBase,
+    key: str, value: Union[BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase]
 ) -> None:
     """Create a Limits schema with or without quotas."""
-    if qtype == "block_storage":
-        item = Limits(block_storage=block_storage_quota)
-        assert item.block_storage.type == block_storage_quota.type
-        assert item.block_storage.gigabytes == block_storage_quota.gigabytes
-        assert (
-            item.block_storage.per_volume_gigabytes
-            == block_storage_quota.per_volume_gigabytes
-        )
-        assert item.block_storage.volumes == block_storage_quota.volumes
-    elif qtype == "compute":
-        item = Limits(compute=compute_quota)
-        assert item.compute.type == compute_quota.type
-        assert item.compute.cores == compute_quota.cores
-        assert item.compute.instances == compute_quota.instances
-        assert item.compute.ram == compute_quota.ram
-    elif qtype == "network":
-        item = Limits(network=network_quota)
-        assert item.network.type == network_quota.type
-        assert item.network.public_ips == network_quota.public_ips
-        assert item.network.networks == network_quota.networks
-        assert item.network.ports == network_quota.ports
-        assert item.network.security_groups == network_quota.security_groups
-        assert item.network.security_group_rules == network_quota.security_group_rules
-    assert item.__getattribute__(qtype).per_user
+    if key == QuotaType.BLOCK_STORAGE:
+        item = Limits(block_storage=value)
+        assert item.block_storage.per_user
+        assert item.block_storage.type == value.type
+        assert item.block_storage.gigabytes == value.gigabytes
+        assert item.block_storage.per_volume_gigabytes == value.per_volume_gigabytes
+        assert item.block_storage.volumes == value.volumes
+    elif key == QuotaType.COMPUTE:
+        item = Limits(compute=value)
+        assert item.compute.per_user
+        assert item.compute.type == value.type
+        assert item.compute.cores == value.cores
+        assert item.compute.instances == value.instances
+        assert item.compute.ram == value.ram
+    elif key == QuotaType.NETWORK:
+        item = Limits(network=value)
+        assert item.network.per_user
+        assert item.network.type == value.type
+        assert item.network.public_ips == value.public_ips
+        assert item.network.networks == value.networks
+        assert item.network.ports == value.ports
+        assert item.network.security_groups == value.security_groups
+        assert item.network.security_group_rules == value.security_group_rules

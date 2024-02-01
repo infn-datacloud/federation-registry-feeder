@@ -5,6 +5,7 @@ from app.location.schemas import LocationBase
 from app.models import BaseNode
 from app.provider.enum import ProviderType
 from app.provider.schemas import ProviderBase
+from app.provider.schemas_extended import find_duplicates
 from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
 from app.region.schemas import RegionBase
 from pydantic import AnyHttpUrl, BaseModel, Field, IPvAnyAddress, validator
@@ -105,6 +106,29 @@ class Provider(ProviderBase):
     projects: List[Project] = Field(
         description="List of projects/namespaces... belonged by this provider"
     )
+
+    @validator("identity_providers")
+    @classmethod
+    def find_idp_duplicates(cls, v: List[AuthMethod]) -> List[AuthMethod]:
+        """Verify there are no duplicate authentication methods endpoints."""
+        find_duplicates(v, "endpoint")
+        find_duplicates(v, "idp_name")
+        return v
+
+    @validator("projects")
+    @classmethod
+    def find_proj_duplicates(cls, v: List[Project]) -> List[Project]:
+        """Verify there are no duplicate project's IDs."""
+        find_duplicates(v, "id")
+        find_duplicates(v, "sla")
+        return v
+
+    @validator("regions")
+    @classmethod
+    def find_reg_duplicates(cls, v: List[Region]) -> List[Region]:
+        """Verify there are no duplicate region names."""
+        find_duplicates(v, "name")
+        return v
 
 
 class Openstack(Provider):

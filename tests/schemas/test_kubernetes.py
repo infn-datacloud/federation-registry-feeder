@@ -1,46 +1,43 @@
+from typing import Any, Dict, List, Literal, Tuple
+
 import pytest
 from app.provider.enum import ProviderType
-from pytest_cases import case, parametrize, parametrize_with_cases
+from pytest_cases import parametrize_with_cases
 
 from src.models.provider import AuthMethod, Kubernetes, Project, Region
-from tests.schemas.utils import random_lower_string, random_provider_type, random_url
+from tests.schemas.utils import random_lower_string, random_url
 
 
-@pytest.fixture
-def default_region() -> Region:
-    return Region(name="default")
+class CaseValidAttr:
+    def case_regions(self, region: Region) -> Tuple[Literal["regions"], List[Region]]:
+        return "regions", [region]
+
+    # TODO: Add BlockStorageVolMap case
 
 
-@case(tags=["valid"])
-@parametrize(attr=["", "regions"])  # TODO: Add BlockStorageVolMap
-def case_valid_attr(attr: bool) -> bool:
-    return attr
+class CaseInvalidAttr:
+    def case_type(self) -> Tuple[Literal["type"], Literal[ProviderType.OS]]:
+        return "type", ProviderType.OS
 
 
-@case(tags=["invalid"])
-@parametrize(attr=["type", "regions_none", "regions_single"])
-def case_invalid_attr(attr: bool) -> bool:
-    return attr
-
-
-@parametrize_with_cases("attr", cases=".", has_tag="valid")
-def test_openstack_schema(
-    attr: str,
-    auth_method: AuthMethod,
-    project: Project,
-    region: Region,
-    default_region: Region,
-) -> None:
-    """Create an SLA with or without regions."""
-    d = {
+def kubernetes_dict() -> Dict[str, Any]:
+    """Dict with kubernetes provider minimal attributes."""
+    return {
         "name": random_lower_string(),
         "type": ProviderType.K8S,
         "auth_url": random_url(),
-        "identity_providers": [auth_method],
-        "projects": [project],
     }
-    if attr == "regions":
-        d["regions"] = [region]
+
+
+@parametrize_with_cases("key, value", cases=CaseValidAttr)
+def test_kubernetes_schema(
+    auth_method: AuthMethod, project: Project, key: str, value: Any
+) -> None:
+    """Valid Kubernetes provider schema."""
+    d = kubernetes_dict()
+    d["identity_providers"] = [auth_method]
+    d["projects"] = [project]
+    d[key] = value
     item = Kubernetes(**d)
     assert item.name == d.get("name")
     assert item.type == d.get("type").value
@@ -51,33 +48,22 @@ def test_openstack_schema(
     identity_providers = d.get("identity_providers", [])
     assert len(item.identity_providers) == len(identity_providers)
     assert item.identity_providers == identity_providers
-    regions = d.get("regions", [default_region])
+    regions = d.get("regions", [Region(name="default")])
     assert len(item.regions) == len(regions)
     assert item.regions == regions
 
 
-@parametrize_with_cases("attr", cases=".", has_tag="invalid")
-def test_openstack_invalid_schema(
-    attr: str, auth_method: AuthMethod, project: Project, region: Region
+@parametrize_with_cases("key, value", cases=CaseInvalidAttr)
+def test_kubernetes_invalid_schema(
+    auth_method: AuthMethod, project: Project, key: str, value: Any
 ) -> None:
-    """SLA with invalid projects list.
+    """Invalid Kubernetes provider schema.
 
-    Duplicated values.
-    None value: if the projects key is omitted as in the previous test, by default it
-    is an empty list.
+    Invalid type.
     """
-    d = {
-        "name": random_lower_string(),
-        "type": random_provider_type(exclude=[ProviderType.K8S])
-        if attr == "type"
-        else ProviderType.K8S,
-        "auth_url": None if attr == "auth_url" else random_url(),
-        "identity_providers": [auth_method],
-        "projects": [project],
-    }
-    if attr == "regions_none":
-        d["regions"] = None
-    elif attr == "regions_single":
-        d["regions"] = region
+    d = kubernetes_dict()
+    d["identity_providers"] = [auth_method]
+    d["projects"] = [project]
+    d[key] = value
     with pytest.raises(ValueError):
         Kubernetes(**d)

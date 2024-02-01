@@ -4,7 +4,7 @@ from app.provider.schemas_extended import find_duplicates
 from pydantic import BaseModel, Field, validator
 
 from src.models.identity_provider import Issuer
-from src.models.provider import Kubernetes, Openstack
+from src.models.provider import Kubernetes, Openstack, Provider
 
 
 class SiteConfig(BaseModel):
@@ -30,7 +30,7 @@ class SiteConfig(BaseModel):
 
     @validator("openstack", "kubernetes")
     @classmethod
-    def find_duplicates(cls, v: List[Issuer]) -> List[Issuer]:
+    def find_duplicates(cls, v: List[Provider]) -> List[Provider]:
         """Verify there are no duplicates."""
         find_duplicates(v, "name")
         return v

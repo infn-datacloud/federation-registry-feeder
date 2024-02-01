@@ -1,37 +1,43 @@
+from typing import Any, Dict
+
 import pytest
-from pytest_cases import case, parametrize, parametrize_with_cases
+from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.provider import PrivateNetProxy
 from tests.schemas.utils import random_ip, random_lower_string
 
 
-@case(tags="ip_version")
-@parametrize(version=["v4", "v6"])
-def case_ip_ver(version: str) -> str:
-    return version
+class CaseIpVersion:
+    @parametrize(version=["v4", "v6"])
+    def case_ip_version(self, version: str) -> str:
+        return version
 
 
-@case(tags="missing")
-@parametrize(arg=["ip", "user"])
-def case_missing_arg(arg: str) -> str:
-    return arg
+class CaseMissingAttr:
+    @parametrize(arg=["ip", "user"])
+    def case_missing_arg(self, arg: str) -> str:
+        return arg
 
 
-@parametrize_with_cases("ipv", cases=".", has_tag="ip_version")
+def private_net_proxy_dict() -> Dict[str, Any]:
+    """Dict with PrivateNetProxy minimal attributes."""
+    return {"ip": random_ip(), "user": random_lower_string()}
+
+
+@parametrize_with_cases("ipv", cases=CaseIpVersion)
 def test_net_proxy_schema(ipv: str) -> None:
-    """Create a PrivateNetProxy."""
-    d = {"ip": random_ip(version=ipv), "user": random_lower_string()}
+    """Valid PrivateNetProxy schema."""
+    d = private_net_proxy_dict()
+    d["ip"] = random_ip(version=ipv)
     item = PrivateNetProxy(**d)
     assert item.ip == d.get("ip")
     assert item.user == d.get("user")
 
 
-@parametrize_with_cases("missing_arg", cases=".", has_tag="missing")
+@parametrize_with_cases("missing_arg", cases=CaseMissingAttr)
 def test_net_proxy_invalid_schema(missing_arg: str) -> None:
     """Create a PrivateNetProxy."""
-    d = {
-        "ip": None if missing_arg == "ip" else random_ip(),
-        "user": None if missing_arg == "user" else random_lower_string(),
-    }
+    d = private_net_proxy_dict()
+    d[missing_arg] = None
     with pytest.raises(ValueError):
         PrivateNetProxy(**d)

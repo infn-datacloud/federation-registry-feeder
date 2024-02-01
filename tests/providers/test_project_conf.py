@@ -62,14 +62,12 @@ def case_with_per_region_props(per_region_props: bool) -> bool:
 
 
 @pytest.fixture
-def region_props() -> PerRegionProps:
-    return PerRegionProps(
-        region_name=random_lower_string(),
-        default_public_net=random_lower_string(),
-        default_private_net=random_lower_string(),
-        private_net_proxy=get_private_net_proxy(),
-        per_user_limits=get_per_user_limits(),
-    )
+def per_region_props_with_specifics(per_region_props: PerRegionProps) -> PerRegionProps:
+    per_region_props.default_public_net = random_lower_string()
+    per_region_props.default_private_net = random_lower_string()
+    per_region_props.private_net_proxy = get_private_net_proxy()
+    per_region_props.per_user_limits = get_per_user_limits()
+    return per_region_props
 
 
 @pytest.fixture
@@ -85,30 +83,41 @@ def project_with_specifics(project: Project) -> Project:
 def test_project_conf_based_on_region(
     project_with_specifics: Project,
     with_per_region_props: bool,
-    region_props: PerRegionProps,
+    per_region_props_with_specifics: PerRegionProps,
 ) -> None:
     original_per_project_len = len(project_with_specifics.per_region_props)
     new_conf = get_project_conf_params(
         project_conf=project_with_specifics,
-        region_props=region_props if with_per_region_props else None,
+        region_props=per_region_props_with_specifics if with_per_region_props else None,
     )
     assert new_conf.id == project_with_specifics.id
     assert new_conf.description == project_with_specifics.description
     assert new_conf.sla == project_with_specifics.sla
     if with_per_region_props:
-        assert new_conf.default_private_net == region_props.default_private_net
-        assert new_conf.default_public_net == region_props.default_public_net
-        assert new_conf.private_net_proxy == region_props.private_net_proxy
+        assert (
+            new_conf.default_private_net
+            == per_region_props_with_specifics.default_private_net
+        )
+        assert (
+            new_conf.default_public_net
+            == per_region_props_with_specifics.default_public_net
+        )
+        assert (
+            new_conf.private_net_proxy
+            == per_region_props_with_specifics.private_net_proxy
+        )
         if new_conf.per_user_limits:
             assert (
                 new_conf.per_user_limits.block_storage
-                == region_props.per_user_limits.block_storage
+                == per_region_props_with_specifics.per_user_limits.block_storage
             )
             assert (
-                new_conf.per_user_limits.compute == region_props.per_user_limits.compute
+                new_conf.per_user_limits.compute
+                == per_region_props_with_specifics.per_user_limits.compute
             )
             assert (
-                new_conf.per_user_limits.network == region_props.per_user_limits.network
+                new_conf.per_user_limits.network
+                == per_region_props_with_specifics.per_user_limits.network
             )
     else:
         assert (

@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 import pytest
 from pytest_cases import parametrize, parametrize_with_cases
 
@@ -5,14 +7,21 @@ from src.models.identity_provider import SLA, UserGroup
 from tests.schemas.utils import random_lower_string
 
 
-@parametrize(with_slas=[True, False])
-def case_with_slas(with_slas: bool) -> bool:
-    return with_slas
+class CaseWithSLAs:
+    @parametrize(with_slas=[True, False])
+    def case_with_slas(self, with_slas: bool) -> bool:
+        return with_slas
+
+
+def user_group_dict() -> Dict[str, Any]:
+    """Dict with UserGroup minimal attributes."""
+    return {"name": random_lower_string()}
 
 
 def test_user_group_schema(sla: SLA) -> None:
-    """Create a UserGroup with or without SLAs."""
-    d = {"name": random_lower_string(), "slas": [sla]}
+    """Valid UserGroup schema with one SLA."""
+    d = user_group_dict()
+    d["slas"] = [sla]
     item = UserGroup(**d)
     assert item.name == d.get("name")
     slas = d.get("slas", [])
@@ -20,14 +29,15 @@ def test_user_group_schema(sla: SLA) -> None:
     assert item.slas == slas
 
 
-@parametrize_with_cases("with_slas", cases=".")
+@parametrize_with_cases("with_slas", cases=CaseWithSLAs)
 def test_user_group_invalid_schema(with_slas: bool, sla: SLA) -> None:
-    """SLA with invalid slas list.
+    """Invalid UserGroup schema.
 
-    Duplicated values: SLA with same doc_uuid.
-    None value: if the SLAs key is omitted as in the previous test, by default it
+    The SLA list contains duplicate SLA values or it received a None value.
+    None value: if the slas key is omitted as in the previous test, by default it
     is an empty list.
     """
-    d = {"name": random_lower_string(), "slas": [sla, sla] if with_slas else None}
+    d = user_group_dict()
+    d["slas"] = [sla, sla] if with_slas else None
     with pytest.raises(ValueError):
         UserGroup(**d)

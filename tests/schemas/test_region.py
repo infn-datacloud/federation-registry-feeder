@@ -1,3 +1,5 @@
+from typing import Optional
+
 import pytest
 from app.location.schemas import LocationBase
 from pytest_cases import parametrize, parametrize_with_cases
@@ -12,15 +14,16 @@ def location() -> LocationBase:
     return LocationBase(site=random_lower_string(), country=random_country())
 
 
-@parametrize(with_location=[True, False])
-def case_with_locations(with_location: bool) -> bool:
-    return with_location
+class CaseLocation:
+    @parametrize(with_location=[True, False])
+    def case_with_locations(self, with_location: bool, location: LocationBase) -> bool:
+        return location if with_location else None
 
 
-@parametrize_with_cases("with_location", cases=".")
-def test_region_schema(with_location: bool, location: LocationBase) -> None:
-    """Create a UserGroup with or without SLAs."""
-    d = {"name": random_lower_string(), "location": location if with_location else None}
+@parametrize_with_cases("location", cases=CaseLocation)
+def test_region_schema(location: Optional[LocationBase]) -> None:
+    """Valid Region schema."""
+    d = {"name": random_lower_string(), "location": location}
     item = Region(**d)
     assert item.name == d.get("name")
     assert item.location == d.get("location")
