@@ -1,6 +1,6 @@
 import copy
 import os
-from typing import Any, Dict, List, Type, Union
+from typing import Any, Dict, List, Literal, Type, Union
 from unittest.mock import Mock, patch
 
 import pytest
@@ -11,7 +11,7 @@ from app.provider.schemas_extended import (
 )
 from fastapi import status
 from fastapi.encoders import jsonable_encoder
-from pytest_cases import parametrize, parametrize_with_cases
+from pytest_cases import case, parametrize, parametrize_with_cases
 from requests.exceptions import ConnectionError, ReadTimeout
 
 from src.crud import CRUD
@@ -29,12 +29,23 @@ class CaseConnException:
 
 
 class CaseRequest:
-    @parametrize(operation=["get", "put", "post", "delete"])
-    def case_operation(self, operation: str) -> str:
-        return operation
+    def case_get(self) -> Literal["get"]:
+        return "get"
+
+    @case(tags=["write"])
+    def case_put(self) -> Literal["put"]:
+        return "put"
+
+    @case(tags=["write"])
+    def case_post(self) -> Literal["post"]:
+        return "post"
+
+    def case_delete(self) -> Literal["delete"]:
+        return "delete"
 
 
 class CaseErrorCode:
+    @case(tags=["unmanaged"])
     @parametrize(
         code=[
             status.HTTP_400_BAD_REQUEST,
@@ -43,11 +54,15 @@ class CaseErrorCode:
             status.HTTP_404_NOT_FOUND,
             status.HTTP_405_METHOD_NOT_ALLOWED,
             status.HTTP_408_REQUEST_TIMEOUT,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
             status.HTTP_500_INTERNAL_SERVER_ERROR,
         ]
     )
-    def case_error_code(self, code: int) -> int:
+    def case_unmanaged_error_code(self, code: int) -> int:
+        return code
+
+    @case(tags=["managed"])
+    @parametrize(code=[status.HTTP_422_UNPROCESSABLE_ENTITY])
+    def case_managed_error_code(self, code: int) -> int:
         return code
 
 
@@ -65,20 +80,20 @@ class CaseCRUDCreation:
         return attr
 
 
-def execute_request(
+def execute_operation(
     *,
     crud: CRUD,
-    request: str,
+    operation: str,
     provider_create: ProviderCreateExtended,
     provider_read: ProviderRead,
 ) -> None:
-    if request == "get":
+    if operation == "get":
         crud.read()
-    elif request == "post":
+    elif operation == "post":
         crud.create(data=provider_create)
-    elif request == "delete":
+    elif operation == "delete":
         crud.remove(item=provider_read)
-    elif request == "put":
+    elif operation == "put":
         new_data = copy.deepcopy(provider_create)
         new_data.name = random_lower_string()
         crud.update(new_data=new_data, old_data=provider_read)
@@ -116,43 +131,66 @@ def test_invalid_crud_class(missing_attr: str) -> None:
         CRUD(**d)
 
 
-@parametrize_with_cases("error_code", cases=CaseErrorCode)
-@parametrize_with_cases("request", cases=CaseRequest)
-def test_fail_operation(
+@parametrize_with_cases("error_code", cases=CaseErrorCode, has_tag="unmanaged")
+@parametrize_with_cases("operation", cases=CaseRequest)
+def test_generic_http_error(
     crud: CRUD,
     provider_create: ProviderCreateExtended,
     provider_read: ProviderReadExtended,
-    request: str,
     error_code: int,
+    operation: str,
 ) -> None:
     """Endpoint responds with error codes."""
-    with patch(f"src.crud.requests.{request}") as mock_req:
+    with patch(f"src.crud.requests.{operation}") as mock_req:
         mock_req.return_value.status_code = error_code
-        execute_request(
+        execute_operation(
             crud=crud,
-            request=request,
+            operation=operation,
             provider_create=provider_create,
             provider_read=provider_read,
         )
         mock_req.return_value.raise_for_status.assert_called()
 
 
+@parametrize_with_cases("error_code", cases=CaseErrorCode, has_tag="managed")
+@parametrize_with_cases("operation", cases=CaseRequest, has_tag=["write"])
+def test_managed_http_error(
+    crud: CRUD,
+    provider_create: ProviderCreateExtended,
+    provider_read: ProviderReadExtended,
+    error_code: int,
+    operation: str,
+) -> None:
+    """Endpoint responds with error codes."""
+    with patch(f"src.crud.requests.{operation}") as mock_req:
+        mock_req.return_value.status_code = error_code
+        if operation == "post":
+            resp = crud.create(data=provider_create)
+            assert not resp
+        elif operation == "put":
+            new_data = copy.deepcopy(provider_create)
+            new_data.name = random_lower_string()
+            resp = crud.update(new_data=new_data, old_data=provider_read)
+            assert not resp
+        mock_req.return_value.raise_for_status.assert_not_called()
+
+
 @parametrize_with_cases("exception", cases=CaseConnException)
-@parametrize_with_cases("request", cases=CaseRequest)
+@parametrize_with_cases("operation", cases=CaseRequest)
 def test_read_no_connection(
     crud: CRUD,
     provider_create: ProviderCreateExtended,
     provider_read: ProviderReadExtended,
-    request: str,
+    operation: str,
     exception: Union[Type[ConnectionError], Type[ReadTimeout]],
 ) -> None:
     """Connection error: no connection or read timeout."""
-    with patch(f"src.crud.requests.{request}") as mock_req:
+    with patch(f"src.crud.requests.{operation}") as mock_req:
         mock_req.side_effect = exception()
         with pytest.raises(exception):
-            execute_request(
+            execute_operation(
                 crud=crud,
-                request=request,
+                operation=operation,
                 provider_create=provider_create,
                 provider_read=provider_read,
             )

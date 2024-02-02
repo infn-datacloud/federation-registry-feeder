@@ -60,6 +60,10 @@ class CRUD(BaseModel):
             logger.info(f"Provider={data.name} created")
             logger.debug(f"{resp.json()}")
             return ProviderReadExtended(**resp.json())
+        elif resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
+            logger.error(f"Provider={data.name} has not been created.")
+            logger.error(f"{resp.json()}")
+            return None
 
         logger.debug(f"Status code: {resp.status_code}")
         logger.debug(f"Message: {resp.text}")
@@ -101,11 +105,14 @@ class CRUD(BaseModel):
             logger.info(f"Provider={new_data.name} updated")
             logger.debug(f"{resp.json()}")
             return ProviderReadExtended(**resp.json())
-
-        if resp.status_code == status.HTTP_304_NOT_MODIFIED:
+        elif resp.status_code == status.HTTP_304_NOT_MODIFIED:
             logger.info(
                 f"New data match stored data. Provider={new_data.name} not modified"
             )
+            return None
+        elif resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
+            logger.error(f"Provider={new_data.name} has not been updated.")
+            logger.error(f"{resp.json()}")
             return None
 
         logger.debug(f"Status code: {resp.status_code}")
