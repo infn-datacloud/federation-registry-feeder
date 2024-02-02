@@ -1,17 +1,10 @@
 from typing import Optional
 
-import pytest
 from app.location.schemas import LocationBase
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.provider import Region
-from tests.schemas.utils import random_country, random_lower_string
-
-
-@pytest.fixture
-def location() -> LocationBase:
-    """Fixture with an LocationBase without projects."""
-    return LocationBase(site=random_lower_string(), country=random_country())
+from tests.schemas.utils import random_lower_string
 
 
 class CaseLocation:

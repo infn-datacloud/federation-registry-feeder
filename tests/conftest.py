@@ -1,17 +1,34 @@
 import os
-from typing import Union
+from random import getrandbits, randint
+from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
 
 import pytest
+from app.location.schemas import LocationBase
 from app.provider.schemas_extended import (
+    AuthMethodCreate,
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
+    IdentityProviderCreateExtended,
     IdentityServiceCreate,
     NetworkServiceCreateExtended,
     ProjectCreate,
     ProviderCreateExtended,
+    ProviderRead,
+    ProviderReadExtended,
+    SLACreateExtended,
+    UserGroupCreateExtended,
 )
-from pytest_cases import parametrize
+from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
+from openstack.block_storage.v3.quota_set import (
+    QuotaSet as OpenstackBlockStorageQuotaSet,
+)
+from openstack.compute.v2.flavor import Flavor as OpenstackFlavor
+from openstack.compute.v2.quota_set import QuotaSet as OpenstackComputeQuotaSet
+from openstack.image.v2.image import Image as OpenstackImage
+from openstack.network.v2.network import Network as OpenstackNetwork
+from openstack.network.v2.quota import Quota as OpenstackNetworkQuota
+from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.config import APIVersions, Settings, URLs
 from src.crud import CRUD
@@ -28,10 +45,14 @@ from src.models.provider import (
     Region,
 )
 from src.utils import get_read_write_headers
+from tests.providers.openstack.utils import random_image_status, random_network_status
 from tests.schemas.utils import (
     random_block_storage_service_name,
     random_compute_service_name,
+    random_country,
+    random_float,
     random_identity_service_name,
+    random_image_os_type,
     random_ip,
     random_lower_string,
     random_network_service_name,
@@ -190,6 +211,66 @@ def site_config(issuer: Issuer) -> SiteConfig:
     return SiteConfig(trusted_idps=[issuer])
 
 
+@pytest.fixture
+def configurations(
+    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_provider: Openstack,
+    project: Project,
+) -> Tuple[IdentityProviderCreateExtended, Openstack, Project]:
+    project.sla = identity_provider_create.user_groups[0].sla.doc_uuid
+    openstack_provider.identity_providers[
+        0
+    ].endpoint = identity_provider_create.endpoint
+    openstack_provider.identity_providers[
+        0
+    ].idp_name = identity_provider_create.relationship.idp_name
+    openstack_provider.identity_providers[
+        0
+    ].protocol = identity_provider_create.relationship.protocol
+    return identity_provider_create, openstack_provider, project
+
+
+# Federation-Registry Base Items
+
+
+@pytest.fixture
+def location() -> LocationBase:
+    """Fixture with an LocationBase without projects."""
+    return LocationBase(site=random_lower_string(), country=random_country())
+
+
+@pytest.fixture
+def block_storage_quota() -> BlockStorageQuotaBase:
+    """Fixture with a BlockStorageQuotaBase."""
+    return BlockStorageQuotaBase(
+        gigabytes=randint(0, 100),
+        per_volume_gigabytes=randint(0, 100),
+        volumes=randint(1, 100),
+    )
+
+
+@pytest.fixture
+def compute_quota() -> ComputeQuotaBase:
+    """Fixture with a ComputeQuotaBase."""
+    return ComputeQuotaBase(
+        cores=randint(0, 100),
+        instances=randint(0, 100),
+        ram=randint(1, 100),
+    )
+
+
+@pytest.fixture
+def network_quota() -> NetworkQuotaBase:
+    """Fixture with a NetworkQuotaBase."""
+    return NetworkQuotaBase(
+        public_ips=randint(0, 100),
+        networks=randint(0, 100),
+        ports=randint(1, 100),
+        security_groups=randint(1, 100),
+        security_group_rules=randint(1, 100),
+    )
+
+
 # Federation-Registry Creation Items
 
 
@@ -199,6 +280,18 @@ def provider_create() -> ProviderCreateExtended:
     return ProviderCreateExtended(
         name=random_lower_string(), type=random_provider_type()
     )
+
+
+@pytest.fixture
+def provider_read(provider_create: ProviderCreateExtended) -> ProviderRead:
+    return ProviderRead(uid=uuid4(), **provider_create.dict())
+
+
+@pytest.fixture
+def provider_read_extended(
+    provider_create: ProviderCreateExtended,
+) -> ProviderReadExtended:
+    return ProviderReadExtended(uid=uuid4(), **provider_create.dict())
 
 
 @pytest.fixture
@@ -267,3 +360,369 @@ def service_create(
     IdentityServiceCreate and NetworkServiceCreateExtended.
     """
     return s
+
+
+@pytest.fixture
+def sla_create(sla: SLA, project: Project) -> SLACreateExtended:
+    """Fixture with an SLACreateExtended."""
+    return SLACreateExtended(**sla.dict(), project=project.id)
+
+
+@pytest.fixture
+def user_group_create(sla_create: SLACreateExtended) -> UserGroupCreateExtended:
+    """Fixture with a UserGroupCreateExtended."""
+    return UserGroupCreateExtended(name=random_lower_string(), sla=sla_create)
+
+
+@pytest.fixture
+def auth_method_create() -> AuthMethodCreate:
+    return AuthMethodCreate(
+        idp_name=random_lower_string(), protocol=random_lower_string()
+    )
+
+
+@pytest.fixture
+def identity_provider_create(
+    auth_method_create: AuthMethodCreate, user_group_create: UserGroupCreateExtended
+) -> IdentityProviderCreateExtended:
+    """Fixture with an IdentityProviderCreateExtended."""
+    return IdentityProviderCreateExtended(
+        user_groups=[user_group_create],
+        endpoint=random_url(),
+        group_claim=random_lower_string(),
+        relationship=auth_method_create,
+    )
+
+
+# Openstack specific
+
+
+class CaseDefaultAttr:
+    @parametrize(value=[True, False])
+    def case_is_default(self, value: bool) -> bool:
+        return value
+
+
+class CaseTags:
+    def case_single_valid_tag(self) -> List[str]:
+        return ["one"]
+
+    @parametrize(case=[0, 1])
+    def case_single_invalid_tag(self, case: int) -> List[str]:
+        return ["two"] if case else ["one-two"]
+
+    def case_at_least_one_valid_tag(self) -> List[str]:
+        return ["one", "two"]
+
+
+def openstack_network_dict() -> Dict[str, Any]:
+    """Dict with network minimal data."""
+    return {
+        "id": uuid4().hex,
+        "name": random_lower_string(),
+        "status": "active",
+        "project_id": uuid4().hex,
+        "is_router_external": getrandbits(1),
+        "is_shared": False,
+        "mtu": randint(1, 100),
+    }
+
+
+@pytest.fixture
+def openstack_network_base() -> OpenstackNetwork:
+    """Fixture with network."""
+    return OpenstackNetwork(**openstack_network_dict())
+
+
+@pytest.fixture
+def openstack_network_disabled() -> OpenstackNetwork:
+    """Fixture with disabled network."""
+    d = openstack_network_dict()
+    d["status"] = random_network_status(exclude=["active"])
+    return OpenstackNetwork(**d)
+
+
+@pytest.fixture
+def openstack_network_with_desc() -> OpenstackNetwork:
+    """Fixture with network with specified description."""
+    d = openstack_network_dict()
+    d["description"] = random_lower_string()
+    return OpenstackNetwork(**d)
+
+
+@pytest.fixture
+def openstack_network_shared() -> OpenstackNetwork:
+    """Fixture with shared network."""
+    d = openstack_network_dict()
+    d["is_shared"] = True
+    return OpenstackNetwork(**d)
+
+
+@pytest.fixture
+@parametrize_with_cases("tags", cases=CaseTags)
+def openstack_network_with_tags(tags: List[str]) -> OpenstackNetwork:
+    """Fixture with network with specified tags."""
+    d = openstack_network_dict()
+    d["tags"] = tags
+    return OpenstackNetwork(**d)
+
+
+@pytest.fixture
+@parametrize(i=[openstack_network_base, openstack_network_shared])
+def openstack_priv_pub_network(i: OpenstackNetwork) -> OpenstackNetwork:
+    """Fixtures union."""
+    return i
+
+
+@pytest.fixture
+@parametrize(
+    i=[
+        openstack_priv_pub_network,
+        openstack_network_disabled,
+        openstack_network_with_desc,
+        openstack_network_with_tags,
+    ]
+)
+def openstack_network(i: OpenstackNetwork) -> OpenstackNetwork:
+    """Fixtures union."""
+    return i
+
+
+@pytest.fixture
+@parametrize(n=[openstack_network_base, openstack_network_shared])
+@parametrize_with_cases("is_default", cases=CaseDefaultAttr)
+def openstack_default_network(
+    n: OpenstackNetwork, is_default: bool
+) -> OpenstackNetwork:
+    """Shared and not shared networks with/without is_default."""
+    n.is_default = is_default
+    return n
+
+
+class CaseVisibility:
+    @case(tags=["private"])
+    @parametrize(visibility=["shared", "private"])
+    def case_priv_visibility(self, visibility: str) -> str:
+        return visibility
+
+    @case(tags=["public"])
+    @parametrize(visibility=["public", "community"])
+    def case_pub_visibility(self, visibility: str) -> str:
+        return visibility
+
+
+def openstack_image_dict() -> Dict[str, Any]:
+    """Dict with image minimal data."""
+    return {
+        "id": uuid4().hex,
+        "name": random_lower_string(),
+        "status": "active",
+        "owner_id": uuid4().hex,
+        "os_type": random_image_os_type(),
+        "os_distro": random_lower_string(),
+        "os_version": random_lower_string(),
+        "architecture": random_lower_string(),
+        "kernel_id": random_lower_string(),
+        "visibility": "public",
+    }
+
+
+@pytest.fixture
+def openstack_image_disabled() -> OpenstackImage:
+    """Fixture with disabled image."""
+    d = openstack_image_dict()
+    d["status"] = random_image_status(exclude=["active"])
+    return OpenstackImage(**d)
+
+
+@pytest.fixture
+@parametrize_with_cases("visibility", cases=CaseVisibility, has_tag="public")
+def openstack_image_public(visibility: str) -> OpenstackImage:
+    """Fixture with image with specified visibility."""
+    d = openstack_image_dict()
+    d["visibility"] = visibility
+    return OpenstackImage(**d)
+
+
+@pytest.fixture
+@parametrize_with_cases("tags", cases=CaseTags)
+def openstack_image_with_tags(tags: List[str]) -> OpenstackImage:
+    """Fixture with image with specified tags."""
+    d = openstack_image_dict()
+    d["tags"] = tags
+    return OpenstackImage(**d)
+
+
+@pytest.fixture
+@parametrize_with_cases("visibility", cases=CaseVisibility, has_tag="private")
+def openstack_image_private(visibility: str) -> OpenstackImage:
+    """Fixture with private image."""
+    d = openstack_image_dict()
+    d["visibility"] = visibility
+    return OpenstackImage(**d)
+
+
+@pytest.fixture
+@parametrize(
+    i=[openstack_image_disabled, openstack_image_public, openstack_image_with_tags]
+)
+def openstack_image(i: OpenstackImage) -> OpenstackImage:
+    """Fixtures union."""
+    return i
+
+
+class CaseExtraSpecs:
+    @parametrize(second_attr=["gpu_model", "gpu_vendor"])
+    def case_gpu(self, second_attr: str) -> Dict[str, Any]:
+        return {"gpu_number": randint(1, 100), second_attr: random_lower_string()}
+
+    def case_infiniband(self) -> Dict[str, Any]:
+        return {"infiniband": getrandbits(1)}
+
+    def case_local_storage(self) -> Dict[str, Any]:
+        return {"aggregate_instance_extra_specs:local_storage": random_lower_string()}
+
+
+def openstack_flavor_dict() -> Dict[str, Any]:
+    """Dict with flavor minimal data."""
+    return {
+        "name": random_lower_string(),
+        "disk": randint(0, 100),
+        "is_public": getrandbits(1),
+        "ram": randint(0, 100),
+        "vcpus": randint(0, 100),
+        "swap": randint(0, 100),
+        "ephemeral": randint(0, 100),
+        "is_disabled": False,
+        "rxtx_factor": random_float(0, 100),
+        "extra_specs": {},
+    }
+
+
+@pytest.fixture
+def openstack_flavor_base() -> OpenstackFlavor:
+    """Fixture with disabled flavor."""
+    return OpenstackFlavor(**openstack_flavor_dict())
+
+
+@pytest.fixture
+def openstack_flavor_disabled() -> OpenstackFlavor:
+    """Fixture with disabled flavor."""
+    d = openstack_flavor_dict()
+    d["is_disabled"] = True
+    return OpenstackFlavor(**d)
+
+
+@pytest.fixture
+def openstack_flavor_with_desc() -> OpenstackFlavor:
+    """Fixture with a flavor with description."""
+    d = openstack_flavor_dict()
+    d["description"] = random_lower_string()
+    return OpenstackFlavor(**d)
+
+
+@pytest.fixture
+def openstack_flavor_private() -> OpenstackFlavor:
+    """Fixture with private flavor."""
+    d = openstack_flavor_dict()
+    d["is_public"] = False
+    return OpenstackFlavor(**d)
+
+
+@pytest.fixture
+@parametrize_with_cases("extra_specs", cases=CaseExtraSpecs)
+def openstack_flavor_with_extra_specs(extra_specs: Dict[str, Any]) -> OpenstackFlavor:
+    """Fixture with a flavor with extra specs."""
+    d = openstack_flavor_dict()
+    d["extra_specs"] = extra_specs
+    return OpenstackFlavor(**d)
+
+
+@pytest.fixture
+@parametrize(
+    f=[
+        openstack_flavor_base,
+        openstack_flavor_disabled,
+        openstack_flavor_with_extra_specs,
+        openstack_flavor_private,
+        openstack_flavor_with_desc,
+    ]
+)
+def openstack_flavor(f: OpenstackFlavor) -> OpenstackFlavor:
+    """Fixtures union."""
+    return f
+
+
+def openstack_block_storage_quotas_dict() -> Dict[str, int]:
+    """Dict with the block storage quotas attributes."""
+    return {
+        "backup_gigabytes": randint(0, 100),
+        "backups": randint(0, 100),
+        "gigabytes": randint(0, 100),
+        "groups": randint(0, 100),
+        "per_volume_gigabytes": randint(0, 100),
+        "snapshots": randint(0, 100),
+        "volumes": randint(0, 100),
+    }
+
+
+def openstack_compute_quotas_dict() -> Dict[str, int]:
+    """Dict with the compute quotas attributes."""
+    return {
+        "cores": randint(0, 100),
+        "fixed_ips": randint(0, 100),
+        "floating_ips": randint(0, 100),
+        "injected_file_content_bytes": randint(0, 100),
+        "injected_file_path_bytes": randint(0, 100),
+        "injected_files": randint(0, 100),
+        "instances": randint(0, 100),
+        "key_pairs": randint(0, 100),
+        "metadata_items": randint(0, 100),
+        "networks": randint(0, 100),
+        "ram": randint(0, 100),
+        "security_group_rules": randint(0, 100),
+        "security_groups": randint(0, 100),
+        "server_groups": randint(0, 100),
+        "server_group_members": randint(0, 100),
+        "force": False,
+    }
+
+
+def openstack_network_quotas_dict() -> Dict[str, int]:
+    """Dict with the network quotas attributes."""
+    return {
+        "check_limit": False,
+        "floating_ips": randint(0, 100),
+        "health_monitors": randint(0, 100),
+        "listeners": randint(0, 100),
+        "load_balancers": randint(0, 100),
+        "l7_policies": randint(0, 100),
+        "networks": randint(0, 100),
+        "pools": randint(0, 100),
+        "ports": randint(0, 100),
+        # "project_id": ?,
+        "rbac_policies": randint(0, 100),
+        "routers": randint(0, 100),
+        "subnets": randint(0, 100),
+        "subnet_pools": randint(0, 100),
+        "security_group_rules": randint(0, 100),
+        "security_groups": randint(0, 100),
+    }
+
+
+@pytest.fixture
+def openstack_block_storage_quotas() -> OpenstackBlockStorageQuotaSet:
+    """Fixture with the block storage quotas."""
+    return OpenstackBlockStorageQuotaSet(**openstack_block_storage_quotas_dict())
+
+
+@pytest.fixture
+def openstack_compute_quotas() -> OpenstackComputeQuotaSet:
+    """Fixture with the compute quotas."""
+    return OpenstackComputeQuotaSet(**openstack_compute_quotas_dict())
+
+
+@pytest.fixture
+def openstack_network_quotas() -> OpenstackNetworkQuota:
+    """Fixture with the network quotas."""
+    return OpenstackNetworkQuota(**openstack_network_quotas_dict())

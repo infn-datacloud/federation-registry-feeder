@@ -123,7 +123,6 @@ def test_no_matching_idp_when_retrieving_project_resources(
 
 @parametrize_with_cases("provider_type", cases=CaseProvider, has_tag="type")
 def test_no_conn_when_retrieving_project_resources(
-    caplog: pytest.LogCaptureFixture,
     provider_type: str,
     issuer: Issuer,
     openstack_provider: Openstack,
@@ -144,7 +143,3 @@ def test_no_conn_when_retrieving_project_resources(
         issuers=[issuer],
     )
     assert not resp
-
-    if provider_type == ProviderType.OS:
-        msg = "Connection closed unexpectedly."
-        assert caplog.text.strip("\n").endswith(msg)

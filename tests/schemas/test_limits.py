@@ -1,44 +1,10 @@
-from random import randint
 from typing import Literal, Tuple, Union
 
-import pytest
 from app.quota.enum import QuotaType
 from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
 from pytest_cases import parametrize_with_cases
 
 from src.models.provider import Limits
-
-
-@pytest.fixture
-def block_storage_quota() -> BlockStorageQuotaBase:
-    """Fixture with a BlockStorageQuotaBase."""
-    return BlockStorageQuotaBase(
-        gigabytes=randint(0, 100),
-        per_volume_gigabytes=randint(0, 100),
-        volumes=randint(1, 100),
-    )
-
-
-@pytest.fixture
-def compute_quota() -> ComputeQuotaBase:
-    """Fixture with a ComputeQuotaBase."""
-    return ComputeQuotaBase(
-        cores=randint(0, 100),
-        instances=randint(0, 100),
-        ram=randint(1, 100),
-    )
-
-
-@pytest.fixture
-def network_quota() -> NetworkQuotaBase:
-    """Fixture with a NetworkQuotaBase."""
-    return NetworkQuotaBase(
-        public_ips=randint(0, 100),
-        networks=randint(0, 100),
-        ports=randint(1, 100),
-        security_groups=randint(1, 100),
-        security_group_rules=randint(1, 100),
-    )
 
 
 class CaseQuotaType:

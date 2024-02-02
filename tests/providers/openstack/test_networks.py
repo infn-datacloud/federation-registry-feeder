@@ -1,191 +1,151 @@
-from random import getrandbits, randint
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
-import pytest
 from openstack.network.v2.network import Network
 from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.models.provider import PrivateNetProxy
 from src.providers.openstack import get_networks
-from tests.providers.openstack.utils import random_network_status
-from tests.schemas.utils import random_ip, random_lower_string
 
 
-@case(tags=["is_shared"])
-@parametrize(is_shared=[True, False])
-def case_is_shared(is_shared: bool) -> bool:
-    return is_shared
+class CaseTagList:
+    @case(tags=["empty"])
+    def case_empty_tag_list(self) -> Optional[List]:
+        return []
 
+    @case(tags=["empty"])
+    def case_no_list(self) -> Optional[List]:
+        return None
 
-@case(tags=["tags"])
-@parametrize(tags=range(4))
-def case_tags(tags: int) -> List[str]:
-    if tags == 0:
+    @case(tags=["full"])
+    def case_list(self) -> Optional[List]:
         return ["one"]
-    if tags == 1:
-        return ["two"]
-    if tags == 2:
-        return ["one", "two"]
-    if tags == 3:
-        return ["one-two"]
 
 
-@case(tags=["no_tags"])
-@parametrize(empty_list=[True, False])
-def case_empty_tag_list(empty_list: bool) -> Optional[List]:
-    return [] if empty_list else None
+class CaseDefaultNet:
+    @parametrize(default_net=["private", "public"])
+    def case_default_attr(self, default_net: str) -> str:
+        return default_net
 
 
-@case(tags=["is_default"])
-@parametrize(default_attr=["private", "public", "network"])
-def case_default_attr(default_attr: bool) -> bool:
-    return default_attr
-
-
-def network_data() -> Dict[str, Any]:
-    return {
-        "id": uuid4().hex,
-        "name": random_lower_string(),
-        "status": "active",
-        "project_id": uuid4().hex,
-        "is_default": False,
-        "is_router_external": getrandbits(1),
-        "is_shared": getrandbits(1),
-        "mtu": randint(1, 100),
-    }
-
-
-@pytest.fixture
-def network_base() -> Network:
-    return Network(**network_data())
-
-
-@pytest.fixture
-def network_disabled() -> Network:
-    d = network_data()
-    d["status"] = random_network_status(exclude=["active"])
-    return Network(**d)
-
-
-@pytest.fixture
-def network_with_desc() -> Network:
-    d = network_data()
-    d["description"] = random_lower_string()
-    return Network(**d)
-
-
-@pytest.fixture
-@parametrize_with_cases("is_shared", cases=".", has_tag="is_shared")
-def network_shared(is_shared: bool) -> Network:
-    d = network_data()
-    d["is_shared"] = is_shared
-    return Network(**d)
-
-
-@pytest.fixture
-@parametrize_with_cases("tags", cases=".", has_tag="tags")
-def network_with_tags(tags: List[str]) -> Network:
-    d = network_data()
-    d["tags"] = tags
-    return Network(**d)
-
-
-@pytest.fixture
-@parametrize(i=[network_disabled, network_shared, network_with_desc])
-def network(i: Network) -> Network:
-    return i
+def filter_networks(network: Network, tags: Optional[List[str]]) -> bool:
+    valid_tag = tags is None or len(tags) == 0
+    if not valid_tag:
+        valid_tag = len(set(network.tags).intersection(set(tags))) > 0
+    return network.status == "active" and valid_tag
 
 
 @patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
-@parametrize_with_cases("tags", cases=".", has_tag="no_tags")
+@parametrize_with_cases("tags", cases=CaseTagList)
 def test_retrieve_networks(
-    mock_conn: Mock, mock_network: Mock, network: Network, tags: Optional[List]
+    mock_conn: Mock,
+    mock_network: Mock,
+    openstack_network: Network,
+    tags: Optional[List[str]],
 ) -> None:
-    networks = list(filter(lambda x: x.status == "active", [network]))
+    """Successful retrieval of a Network.
+
+    Retrieve only active networks and with the tags contained in the target tags list.
+    If the target tags list is empty or None, all active networks are valid ones.
+
+    Networks retrieval fail is not tested here. It is tested where the exception is
+    caught: get_data_from_openstack function.
+    """
+    networks = list(filter(lambda x: filter_networks(x, tags), [openstack_network]))
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
-    type(mock_conn).current_project_id = PropertyMock(return_value=network.project_id)
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_network.project_id
+    )
     data = get_networks(mock_conn, tags=tags)
 
     assert len(data) == len(networks)
     if len(data) > 0:
         item = data[0]
-        assert item.description == (network.description if network.description else "")
-        assert item.uuid == network.id
-        assert item.name == network.name
-        assert item.is_shared == network.is_shared
-        assert item.is_router_external == network.is_router_external
-        assert item.is_default == network.is_default
-        assert item.mtu == network.mtu
+        if openstack_network.description:
+            assert item.description == openstack_network.description
+        else:
+            assert item.description == ""
+        assert item.uuid == openstack_network.id
+        assert item.name == openstack_network.name
+        assert item.is_shared == openstack_network.is_shared
+        assert item.is_router_external == openstack_network.is_router_external
+        assert item.is_default == bool(openstack_network.is_default)
+        assert item.mtu == openstack_network.mtu
         assert not item.proxy_ip
         assert not item.proxy_user
-        assert item.tags == network.tags
+        assert item.tags == openstack_network.tags
         if item.is_shared:
             assert not item.project
         else:
             assert item.project
-            assert item.project == network.project_id
+            assert item.project == openstack_network.project_id
 
 
 @patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
-def test_retrieve_networks_with_tags(
-    mock_conn: Mock, mock_network: Mock, network_with_tags: Network
+def test_not_owned_private_net(
+    mock_conn: Mock, mock_network: Mock, openstack_network_base: Network
 ) -> None:
-    target_tags = ["one"]
-    networks = list(
-        filter(
-            lambda x: set(x.tags).intersection(set(target_tags)), [network_with_tags]
-        )
-    )
+    """Networks owned by another project are not returned."""
+    networks = [openstack_network_base]
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
-    type(mock_conn).current_project_id = PropertyMock(
-        return_value=network_with_tags.project_id
-    )
-    data = get_networks(mock_conn, tags=target_tags)
-    assert len(data) == len(networks)
+    type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
+    data = get_networks(mock_conn)
+    assert len(data) == 0
 
 
 @patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_networks_with_proxy(
-    mock_conn: Mock, mock_network: Mock, network_base: Network
+    mock_conn: Mock,
+    mock_network: Mock,
+    openstack_network_base: Network,
+    net_proxy: PrivateNetProxy,
 ) -> None:
-    networks = [network_base]
+    """Test retrieving networks with proxy ip and user.
+
+    The network does not have proxy ip and user. This function attaches them to the
+    network.
+    """
+    networks = [openstack_network_base]
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
     type(mock_conn).current_project_id = PropertyMock(
-        return_value=network_base.project_id
+        return_value=openstack_network_base.project_id
     )
-    proxy = PrivateNetProxy(ip=random_ip(), user=random_lower_string())
-    data = get_networks(mock_conn, proxy=proxy)
+    data = get_networks(mock_conn, proxy=net_proxy)
 
     assert len(data) == len(networks)
-    if len(data) > 0:
-        item = data[0]
-        assert item.proxy_ip == str(proxy.ip)
-        assert item.proxy_user == proxy.user
+    assert data[0].proxy_ip == str(net_proxy.ip)
+    assert data[0].proxy_user == net_proxy.user
 
 
 @patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
-@parametrize_with_cases("default_attr", cases=".", has_tag="is_default")
+@parametrize_with_cases("default_net", cases=CaseDefaultNet)
 def test_retrieve_networks_with_default_net(
-    mock_conn: Mock, mock_network: Mock, network_shared: Network, default_attr: str
+    mock_conn: Mock,
+    mock_network: Mock,
+    openstack_default_network: Network,
+    default_net: str,
 ) -> None:
-    default_private_net = network_shared.name if default_attr == "private" else None
-    default_public_net = network_shared.name if default_attr == "public" else None
-    network_shared.is_default = default_attr == "network"
+    """Test how the is_default attribute in NetworkCreateExtended is built."""
+    default_private_net = None
+    default_public_net = None
+    if default_net == "private":
+        default_private_net = openstack_default_network.name
+    if default_net == "public":
+        default_public_net = openstack_default_network.name
 
-    networks = [network_shared]
+    networks = [openstack_default_network]
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
     type(mock_conn).current_project_id = PropertyMock(
-        return_value=network_shared.project_id
+        return_value=openstack_default_network.project_id
     )
     data = get_networks(
         mock_conn,
@@ -196,25 +156,17 @@ def test_retrieve_networks_with_default_net(
     assert len(data) == len(networks)
     if len(data) > 0:
         item = data[0]
-        assert item.is_default == (
-            (network_shared.is_shared and default_public_net == network_shared.name)
-            or (
-                not network_shared.is_shared
-                and default_private_net == network_shared.name
-            )
-            or network_shared.is_default
+        public_default_net_match_shared_net = (
+            openstack_default_network.is_shared
+            and default_public_net == openstack_default_network.name
         )
-
-
-@patch("src.providers.openstack.Connection.network")
-@patch("src.providers.openstack.Connection")
-def test_not_owned_private_net(
-    mock_conn: Mock, mock_network: Mock, network_base: Network
-) -> None:
-    network_base.is_shared = False
-    networks = [network_base]
-    mock_network.networks.return_value = networks
-    mock_conn.network = mock_network
-    type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
-    data = get_networks(mock_conn)
-    assert len(data) == 0
+        private_default_net_match_not_shared_net = (
+            not openstack_default_network.is_shared
+            and default_private_net == openstack_default_network.name
+        )
+        net_marked_as_default = openstack_default_network.is_default
+        assert item.is_default == (
+            public_default_net_match_shared_net
+            or private_default_net_match_not_shared_net
+            or net_marked_as_default
+        )

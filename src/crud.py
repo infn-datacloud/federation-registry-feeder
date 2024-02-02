@@ -65,7 +65,7 @@ class CRUD(BaseModel):
         logger.debug(f"Message: {resp.text}")
         resp.raise_for_status()
 
-    def remove(self, *, item: ProviderReadExtended) -> None:
+    def remove(self, *, item: ProviderRead) -> None:
         """Remove item."""
         logger.info(f"Removing Provider={item.name}.")
         logger.debug(f"Url={self.single_url.format(uid=item.uid)}")

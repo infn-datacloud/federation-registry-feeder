@@ -1,107 +1,68 @@
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from unittest.mock import Mock, patch
 from uuid import uuid4
 
-import pytest
 from openstack.image.v2.image import Image
 from openstack.image.v2.member import Member
 from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.providers.openstack import get_images
-from tests.providers.openstack.utils import random_image_status, random_image_visibility
-from tests.schemas.utils import random_image_os_type, random_lower_string
 
 
-# `shared` has a separate case
-@case(tags=["visibility"])
-@parametrize(visibility=["public", "private", "community"])
-def case_visibility(visibility: bool) -> bool:
-    return visibility
-
-
-@case(tags=["tags"])
-@parametrize(tags=range(4))
-def case_tags(tags: int) -> List[str]:
-    if tags == 0:
+class CaseTags:
+    def case_single_valid_tag(self) -> List[str]:
         return ["one"]
-    if tags == 1:
-        return ["two"]
-    if tags == 2:
+
+    @parametrize(case=[0, 1])
+    def case_single_invalid_tag(self, case: int) -> List[str]:
+        return ["two"] if case else ["one-two"]
+
+    def case_at_least_one_valid_tag(self) -> List[str]:
         return ["one", "two"]
-    if tags == 3:
-        return ["one-two"]
 
 
-@case(tags=["no_tags"])
-@parametrize(empty_list=[True, False])
-def case_empty_tag_list(empty_list: bool) -> Optional[List]:
-    return [] if empty_list else None
+class CaseTagList:
+    @case(tags=["empty"])
+    def case_empty_tag_list(self) -> Optional[List]:
+        return []
+
+    @case(tags=["empty"])
+    def case_no_list(self) -> Optional[List]:
+        return None
+
+    @case(tags=["full"])
+    def case_list(self) -> Optional[List]:
+        return ["one"]
 
 
-@case(tags=["acceptance_status"])
-@parametrize(acceptance_status=["accepted", "rejected", "pending"])
-def case_acceptance_status(acceptance_status: bool) -> bool:
-    return acceptance_status
+class CaseAcceptStatus:
+    @parametrize(acceptance_status=["accepted", "rejected", "pending"])
+    def case_acceptance_status(self, acceptance_status: bool) -> bool:
+        return acceptance_status
 
 
-def image_data() -> Dict[str, Any]:
-    return {
-        "id": uuid4().hex,
-        "name": random_lower_string(),
-        "status": "active",
-        "owner": uuid4().hex,
-        "os_type": random_image_os_type(),
-        "os_distro": random_lower_string(),
-        "os_version": random_lower_string(),
-        "architecture": random_lower_string(),
-        "kernel_id": random_lower_string(),
-        "visibility": random_image_visibility(),
-    }
-
-
-@pytest.fixture
-def image_disabled() -> Image:
-    d = image_data()
-    d["status"] = random_image_status(exclude=["active"])
-    return Image(**d)
-
-
-@pytest.fixture
-@parametrize_with_cases("visibility", cases=".", has_tag="visibility")
-def image_visible(visibility: str) -> Image:
-    d = image_data()
-    d["visibility"] = visibility
-    return Image(**d)
-
-
-@pytest.fixture
-@parametrize_with_cases("tags", cases=".", has_tag="tags")
-def image_with_tags(tags: List[str]) -> Image:
-    d = image_data()
-    d["tags"] = tags
-    return Image(**d)
-
-
-@pytest.fixture
-def image_shared() -> Image:
-    d = image_data()
-    d["visibility"] = "shared"
-    return Image(**d)
-
-
-@pytest.fixture
-@parametrize(i=[image_disabled, image_visible])
-def image(i: Image) -> Image:
-    return i
+def filter_images(image: Image, tags: Optional[List[str]]) -> bool:
+    valid_tag = tags is None or len(tags) == 0
+    if not valid_tag:
+        valid_tag = len(set(image.tags).intersection(set(tags))) > 0
+    return image.status == "active" and valid_tag
 
 
 @patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
-@parametrize_with_cases("tags", cases=".", has_tag="no_tags")
-def test_retrieve_images(
-    mock_conn: Mock, mock_image: Mock, image: Image, tags: Optional[List]
+@parametrize_with_cases("tags", cases=CaseTagList)
+def test_retrieve_public_images(
+    mock_conn: Mock, mock_image: Mock, openstack_image: Image, tags: Optional[List[str]]
 ) -> None:
-    images = list(filter(lambda x: x.status == "active", [image]))
+    """Successful retrieval of an Image.
+
+    Retrieve only active images and with the tags contained in the target tags list.
+    If the target tags list is empty or None, all active images are valid ones.
+
+    Images retrieval fail is not tested here. It is tested where the exception is
+    caught: get_data_from_openstack function.
+    """
+    images = list(filter(lambda x: filter_images(x, tags), [openstack_image]))
     mock_image.images.return_value = images
     mock_conn.image = mock_image
     data = get_images(mock_conn, tags=tags)
@@ -110,66 +71,53 @@ def test_retrieve_images(
     if len(data) > 0:
         item = data[0]
         assert item.description == ""
-        assert item.uuid == image.id
-        assert item.name == image.name
-        assert item.os_type == image.os_type
-        assert item.os_distro == image.os_distro
-        assert item.os_version == image.os_version
-        assert item.architecture == image.architecture
-        assert item.kernel_id == image.kernel_id
+        assert item.uuid == openstack_image.id
+        assert item.name == openstack_image.name
+        assert item.os_type == openstack_image.os_type
+        assert item.os_distro == openstack_image.os_distro
+        assert item.os_version == openstack_image.os_version
+        assert item.architecture == openstack_image.architecture
+        assert item.kernel_id == openstack_image.kernel_id
         assert not item.cuda_support
         assert not item.gpu_driver
-        assert item.tags == image.tags
-        if image.visibility in ["private", "shared"]:
-            assert not item.is_public
-        else:
-            assert item.is_public
-        if item.is_public:
-            assert len(item.projects) == 0
-        else:
-            assert len(item.projects) == len([image.owner_id])
+        assert item.tags == openstack_image.tags
+        assert item.is_public
+        assert len(item.projects) == 0
 
 
 @patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
-def test_retrieve_images_with_tags(
-    mock_conn: Mock, mock_image: Mock, image_with_tags: Image
+@parametrize_with_cases("acceptance_status", cases=CaseAcceptStatus)
+def test_retrieve_private_images(
+    mock_conn: Mock,
+    mock_image: Mock,
+    openstack_image_private: Image,
+    acceptance_status: str,
 ) -> None:
-    target_tags = ["one"]
-    images = list(
-        filter(lambda x: set(x.tags).intersection(set(target_tags)), [image_with_tags])
-    )
-    mock_image.images.return_value = images
-    mock_conn.image = mock_image
-    data = get_images(mock_conn, tags=target_tags)
-    assert len(data) == len(images)
+    """Successful retrieval of an Image with a specified visibility.
 
+    Check that the is_public flag is correctly set to False and projects list is
+    correct.
+    """
 
-@patch("src.providers.openstack.Connection.image")
-@patch("src.providers.openstack.Connection")
-@parametrize_with_cases("acceptance_status", cases=".", has_tag="acceptance_status")
-def test_retrieve_images_with_shared_visibility(
-    mock_conn: Mock, mock_image: Mock, image_shared: Image, acceptance_status: str
-) -> None:
     def get_allowed_members(*args, **kwargs) -> List[Member]:
         return [
-            Member(status="accepted", id=image_shared.owner_id),
+            Member(status="accepted", id=openstack_image_private.owner_id),
             Member(status=acceptance_status, id=uuid4().hex),
         ]
 
-    images = [image_shared]
+    images = [openstack_image_private]
     mock_image.images.return_value = images
     mock_image.members.side_effect = get_allowed_members
     mock_conn.image = mock_image
     data = get_images(mock_conn)
 
     assert len(data) == len(images)
-    if len(data) > 0:
-        item = data[0]
-        assert not item.is_public
-        allowed_members = filter(
-            lambda x: x.status == "accepted", get_allowed_members()
+    assert not data[0].is_public
+    if openstack_image_private.visibility == "private":
+        allowed_project_ids = [openstack_image_private.owner_id]
+    elif openstack_image_private.visibility == "shared":
+        allowed_project_ids = list(
+            filter(lambda x: x.status == "accepted", get_allowed_members())
         )
-        allowed_project_ids = set([i.id for i in allowed_members])
-        allowed_project_ids.add(image_shared.owner_id)
-        assert len(item.projects) == len(allowed_project_ids)
+    assert len(data[0].projects) == len(allowed_project_ids)

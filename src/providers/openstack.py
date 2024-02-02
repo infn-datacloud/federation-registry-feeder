@@ -123,11 +123,12 @@ def get_images(
         logger.debug(f"Image received data={image!r}")
         is_public = True
         projects = []
-        if image.visibility in ["private", "shared"]:
+        if image.visibility == "private":
             projects = [image.owner_id]
             is_public = False
-        if image.visibility == "shared":
+        elif image.visibility == "shared":
             projects = get_image_projects(conn, image=image, projects=projects)
+            is_public = False
         data = image.to_dict()
         data["uuid"] = data.pop("id")
         # Openstack image object does not have `description` field
@@ -207,7 +208,6 @@ def get_block_storage_service(
     conn: Connection,
     *,
     per_user_limits: Optional[BlockStorageQuotaBase],
-    project_id: str,
 ) -> Optional[BlockStorageServiceCreateExtended]:
     """Retrieve project's block storage service.
 
@@ -231,7 +231,8 @@ def get_block_storage_service(
     if per_user_limits:
         block_storage_service.quotas.append(
             BlockStorageQuotaCreateExtended(
-                **per_user_limits.dict(exclude_none=True), project=project_id
+                **per_user_limits.dict(exclude_none=True),
+                project=conn.current_project_id,
             )
         )
     return block_storage_service
@@ -241,7 +242,6 @@ def get_compute_service(
     conn: Connection,
     *,
     per_user_limits: Optional[ComputeQuotaBase],
-    project_id: str,
     tags: List[str],
 ) -> Optional[ComputeServiceCreateExtended]:
     """Create region's compute service.
@@ -266,7 +266,8 @@ def get_compute_service(
     if per_user_limits:
         compute_service.quotas.append(
             ComputeQuotaCreateExtended(
-                **per_user_limits.dict(exclude_none=True), project=project_id
+                **per_user_limits.dict(exclude_none=True),
+                project=conn.current_project_id,
             )
         )
     return compute_service
@@ -276,7 +277,6 @@ def get_network_service(
     conn: Connection,
     *,
     per_user_limits: Optional[NetworkQuotaBase],
-    project_id: str,
     tags: List[str],
     default_private_net: Optional[str],
     default_public_net: Optional[str],
@@ -305,7 +305,8 @@ def get_network_service(
     if per_user_limits:
         network_service.quotas.append(
             NetworkQuotaCreateExtended(
-                **per_user_limits.dict(exclude_none=True), project=project_id
+                **per_user_limits.dict(exclude_none=True),
+                project=conn.current_project_id,
             )
         )
     return network_service
@@ -318,7 +319,7 @@ def connect_to_provider(
     project_id: str,
     region_name: str,
     token: str,
-) -> Optional[Connection]:
+) -> Connection:
     """Connect to Openstack provider"""
     logger.info(
         f"Connecting through IDP {idp.endpoint} to openstack "
@@ -326,22 +327,16 @@ def connect_to_provider(
         f"Accessing with project ID: {project_id}"
     )
     auth_type = "v3oidcaccesstoken"
-    try:
-        conn = connect(
-            auth_url=provider_conf.auth_url,
-            auth_type=auth_type,
-            identity_provider=idp.relationship.idp_name,
-            protocol=idp.relationship.protocol,
-            access_token=token,
-            project_id=project_id,
-            region_name=region_name,
-            timeout=TIMEOUT,
-        )
-    except (ConnectFailure, Unauthorized, NoMatchingPlugin, NotFound) as e:
-        logger.error(e)
-        return None
-    logger.info("Connected.")
-    return conn
+    return connect(
+        auth_url=provider_conf.auth_url,
+        auth_type=auth_type,
+        identity_provider=idp.relationship.idp_name,
+        protocol=idp.relationship.protocol,
+        access_token=token,
+        project_id=project_id,
+        region_name=region_name,
+        timeout=TIMEOUT,
+    )
 
 
 def get_data_from_openstack(
@@ -367,8 +362,6 @@ def get_data_from_openstack(
         region_name=region_name,
         token=token,
     )
-    if not conn:
-        return None
 
     try:
         # Create project entity
@@ -376,14 +369,11 @@ def get_data_from_openstack(
 
         # Retrieve provider services (block_storage, compute, identity and network)
         block_storage_service = get_block_storage_service(
-            conn,
-            per_user_limits=project_conf.per_user_limits.block_storage,
-            project_id=project_conf.id,
+            conn, per_user_limits=project_conf.per_user_limits.block_storage
         )
         compute_service = get_compute_service(
             conn,
             per_user_limits=project_conf.per_user_limits.compute,
-            project_id=project_conf.id,
             tags=provider_conf.image_tags,
         )
         identity_service = IdentityServiceCreate(
@@ -393,21 +383,18 @@ def get_data_from_openstack(
         network_service = get_network_service(
             conn,
             per_user_limits=project_conf.per_user_limits.network,
-            project_id=project_conf.id,
             tags=provider_conf.network_tags,
             default_private_net=project_conf.default_private_net,
             default_public_net=project_conf.default_public_net,
             proxy=project_conf.private_net_proxy,
         )
+    except (ConnectFailure, Unauthorized, NoMatchingPlugin, NotFound) as e:
+        logger.error(e)
+        return None
 
-        conn.close()
-        logger.info("Connection closed")
-    except ConnectFailure:
-        logger.error("Connection closed unexpectedly.")
-        return None
-    except Unauthorized:
-        logger.error("Unauthorized to read project info.")
-        return None
+    # TODO Check if the closing action can raise an exception
+    conn.close()
+    logger.info("Connection closed")
 
     return (
         project,
