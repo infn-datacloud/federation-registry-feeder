@@ -97,4 +97,4 @@ def random_start_end_dates() -> Tuple[date, date]:
 
 def random_url() -> AnyHttpUrl:
     """Return a random URL."""
-    return "http://" + random_lower_string() + ".com"
+    return "https://" + random_lower_string() + ".com"

@@ -116,9 +116,12 @@ def update_identity_providers(
         if not current_issuer:
             d[new_issuer.endpoint] = new_issuer
         else:
-            # Add new user group since for each provider a user group can have just one
-            # SLA pointing to one project.
-            current_issuer.user_groups.append(new_issuer.user_groups[0])
+            # Since for each provider a user group can have just one SLA pointing to
+            # exactly one project. If the user group is not already in the current
+            # identity provider user groups add it, otherwise skip.
+            names = [i.name for i in current_issuer.user_groups]
+            if new_issuer.user_groups[0].name not in names:
+                current_issuer.user_groups.append(new_issuer.user_groups[0])
     return list(d.values())
 
 
