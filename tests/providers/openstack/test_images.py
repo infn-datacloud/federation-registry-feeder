@@ -1,5 +1,5 @@
 from typing import List, Optional
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
 from openstack.image.v2.image import Image
@@ -110,6 +110,9 @@ def test_retrieve_private_images(
     mock_image.images.return_value = images
     mock_image.members.side_effect = get_allowed_members
     mock_conn.image = mock_image
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_image_private.owner_id
+    )
     data = get_images(mock_conn)
 
     assert len(data) == len(images)
@@ -121,3 +124,33 @@ def test_retrieve_private_images(
             filter(lambda x: x.status == "accepted", get_allowed_members())
         )
     assert len(data[0].projects) == len(allowed_project_ids)
+
+
+@patch("src.providers.openstack.Connection.image")
+@patch("src.providers.openstack.Connection")
+@parametrize_with_cases("acceptance_status", cases=CaseAcceptStatus)
+def test_no_matching_project_id_when_retrieving_private_images(
+    mock_conn: Mock,
+    mock_image: Mock,
+    openstack_image_private: Image,
+    acceptance_status: str,
+) -> None:
+    """Successful retrieval of an Image with a specified visibility.
+
+    Check that the is_public flag is correctly set to False and projects list is
+    correct.
+    """
+
+    def get_allowed_members(*args, **kwargs) -> List[Member]:
+        return [
+            Member(status="accepted", id=openstack_image_private.owner_id),
+            Member(status=acceptance_status, id=uuid4().hex),
+        ]
+
+    images = [openstack_image_private]
+    mock_image.images.return_value = images
+    mock_image.members.side_effect = get_allowed_members
+    mock_conn.image = mock_image
+    type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
+    data = get_images(mock_conn)
+    assert len(data) == 0

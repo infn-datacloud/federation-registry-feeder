@@ -25,7 +25,6 @@ from src.providers.openstack import (
     get_compute_service,
     get_network_service,
 )
-from tests.providers.openstack.test_flavors import get_allowed_project_ids
 from tests.providers.openstack.test_images import filter_images
 from tests.providers.openstack.test_networks import filter_networks
 from tests.schemas.utils import random_url
@@ -205,19 +204,24 @@ def test_retrieve_network_service(
         assert item.quotas[1].per_user
 
 
+@patch("src.providers.openstack.Connection.compute.get_flavor_access")
 @patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_compute_service_with_flavors(
-    mock_conn: Mock, mock_compute: Mock, openstack_flavor_base: Flavor
+    mock_conn: Mock,
+    mock_compute: Mock,
+    mock_flavor_access: Mock,
+    openstack_flavor_base: Flavor,
 ) -> None:
     """Check flavors in the returned service."""
     endpoint = random_url()
+    project_id = uuid4().hex
     flavors = [openstack_flavor_base]
     mock_compute.get_endpoint.return_value = endpoint
     mock_compute.flavors.return_value = flavors
-    mock_compute.get_flavor_access.side_effect = get_allowed_project_ids
+    mock_flavor_access.return_value = [{"tenant_id": project_id}]
     mock_conn.compute = mock_compute
-    type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
+    type(mock_conn).current_project_id = PropertyMock(return_value=project_id)
     item = get_compute_service(mock_conn, per_user_limits=None, tags=[])
     assert len(item.flavors) == 1
 

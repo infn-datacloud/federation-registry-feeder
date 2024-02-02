@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.provider.schemas_extended import (
     BlockStorageQuotaCreateExtended,
@@ -64,6 +64,19 @@ def get_network_quotas(conn: Connection) -> NetworkQuotaCreateExtended:
     return NetworkQuotaCreateExtended(**data, project=conn.current_project_id)
 
 
+def get_flavor_extra_specs(extra_specs: Dict[str, Any]) -> Dict[str, Any]:
+    """Format flavor extra specs into a dictionary."""
+    data = {}
+    data["gpus"] = int(extra_specs.get("gpu_number", 0))
+    data["gpu_model"] = extra_specs.get("gpu_model") if data["gpus"] > 0 else None
+    data["gpu_vendor"] = extra_specs.get("gpu_vendor") if data["gpus"] > 0 else None
+    data["local_storage"] = extra_specs.get(
+        "aggregate_instance_extra_specs:local_storage"
+    )
+    data["infiniband"] = extra_specs.get("infiniband", False)
+    return data
+
+
 def get_flavor_projects(conn: Connection, flavor: Flavor) -> List[str]:
     """Retrieve project ids having access to target flavor."""
     projects = set()
@@ -80,19 +93,15 @@ def get_flavors(conn: Connection) -> List[FlavorCreateExtended]:
         projects = []
         if not flavor.is_public:
             projects = get_flavor_projects(conn, flavor)
+            if conn.current_project_id not in projects:
+                continue
         data = flavor.to_dict()
         data["uuid"] = data.pop("id")
         if data.get("description") is None:
             data["description"] = ""
         extra = data.pop("extra_specs")
         if extra:
-            data["gpus"] = int(extra.get("gpu_number", 0))
-            data["gpu_model"] = extra.get("gpu_model") if data["gpus"] > 0 else None
-            data["gpu_vendor"] = extra.get("gpu_vendor") if data["gpus"] > 0 else None
-            data["local_storage"] = extra.get(
-                "aggregate_instance_extra_specs:local_storage"
-            )
-            data["infiniband"] = extra.get("infiniband", False)
+            data = {**get_flavor_extra_specs(extra), **data}
         logger.debug(f"Flavor manipulated data={data}")
         flavors.append(FlavorCreateExtended(**data, projects=list(projects)))
     return flavors
@@ -124,10 +133,14 @@ def get_images(
         is_public = True
         projects = []
         if image.visibility == "private":
+            if conn.current_project_id != image.owner_id:
+                continue
             projects = [image.owner_id]
             is_public = False
         elif image.visibility == "shared":
             projects = get_image_projects(conn, image=image, projects=projects)
+            if conn.current_project_id not in projects:
+                continue
             is_public = False
         data = image.to_dict()
         data["uuid"] = data.pop("id")

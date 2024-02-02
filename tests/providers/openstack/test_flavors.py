@@ -1,5 +1,4 @@
-from typing import Dict, List
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
 from openstack.compute.v2.flavor import Flavor
@@ -7,14 +6,14 @@ from openstack.compute.v2.flavor import Flavor
 from src.providers.openstack import get_flavors
 
 
-def get_allowed_project_ids(*args, **kwargs) -> List[Dict[str, str]]:
-    return [{"tenant_id": uuid4().hex}]
-
-
+@patch("src.providers.openstack.Connection.compute.get_flavor_access")
 @patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_flavors(
-    mock_conn: Mock, mock_compute: Mock, openstack_flavor: Flavor
+    mock_conn: Mock,
+    mock_compute: Mock,
+    mock_flavor_access: Mock,
+    openstack_flavor: Flavor,
 ) -> None:
     """Successful retrieval of a flavors.
 
@@ -24,9 +23,11 @@ def test_retrieve_flavors(
     caught: get_data_from_openstack function.
     """
     flavors = list(filter(lambda x: not x.is_disabled, [openstack_flavor]))
+    project_id = uuid4().hex
+    mock_flavor_access.return_value = [{"tenant_id": project_id}]
     mock_compute.flavors.return_value = flavors
-    mock_compute.get_flavor_access.side_effect = get_allowed_project_ids
     mock_conn.compute = mock_compute
+    type(mock_conn).current_project_id = PropertyMock(return_value=project_id)
     data = get_flavors(mock_conn)
 
     assert len(data) == len(flavors)
@@ -54,4 +55,30 @@ def test_retrieve_flavors(
         if item.is_public:
             assert len(item.projects) == 0
         else:
-            assert len(item.projects) == len(get_allowed_project_ids())
+            assert len(item.projects) == 1
+
+
+@patch("src.providers.openstack.Connection.compute.get_flavor_access")
+@patch("src.providers.openstack.Connection.compute")
+@patch("src.providers.openstack.Connection")
+def test_no_matching_project_id_when_retrieving_private_flavor(
+    mock_conn: Mock,
+    mock_compute: Mock,
+    mock_flavor_access: Mock,
+    openstack_flavor_private: Flavor,
+) -> None:
+    """Successful retrieval of a flavors.
+
+    Retrieve only active flavors.
+
+    Flavors retrieval fail is not tested here. It is tested where the exception is
+    caught: get_data_from_openstack function.
+    """
+    flavors = list(filter(lambda x: not x.is_disabled, [openstack_flavor_private]))
+    project_id = uuid4().hex
+    mock_flavor_access.return_value = [{"tenant_id": project_id}]
+    mock_compute.flavors.return_value = flavors
+    mock_conn.compute = mock_compute
+    type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
+    data = get_flavors(mock_conn)
+    assert len(data) == 0
