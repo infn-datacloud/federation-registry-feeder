@@ -24,10 +24,17 @@ from src.providers.openstack import get_data_from_openstack
 def filter_projects_on_compute_service(
     *, service: ComputeServiceCreateExtended, include_projects: List[str]
 ) -> None:
-    """Remove from compute resources projects not imported in the Federation-Registry"""
-    for flavor in service.flavors:
+    """Remove from compute resources projects not imported in the Federation-Registry.
+
+    Apply the filtering only on public flavors and images.
+
+    Since resources not matching at least the project used to discover them have already
+    been discarded, on a specific resource, after the filtering projects, there can't be
+    an empty projects list.
+    """
+    for flavor in filter(lambda x: not x.is_public, service.flavors):
         flavor.projects = list(filter(lambda x: x in include_projects, flavor.projects))
-    for image in service.images:
+    for image in filter(lambda x: not x.is_public, service.images):
         image.projects = list(filter(lambda x: x in include_projects, image.projects))
 
 
