@@ -15,7 +15,7 @@ from app.provider.schemas_extended import (
     NetworkQuotaCreateExtended,
     NetworkServiceCreateExtended,
 )
-from pytest_cases import case, parametrize, parametrize_with_cases
+from pytest_cases import parametrize, parametrize_with_cases
 
 from src.providers.core import (
     update_region_block_storage_services,
@@ -77,26 +77,54 @@ def get_network_quota() -> NetworkQuotaCreateExtended:
     )
 
 
-@case(tags=["endpoint"])
-@parametrize(equal=[True, False])
-def case_endpoint(equal: bool) -> bool:
-    return equal
+class CaseEqualEndpoint:
+    @parametrize(equal=[True, False])
+    def case_endpoint(self, equal: bool) -> bool:
+        return equal
 
 
-@case(tags=["quotas"])
-@parametrize(presence=[True, False])
-def case_quota(presence: bool) -> bool:
-    return presence
+class CaseWithQuotas:
+    @parametrize(presence=[True, False])
+    def case_quota(self, presence: bool) -> bool:
+        return presence
 
 
-@case(tags=["resource"])
-@parametrize(equal=[True, False])
-def case_net_rel(equal: bool) -> Tuple[str, bool]:
-    return equal
+class CaseEqualResources:
+    @parametrize(equal=[True, False])
+    def case_net_rel(self, equal: bool) -> Tuple[str, bool]:
+        return equal
 
 
-@parametrize_with_cases("equal_endpoint", cases=".", has_tag="endpoint")
-@parametrize_with_cases("with_quota", cases=".", has_tag="quotas")
+def test_update_region_service_empty_list(
+    service_create: BlockStorageServiceCreateExtended,
+) -> None:
+    current_services = [service_create]
+    if isinstance(service_create, BlockStorageServiceCreateExtended):
+        update_region_block_storage_services(
+            current_services=current_services, new_services=[]
+        )
+    elif isinstance(service_create, ComputeServiceCreateExtended):
+        update_region_compute_services(
+            current_services=current_services, new_services=[]
+        )
+    elif isinstance(service_create, IdentityServiceCreate):
+        update_region_identity_services(
+            current_services=current_services, new_services=[]
+        )
+    elif isinstance(service_create, NetworkServiceCreateExtended):
+        update_region_network_services(
+            current_services=current_services, new_services=[]
+        )
+    assert len(current_services) == 1
+    curr_srv = current_services[0]
+    assert curr_srv.endpoint == service_create.endpoint
+    assert curr_srv.description == service_create.description
+    assert curr_srv.name == service_create.name
+    assert curr_srv.type == service_create.type
+
+
+@parametrize_with_cases("equal_endpoint", cases=CaseEqualEndpoint)
+@parametrize_with_cases("with_quota", cases=CaseWithQuotas)
 def test_update_region_block_storage_service(
     equal_endpoint: bool, with_quota: bool
 ) -> None:
@@ -137,8 +165,8 @@ def test_update_region_block_storage_service(
         assert len(current_services[1].quotas) == len(new_srv.quotas)
 
 
-@parametrize_with_cases("equal_endpoint", cases=".", has_tag="endpoint")
-@parametrize_with_cases("with_quota", cases=".", has_tag="quotas")
+@parametrize_with_cases("equal_endpoint", cases=CaseEqualEndpoint)
+@parametrize_with_cases("with_quota", cases=CaseWithQuotas)
 def test_update_region_compute_service(equal_endpoint: bool, with_quota: bool) -> None:
     old_srv = ComputeServiceCreateExtended(
         endpoint=random_url(),
@@ -177,7 +205,7 @@ def test_update_region_compute_service(equal_endpoint: bool, with_quota: bool) -
         assert len(current_services[1].quotas) == len(new_srv.quotas)
 
 
-@parametrize_with_cases("equal_endpoint", cases=".", has_tag="endpoint")
+@parametrize_with_cases("equal_endpoint", cases=CaseEqualEndpoint)
 def test_update_region_identity_service(equal_endpoint: bool) -> None:
     old_srv = IdentityServiceCreate(
         endpoint=random_url(),
@@ -210,8 +238,8 @@ def test_update_region_identity_service(equal_endpoint: bool) -> None:
         assert current_services[1].type == new_srv.type
 
 
-@parametrize_with_cases("equal_endpoint", cases=".", has_tag="endpoint")
-@parametrize_with_cases("with_quota", cases=".", has_tag="quotas")
+@parametrize_with_cases("equal_endpoint", cases=CaseEqualEndpoint)
+@parametrize_with_cases("with_quota", cases=CaseWithQuotas)
 def test_update_region_network_service(equal_endpoint: bool, with_quota: bool) -> None:
     old_srv = NetworkServiceCreateExtended(
         endpoint=random_url(),
@@ -252,7 +280,7 @@ def test_update_region_network_service(equal_endpoint: bool, with_quota: bool) -
         assert len(current_services[1].quotas) == len(new_srv.quotas)
 
 
-@parametrize_with_cases("equal", cases=".", has_tag="resource")
+@parametrize_with_cases("equal", cases=CaseEqualResources)
 def test_update_region_compute_service_with_flavors(equal: bool) -> None:
     flavor1 = get_flavor()
     old_srv = ComputeServiceCreateExtended(
@@ -270,7 +298,7 @@ def test_update_region_compute_service_with_flavors(equal: bool) -> None:
     assert len(current_services[0].flavors) == (1 if equal else 2)
 
 
-@parametrize_with_cases("equal", cases=".", has_tag="resource")
+@parametrize_with_cases("equal", cases=CaseEqualResources)
 def test_update_region_compute_service_with_images(equal: bool) -> None:
     image1 = get_image()
     old_srv = ComputeServiceCreateExtended(
@@ -288,7 +316,7 @@ def test_update_region_compute_service_with_images(equal: bool) -> None:
     assert len(current_services[0].images) == (1 if equal else 2)
 
 
-@parametrize_with_cases("equal", cases=".", has_tag="resource")
+@parametrize_with_cases("equal", cases=CaseEqualResources)
 def test_update_region_network_service_with_networks(equal: bool) -> None:
     item1 = get_network()
     old_srv = NetworkServiceCreateExtended(
