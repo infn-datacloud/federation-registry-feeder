@@ -50,9 +50,9 @@ class CaseInvalidAttr:
         self, diff_attr: str, project: Project
     ) -> Tuple[Literal["projects"], Project]:
         project2 = copy.deepcopy(project)
-        if diff_attr == "endpoint":
+        if diff_attr == "id":
             project2.id = uuid4()
-        elif diff_attr == "idp_name":
+        elif diff_attr == "sla":
             project2.sla = uuid4()
         return "projects", [project, project2]
 
