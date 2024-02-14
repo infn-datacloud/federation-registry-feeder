@@ -2,13 +2,13 @@ import os
 from typing import Any, Dict, List, Optional
 
 import requests
-from app.provider.schemas_extended import (
+from fastapi import status
+from fastapi.encoders import jsonable_encoder
+from fed_reg.provider.schemas_extended import (
     ProviderCreateExtended,
     ProviderRead,
     ProviderReadExtended,
 )
-from fastapi import status
-from fastapi.encoders import jsonable_encoder
 from pydantic import AnyHttpUrl, BaseModel, Field, validator
 
 from src.logger import logger

@@ -1,15 +1,15 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from app.provider.enum import ProviderType
-from app.provider.schemas_extended import (
+from fed_reg.provider.enum import ProviderType
+from fed_reg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
     IdentityServiceCreate,
     NetworkServiceCreateExtended,
     ProjectCreate,
 )
-from app.service.enum import (
+from fed_reg.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
     IdentityServiceName,

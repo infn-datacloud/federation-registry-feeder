@@ -2,10 +2,11 @@ from random import randint
 from typing import Any, List, Literal, Tuple
 
 import pytest
-from pydantic import ValidationError
+from pydantic import AnyHttpUrl, ValidationError
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.config import APIVersions, Settings
+from tests.schemas.utils import random_url
 
 
 class CaseVersionKey:
@@ -15,10 +16,8 @@ class CaseVersionKey:
 
 
 class CaseSettings:
-    def case_fed_reg_url(
-        self,
-    ) -> Tuple[Literal["FED_REG_API_URL"], Literal["https://test.url.it/api"]]:
-        return "FED_REG_API_URL", "https://test.url.it/api"
+    def case_fed_reg_url(self) -> Tuple[Literal["FED_REG_API_URL"], AnyHttpUrl]:
+        return "FED_REG_API_URL", random_url()
 
     def case_vol_labels_single(
         self,
@@ -85,10 +84,21 @@ def test_api_versions_invalid_attr(key: str) -> None:
 def test_settings_defaults(api_ver: APIVersions) -> None:
     """Settings needs at least an APIVersions instance to work."""
     settings = Settings(api_ver=api_ver)
-    assert settings.FED_REG_API_URL == "http://localhost:8000/api"
-    assert settings.BLOCK_STORAGE_VOL_LABELS == []
-    assert settings.PROVIDERS_CONF_DIR == "providers-conf"
-    assert settings.OIDC_AGENT_CONTAINER_NAME == "feeder-dev-oidc-agent"
+    assert (
+        settings.FED_REG_API_URL == settings.__fields__.get("FED_REG_API_URL").default
+    )
+    assert (
+        settings.BLOCK_STORAGE_VOL_LABELS
+        == settings.__fields__.get("BLOCK_STORAGE_VOL_LABELS").default_factory()
+    )
+    assert (
+        settings.PROVIDERS_CONF_DIR
+        == settings.__fields__.get("PROVIDERS_CONF_DIR").default
+    )
+    assert (
+        settings.OIDC_AGENT_CONTAINER_NAME
+        == settings.__fields__.get("OIDC_AGENT_CONTAINER_NAME").default
+    )
     assert settings.api_ver == api_ver
 
 

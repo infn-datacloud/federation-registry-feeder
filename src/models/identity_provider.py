@@ -1,9 +1,9 @@
 import subprocess
 from typing import List
 
-from app.provider.schemas_extended import IdentityProviderCreate, find_duplicates
-from app.sla.schemas import SLABase
-from app.user_group.schemas import UserGroupBase
+from fed_reg.provider.schemas_extended import IdentityProviderCreate, find_duplicates
+from fed_reg.sla.schemas import SLABase
+from fed_reg.user_group.schemas import UserGroupBase
 from pydantic import AnyHttpUrl, Field, validator
 
 from src.config import get_settings

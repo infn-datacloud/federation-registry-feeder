@@ -1,7 +1,7 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from app.provider.schemas_extended import ProviderCreateExtended, ProviderRead
+from fed_reg.provider.schemas_extended import ProviderCreateExtended, ProviderRead
 from requests import HTTPError
 
 from src.config import URLs

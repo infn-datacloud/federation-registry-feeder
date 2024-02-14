@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Literal, Tuple
 
 import pytest
-from app.provider.enum import ProviderType
+from fed_reg.provider.enum import ProviderType
 from pytest_cases import parametrize_with_cases
 
 from src.models.provider import AuthMethod, Kubernetes, Project, Region

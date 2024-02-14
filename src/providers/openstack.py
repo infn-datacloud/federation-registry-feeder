@@ -1,7 +1,7 @@
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
-from app.provider.schemas_extended import (
+from fed_reg.provider.schemas_extended import (
     BlockStorageQuotaCreateExtended,
     BlockStorageServiceCreateExtended,
     ComputeQuotaCreateExtended,
@@ -15,8 +15,12 @@ from app.provider.schemas_extended import (
     NetworkServiceCreateExtended,
     ProjectCreate,
 )
-from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
-from app.service.enum import (
+from fed_reg.quota.schemas import (
+    BlockStorageQuotaBase,
+    ComputeQuotaBase,
+    NetworkQuotaBase,
+)
+from fed_reg.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
     IdentityServiceName,

@@ -1,7 +1,7 @@
 from typing import List
 from unittest.mock import Mock, patch
 
-from app.provider.schemas_extended import ProviderCreateExtended
+from fed_reg.provider.schemas_extended import ProviderCreateExtended
 from pytest_cases import parametrize_with_cases
 
 from src.config import URLs

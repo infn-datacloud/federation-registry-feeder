@@ -5,9 +5,9 @@ from datetime import date
 from random import choice, choices, randint, random
 from typing import List, Optional, Tuple, Union
 
-from app.image.enum import ImageOS
-from app.provider.enum import ProviderType
-from app.service.enum import (
+from fed_reg.image.enum import ImageOS
+from fed_reg.provider.enum import ProviderType
+from fed_reg.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
     IdentityServiceName,

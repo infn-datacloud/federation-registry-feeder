@@ -1,7 +1,7 @@
 from typing import Tuple, Union
 from uuid import uuid4
 
-from app.provider.schemas_extended import (
+from fed_reg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
     FlavorCreateExtended,

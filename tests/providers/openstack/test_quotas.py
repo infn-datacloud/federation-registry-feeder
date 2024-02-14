@@ -1,7 +1,7 @@
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
-from app.quota.enum import QuotaType
+from fed_reg.quota.enum import QuotaType
 from openstack.block_storage.v3.quota_set import QuotaSet as BlockStorageQuotaSet
 from openstack.compute.v2.quota_set import QuotaSet as ComputeQuotaSet
 from openstack.network.v2.quota import Quota as NetworkQuota

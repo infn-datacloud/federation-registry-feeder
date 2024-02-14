@@ -3,8 +3,12 @@ from typing import List, Optional
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
-from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
-from app.service.enum import (
+from fed_reg.quota.schemas import (
+    BlockStorageQuotaBase,
+    ComputeQuotaBase,
+    NetworkQuotaBase,
+)
+from fed_reg.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
     NetworkServiceName,

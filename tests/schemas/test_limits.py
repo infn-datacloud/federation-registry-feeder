@@ -1,7 +1,11 @@
 from typing import Literal, Tuple, Union
 
-from app.quota.enum import QuotaType
-from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
+from fed_reg.quota.enum import QuotaType
+from fed_reg.quota.schemas import (
+    BlockStorageQuotaBase,
+    ComputeQuotaBase,
+    NetworkQuotaBase,
+)
 from pytest_cases import parametrize_with_cases
 
 from src.models.provider import Limits

@@ -1,8 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Tuple
 
-from app.provider.enum import ProviderStatus, ProviderType
-from app.provider.schemas_extended import (
+from fed_reg.provider.enum import ProviderStatus, ProviderType
+from fed_reg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
     IdentityProviderCreateExtended,

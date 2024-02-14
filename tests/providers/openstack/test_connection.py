@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from app.provider.schemas_extended import IdentityProviderCreateExtended
+from fed_reg.provider.schemas_extended import IdentityProviderCreateExtended
 
 from src.models.provider import Openstack, Project
 from src.providers.openstack import connect_to_provider

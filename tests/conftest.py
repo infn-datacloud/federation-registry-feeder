@@ -4,8 +4,8 @@ from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
 
 import pytest
-from app.location.schemas import LocationBase
-from app.provider.schemas_extended import (
+from fed_reg.location.schemas import LocationBase
+from fed_reg.provider.schemas_extended import (
     AuthMethodCreate,
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
@@ -19,7 +19,11 @@ from app.provider.schemas_extended import (
     SLACreateExtended,
     UserGroupCreateExtended,
 )
-from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
+from fed_reg.quota.schemas import (
+    BlockStorageQuotaBase,
+    ComputeQuotaBase,
+    NetworkQuotaBase,
+)
 from openstack.block_storage.v3.quota_set import (
     QuotaSet as OpenstackBlockStorageQuotaSet,
 )

@@ -1,13 +1,17 @@
 from typing import List, Literal, Optional, Union
 
-from app.auth_method.schemas import AuthMethodBase
-from app.location.schemas import LocationBase
-from app.models import BaseNode
-from app.provider.enum import ProviderType
-from app.provider.schemas import ProviderBase
-from app.provider.schemas_extended import find_duplicates
-from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
-from app.region.schemas import RegionBase
+from fed_reg.auth_method.schemas import AuthMethodBase
+from fed_reg.location.schemas import LocationBase
+from fed_reg.models import BaseNode
+from fed_reg.provider.enum import ProviderType
+from fed_reg.provider.schemas import ProviderBase
+from fed_reg.provider.schemas_extended import find_duplicates
+from fed_reg.quota.schemas import (
+    BlockStorageQuotaBase,
+    ComputeQuotaBase,
+    NetworkQuotaBase,
+)
+from fed_reg.region.schemas import RegionBase
 from pydantic import AnyHttpUrl, BaseModel, Field, IPvAnyAddress, validator
 
 

@@ -1,6 +1,6 @@
 from typing import List
 
-from app.provider.schemas_extended import find_duplicates
+from fed_reg.provider.schemas_extended import find_duplicates
 from pydantic import BaseModel, Field, validator
 
 from src.models.identity_provider import Issuer

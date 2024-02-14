@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple
 
 import yaml
-from app.provider.schemas_extended import ProviderCreateExtended
+from fed_reg.provider.schemas_extended import ProviderCreateExtended
 
 from src.config import Settings, URLs
 from src.crud import CRUD

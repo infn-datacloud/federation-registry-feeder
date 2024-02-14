@@ -1,7 +1,11 @@
 from random import randint
 
 import pytest
-from app.quota.schemas import BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase
+from fed_reg.quota.schemas import (
+    BlockStorageQuotaBase,
+    ComputeQuotaBase,
+    NetworkQuotaBase,
+)
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.provider import (

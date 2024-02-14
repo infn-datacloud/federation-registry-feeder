@@ -1,6 +1,6 @@
 from typing import Optional
 
-from app.location.schemas import LocationBase
+from fed_reg.location.schemas import LocationBase
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.provider import Region

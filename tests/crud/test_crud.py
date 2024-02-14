@@ -4,13 +4,13 @@ from typing import Any, Dict, List, Literal, Type, Union
 from unittest.mock import Mock, patch
 
 import pytest
-from app.provider.schemas_extended import (
+from fastapi import status
+from fastapi.encoders import jsonable_encoder
+from fed_reg.provider.schemas_extended import (
     ProviderCreateExtended,
     ProviderRead,
     ProviderReadExtended,
 )
-from fastapi import status
-from fastapi.encoders import jsonable_encoder
 from pytest_cases import case, parametrize, parametrize_with_cases
 from requests.exceptions import ConnectionError, ReadTimeout
 

@@ -1,14 +1,14 @@
 from typing import Tuple, Union
 from unittest.mock import Mock, patch
 
-from app.provider.schemas_extended import (
+from fed_reg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
     IdentityProviderCreateExtended,
     NetworkServiceCreateExtended,
     ProjectCreate,
 )
-from app.service.enum import (
+from fed_reg.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
     NetworkServiceName,

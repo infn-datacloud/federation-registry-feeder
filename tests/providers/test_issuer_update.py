@@ -2,7 +2,7 @@ import copy
 from typing import Tuple
 from uuid import uuid4
 
-from app.provider.schemas_extended import IdentityProviderCreateExtended
+from fed_reg.provider.schemas_extended import IdentityProviderCreateExtended
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.providers.core import update_identity_providers
