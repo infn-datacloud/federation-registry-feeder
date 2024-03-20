@@ -3,68 +3,61 @@ version: "3"
 services:
   db:
     image: neo4j:5.15.0
-    container_name: feeder-dev-db
+    container_name: feeder-devc-db
     volumes:
-      - dev-db-data:/data
-      - dev-db-logs:/logs
-    ports: 
-      - "7474:7474"
-      - "7687:7687"
+      - feeder-devc-db-data:/data
+      - feeder-devc-db-logs:/logs
     environment:
       - NEO4J_AUTH=none
       - NEO4J_PLUGINS=["apoc"]
     networks:
-      - fed-reg-db
+      - feeder-devc-db
 
   registry:
     image: indigopaas/federation-registry:build-docker
-    container_name: feeder-dev-registry
+    container_name: feeder-devc-registry
     depends_on:
       - db
-    ports:
-      - "8000:80"
     environment:
-      - NEO4J_SERVER=feeder-dev-db
+      - NEO4J_SERVER=feeder-devc-db
       - TRUSTED_IDP_LIST=${TRUSTED_IDP_LIST-[]}
       - ADMIN_EMAIL_LIST=${ADMIN_EMAIL_LIST-[]}
     networks:
-      - fed-reg-db
-      - feeder-fed-reg
+      - feeder-devc-db
+      - feeder-devc-fed-reg
 
   oidc-agent:
-    image: opensciencegrid/oidc-agent:3.6-release
-    container_name: feeder-dev-oidc-agent
+    image: opensciencegrid/oidc-agent:3.6-release-20240220-1639
+    container_name: feeder-devc-oidc-agent
     platform: linux/amd64
     volumes:
-      - dev-oidc-config:/root/.oidc-agent
+      - feeder-devc-oidc-agent-iss-config:/root/.oidc-agent
     networks:
-      - feeder-oidc-agent 
+      - feeder-devc-oidc-agent
 
   base:
-    build:
-      context: ../.
-      dockerfile: .devcontainer/Dockerfile
-    container_name: feeder-dev
+    image: mcr.microsoft.com/devcontainers/typescript-node:18
+    container_name: feeder-devc
     depends_on:
       - registry
       - oidc-agent
     volumes:
       - ..:/workspace:cached
     environment:
-      - FED_REG_API_URL=http://feeder-dev-registry/api
-      - OIDC_AGENT_CONTAINER_NAME=feeder-dev-oidc-agent
+      - FED_REG_API_URL=http://feeder-devc-registry/api
+      - OIDC_AGENT_CONTAINER_NAME=feeder-devc-oidc-agent
     networks:
-      - feeder-oidc-agent 
-      - feeder-fed-reg
-    # Infinite loop to keep container live doing nothing
-    command: bash -c "while true; do sleep 1; done"
+      - feeder-devc-oidc-agent
+      - feeder-devc-fed-reg
+    command: sleep infinity
 
 volumes:
-  dev-db-data:
-  dev-db-logs:
-  dev-oidc-config:
+  feeder-devc-db-data:
+  feeder-devc-db-logs:
+  feeder-devc-oidc-agent-iss-config:
+
 
 networks:
-  fed-reg-db:
-  feeder-fed-reg:
-  feeder-oidc-agent:
+  feeder-devc-db:
+  feeder-devc-fed-reg:
+  feeder-devc-oidc-agent:
