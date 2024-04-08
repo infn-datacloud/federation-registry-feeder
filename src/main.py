@@ -40,5 +40,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     main()
