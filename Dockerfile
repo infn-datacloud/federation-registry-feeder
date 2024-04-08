@@ -1,5 +1,5 @@
 # Create requirements.txt from poetry dependencies
-FROM python:3.8-slim AS requirements
+FROM python:3.9-slim AS requirements
 
 WORKDIR /tmp
 
@@ -12,7 +12,7 @@ RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
 
 
 # Stage used in production
-FROM python:3.8-slim AS production
+FROM python:3.9-slim AS production
 
 WORKDIR /app/
 
