@@ -606,7 +606,7 @@ name = "federation-registry"
 version = "0.1.0"
 description = "Python web application providing public REST API to inspect the configurations of the providers registered into the DataCloud project"
 optional = false
-python-versions = "^3.8.1"
+python-versions = ">=3.9,<4.0.0"
 files = []
 develop = false
 
@@ -622,7 +622,7 @@ uvicorn = "^0.22.0"
 type = "git"
 url = "https://github.com/indigo-paas/federation-registry.git"
 reference = "devel"
-resolved_reference = "71175cfb116371a40c42be9c243ebe23c9af484f"
+resolved_reference = "1d8cb2c5bb49cfa28220c42b02e71cfd8c7f0fb7"
 
 [[package]]
 name = "filelock"
