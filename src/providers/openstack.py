@@ -202,7 +202,7 @@ def get_networks(
             default_public_net=default_public_net,
         )
         if proxy:
-            data["proxy_ip"] = str(proxy.ip)
+            data["proxy_ip"] = str(proxy.host)
             data["proxy_user"] = proxy.user
         logger.debug(f"Network manipulated data={data}")
         networks.append(NetworkCreateExtended(**data, project=project))

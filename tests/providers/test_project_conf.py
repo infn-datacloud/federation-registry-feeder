@@ -57,7 +57,7 @@ def get_per_user_limits() -> Limits:
 
 
 def get_private_net_proxy() -> PrivateNetProxy:
-    return PrivateNetProxy(ip=random_ip(), user=random_lower_string())
+    return PrivateNetProxy(host=random_ip(), user=random_lower_string())
 
 
 @parametrize(per_region_props=[True, False])

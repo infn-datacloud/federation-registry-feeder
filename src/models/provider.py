@@ -39,7 +39,9 @@ class Limits(BaseNode):
 
 
 class PrivateNetProxy(BaseNode):
-    ip: IPvAnyAddress = Field(description="Proxy IP address")
+    host: Union[str, IPvAnyAddress] = Field(
+        description="Proxy IP address or Hostname. It is posible to define the port."
+    )
     user: str = Field(description="Username to use when performing ssh operations")
 
 

@@ -120,7 +120,7 @@ def test_retrieve_networks_with_proxy(
     data = get_networks(mock_conn, proxy=net_proxy)
 
     assert len(data) == len(networks)
-    assert data[0].proxy_ip == str(net_proxy.ip)
+    assert data[0].proxy_ip == str(net_proxy.host)
     assert data[0].proxy_user == net_proxy.user
 
 
