@@ -74,7 +74,7 @@ def test_retrieve_networks(
         assert item.is_router_external == openstack_network.is_router_external
         assert item.is_default == bool(openstack_network.is_default)
         assert item.mtu == openstack_network.mtu
-        assert not item.proxy_ip
+        assert not item.proxy_host
         assert not item.proxy_user
         assert item.tags == openstack_network.tags
         if item.is_shared:
@@ -120,7 +120,7 @@ def test_retrieve_networks_with_proxy(
     data = get_networks(mock_conn, proxy=net_proxy)
 
     assert len(data) == len(networks)
-    assert data[0].proxy_ip == str(net_proxy.host)
+    assert data[0].proxy_host == str(net_proxy.host)
     assert data[0].proxy_user == net_proxy.user
 
 

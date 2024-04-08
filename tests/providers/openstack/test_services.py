@@ -353,5 +353,5 @@ def test_retrieve_network_service_proxy(
     )
 
     assert len(item.networks) == len(networks)
-    assert item.networks[0].proxy_ip == str(net_proxy.host)
+    assert item.networks[0].proxy_host == str(net_proxy.host)
     assert item.networks[0].proxy_user == net_proxy.user
