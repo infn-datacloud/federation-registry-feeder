@@ -33,6 +33,7 @@ from keystoneauth1.exceptions.http import NotFound, Unauthorized
 from openstack import connect
 from openstack.compute.v2.flavor import Flavor
 from openstack.connection import Connection
+from openstack.exceptions import ForbiddenException
 from openstack.image.v2.image import Image
 from openstack.network.v2.network import Network
 
@@ -84,8 +85,11 @@ def get_flavor_extra_specs(extra_specs: Dict[str, Any]) -> Dict[str, Any]:
 def get_flavor_projects(conn: Connection, flavor: Flavor) -> List[str]:
     """Retrieve project ids having access to target flavor."""
     projects = set()
-    for i in conn.compute.get_flavor_access(flavor):
-        projects.add(i.get("tenant_id"))
+    try:
+        for i in conn.compute.get_flavor_access(flavor):
+            projects.add(i.get("tenant_id"))
+    except ForbiddenException as e:
+        logger.error(e)
     return list(projects)
 
 
@@ -405,7 +409,13 @@ def get_data_from_openstack(
             default_public_net=project_conf.default_public_net,
             proxy=project_conf.private_net_proxy,
         )
-    except (ConnectFailure, Unauthorized, NoMatchingPlugin, NotFound) as e:
+    except (
+        ConnectFailure,
+        Unauthorized,
+        NoMatchingPlugin,
+        NotFound,
+        ForbiddenException,
+    ) as e:
         logger.error(e)
         return None
 
