@@ -389,6 +389,11 @@ def get_data_from_openstack(
     )
 
     try:
+        identity_service = IdentityServiceCreate(
+            endpoint=provider_conf.auth_url,
+            name=IdentityServiceName.OPENSTACK_KEYSTONE,
+        )
+
         # Create project entity
         project = get_project(conn)
 
@@ -400,10 +405,6 @@ def get_data_from_openstack(
             conn,
             per_user_limits=project_conf.per_user_limits.compute,
             tags=provider_conf.image_tags,
-        )
-        identity_service = IdentityServiceCreate(
-            endpoint=provider_conf.auth_url,
-            name=IdentityServiceName.OPENSTACK_KEYSTONE,
         )
         network_service = get_network_service(
             conn,
