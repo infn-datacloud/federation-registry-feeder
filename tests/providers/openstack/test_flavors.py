@@ -2,6 +2,7 @@ from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
 from openstack.compute.v2.flavor import Flavor
+from openstack.exceptions import ForbiddenException
 
 from src.providers.openstack import get_flavors
 
@@ -67,16 +68,34 @@ def test_no_matching_project_id_when_retrieving_private_flavor(
     mock_flavor_access: Mock,
     openstack_flavor_private: Flavor,
 ) -> None:
-    """Successful retrieval of a flavors.
-
-    Retrieve only active flavors.
-
-    Flavors retrieval fail is not tested here. It is tested where the exception is
-    caught: get_data_from_openstack function.
+    """
+    Filter out private flavors not visible to the current project.
     """
     flavors = list(filter(lambda x: not x.is_disabled, [openstack_flavor_private]))
     project_id = uuid4().hex
     mock_flavor_access.return_value = [{"tenant_id": project_id}]
+    mock_compute.flavors.return_value = flavors
+    mock_conn.compute = mock_compute
+    type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
+    data = get_flavors(mock_conn)
+    assert len(data) == 0
+
+
+@patch("src.providers.openstack.Connection.compute.get_flavor_access")
+@patch("src.providers.openstack.Connection.compute")
+@patch("src.providers.openstack.Connection")
+def test_catch_forbidden_exception_when_reading_flavor_projects(
+    mock_conn: Mock,
+    mock_compute: Mock,
+    mock_flavor_access: Mock,
+    openstack_flavor_private: Flavor,
+) -> None:
+    """
+    Catch ForbiddenException and filter out private flavors if the openstack policy does
+    not allow to read os-flavor-access.
+    """
+    flavors = list(filter(lambda x: not x.is_disabled, [openstack_flavor_private]))
+    mock_flavor_access.side_effect = ForbiddenException()
     mock_compute.flavors.return_value = flavors
     mock_conn.compute = mock_compute
     type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
