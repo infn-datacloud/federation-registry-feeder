@@ -46,8 +46,12 @@ TIMEOUT = 2  # s
 
 def get_block_storage_quotas(conn: Connection) -> BlockStorageQuotaCreateExtended:
     logger.info("Retrieve current project accessible block storage quotas")
-    quota = conn.block_storage.get_quota_set(conn.current_project_id)
-    data = quota.to_dict()
+    try:
+        quota = conn.block_storage.get_quota_set(conn.current_project_id)
+        data = quota.to_dict()
+    except ForbiddenException as e:
+        logger.error(e)
+        data = {}
     logger.debug(f"Block storage service quotas={data}")
     return BlockStorageQuotaCreateExtended(**data, project=conn.current_project_id)
 

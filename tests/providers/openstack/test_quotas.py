@@ -4,6 +4,7 @@ from uuid import uuid4
 from fed_reg.quota.enum import QuotaType
 from openstack.block_storage.v3.quota_set import QuotaSet as BlockStorageQuotaSet
 from openstack.compute.v2.quota_set import QuotaSet as ComputeQuotaSet
+from openstack.exceptions import ForbiddenException
 from openstack.network.v2.quota import Quota as NetworkQuota
 
 from src.providers.openstack import (
@@ -33,6 +34,25 @@ def test_retrieve_block_storage_quotas(
         "per_volume_gigabytes"
     )
     assert data.volumes == openstack_block_storage_quotas.get("volumes")
+    assert data.project == project_id
+
+
+@patch("src.providers.openstack.Connection.block_storage")
+@patch("src.providers.openstack.Connection")
+def test_catch_forbidden_when_reading_block_storage_quotas(
+    mock_conn: Mock, mock_block_storage: Mock
+) -> None:
+    """Retrieve a block storage quota."""
+    mock_block_storage.get_quota_set.side_effect = ForbiddenException()
+    mock_conn.block_storage = mock_block_storage
+    project_id = uuid4().hex
+    type(mock_conn).current_project_id = PropertyMock(return_value=project_id)
+    data = get_block_storage_quotas(mock_conn)
+    assert data.type == QuotaType.BLOCK_STORAGE.value
+    assert not data.per_user
+    assert data.gigabytes is None
+    assert data.per_volume_gigabytes is None
+    assert data.volumes is None
     assert data.project == project_id
 
 
