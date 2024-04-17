@@ -620,7 +620,7 @@ uvicorn = "^0.22.0"
 
 [package.source]
 type = "git"
-url = "https://github.com/indigo-paas/federation-registry.git"
+url = "https://github.com/infn-datacloud/federation-registry.git"
 reference = "devel"
 resolved_reference = "1d8cb2c5bb49cfa28220c42b02e71cfd8c7f0fb7"
 
@@ -2391,4 +2391,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0.0"
-content-hash = "bb25cc482a0a3699a4a56e098c624e1603bcf76656581f1959f19eb0745b781c"
+content-hash = "877f27c11064aef87eee3f93502950592d4ffd1470166a6439a3d7293cfb26c6"

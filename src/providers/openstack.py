@@ -33,6 +33,7 @@ from keystoneauth1.exceptions.http import NotFound, Unauthorized
 from openstack import connect
 from openstack.compute.v2.flavor import Flavor
 from openstack.connection import Connection
+from openstack.exceptions import ForbiddenException
 from openstack.image.v2.image import Image
 from openstack.network.v2.network import Network
 
@@ -45,8 +46,12 @@ TIMEOUT = 2  # s
 
 def get_block_storage_quotas(conn: Connection) -> BlockStorageQuotaCreateExtended:
     logger.info("Retrieve current project accessible block storage quotas")
-    quota = conn.block_storage.get_quota_set(conn.current_project_id)
-    data = quota.to_dict()
+    try:
+        quota = conn.block_storage.get_quota_set(conn.current_project_id)
+        data = quota.to_dict()
+    except ForbiddenException as e:
+        logger.error(e)
+        data = {}
     logger.debug(f"Block storage service quotas={data}")
     return BlockStorageQuotaCreateExtended(**data, project=conn.current_project_id)
 
@@ -84,8 +89,11 @@ def get_flavor_extra_specs(extra_specs: Dict[str, Any]) -> Dict[str, Any]:
 def get_flavor_projects(conn: Connection, flavor: Flavor) -> List[str]:
     """Retrieve project ids having access to target flavor."""
     projects = set()
-    for i in conn.compute.get_flavor_access(flavor):
-        projects.add(i.get("tenant_id"))
+    try:
+        for i in conn.compute.get_flavor_access(flavor):
+            projects.add(i.get("tenant_id"))
+    except ForbiddenException as e:
+        logger.error(e)
     return list(projects)
 
 
@@ -381,6 +389,11 @@ def get_data_from_openstack(
     )
 
     try:
+        identity_service = IdentityServiceCreate(
+            endpoint=provider_conf.auth_url,
+            name=IdentityServiceName.OPENSTACK_KEYSTONE,
+        )
+
         # Create project entity
         project = get_project(conn)
 
@@ -393,10 +406,6 @@ def get_data_from_openstack(
             per_user_limits=project_conf.per_user_limits.compute,
             tags=provider_conf.image_tags,
         )
-        identity_service = IdentityServiceCreate(
-            endpoint=provider_conf.auth_url,
-            name=IdentityServiceName.OPENSTACK_KEYSTONE,
-        )
         network_service = get_network_service(
             conn,
             per_user_limits=project_conf.per_user_limits.network,
@@ -405,7 +414,13 @@ def get_data_from_openstack(
             default_public_net=project_conf.default_public_net,
             proxy=project_conf.private_net_proxy,
         )
-    except (ConnectFailure, Unauthorized, NoMatchingPlugin, NotFound) as e:
+    except (
+        ConnectFailure,
+        Unauthorized,
+        NoMatchingPlugin,
+        NotFound,
+        ForbiddenException,
+    ) as e:
         logger.error(e)
         return None
 

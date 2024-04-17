@@ -1,6 +1,6 @@
 # Federation Registry Feeder
 
-This python script populates the [Federation Registry](https://github.com/indigo-paas/federation-registry.git) through the REST API provider by that service.
+This python script populates the [Federation Registry](https://github.com/infn-datacloud/federation-registry.git) through the REST API provider by that service.
 
 It uses [oidc-agent](https://indigo-dc.gitbook.io/oidc-agent/) to generate the tokens to use to perform authenticated requests on both the `federation-registry` and the resource providers.
 
@@ -183,7 +183,7 @@ To correctly work, the application requires a running `federation-registry` serv
 
 If you don't have an already running instance, we suggest to deploy your instance using the [indigopaas/federation-registry](https://hub.docker.com/r/indigopaas/federation-registry) docker image available on DockerHub.
 
-> The service instance needs a `neo4j` database instance with the **apoc** extension. Look at the [federation-registry documentation](https://github.com/indigo-paas/federation-registry) for more information about it.
+> The service instance needs a `neo4j` database instance with the **apoc** extension. Look at the [federation-registry documentation](https://github.com/infn-datacloud/federation-registry) for more information about it.
 
 ### OIDC-Agent
 
@@ -293,7 +293,7 @@ volumes:
 Clone this repository and move inside the project top folder.
 
 ```bash
-git clone https://github.com/indigo-paas/federation-registry-feeder.git
+git clone https://github.com/infn-datacloud/federation-registry-feeder.git
 cd federation-registry-feeder
 ```
 

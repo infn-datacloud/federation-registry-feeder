@@ -30,8 +30,8 @@
           "editor.defaultFormatter": "ms-azuretools.vscode-docker"
         },
         "sonarlint.connectedMode.project": {
-          "connectionId": "indigo-paas/federation-registry-feeder",
-          "projectKey": "indigo-paas_federation-registry-feeder"
+          "connectionId": "infn-datacloud",
+          "projectKey": "infn-datacloud_federation-registry-feeder"
         },
         "python.analysis.autoFormatStrings": true,
         "python.analysis.inlayHints.functionReturnTypes": true,
