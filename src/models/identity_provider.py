@@ -4,6 +4,7 @@ from typing import List
 from fed_reg.provider.schemas_extended import IdentityProviderCreate, find_duplicates
 from fed_reg.sla.schemas import SLABase
 from fed_reg.user_group.schemas import UserGroupBase
+from liboidcagent import get_access_token_by_issuer_url
 from pydantic import AnyHttpUrl, Field, validator
 
 from src.config import get_settings
@@ -50,20 +51,22 @@ class Issuer(IdentityProviderCreate):
         # Generate token
         if v == "":
             settings = get_settings()
-            token_cmd = subprocess.run(
-                [
-                    "docker",
-                    "exec",
-                    settings.OIDC_AGENT_CONTAINER_NAME,
-                    "oidc-token",
-                    values.get("endpoint"),
-                ],
-                capture_output=True,
-                text=True,
-            )
-            if token_cmd.returncode > 0:
-                raise ValueError(
-                    token_cmd.stderr if token_cmd.stderr else token_cmd.stdout
+            if settings.OIDC_AGENT_CONTAINER_NAME is not None:
+                token_cmd = subprocess.run(
+                    [
+                        "docker",
+                        "exec",
+                        settings.OIDC_AGENT_CONTAINER_NAME,
+                        "oidc-token",
+                        values.get("endpoint"),
+                    ],
+                    capture_output=True,
+                    text=True,
                 )
-            return token_cmd.stdout.strip("\n")
+                if token_cmd.returncode > 0:
+                    raise ValueError(
+                        token_cmd.stderr if token_cmd.stderr else token_cmd.stdout
+                    )
+                return token_cmd.stdout.strip("\n")
+            return get_access_token_by_issuer_url(values.get("endpoint"))
         return v

@@ -860,13 +860,17 @@ version = "0.6.0"
 description = "A python library for requesting OpenID Connect access tokens from oidc-agent."
 optional = false
 python-versions = "*"
-files = [
-    {file = "liboidcagent-0.6.0-py3-none-any.whl", hash = "sha256:52e1ff2e6283f814d5276f3d134f2e3c23a43d2751c17a01b3adf4ad6c41c97b"},
-    {file = "liboidcagent-0.6.0.tar.gz", hash = "sha256:4eacb1cbbc9e23ea7869f2443a121669ff531b5d679867a1174a23a994a62967"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 PyNaCl = ">=1.2.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/giosava94/liboidc-agent-py.git"
+reference = "local-and-remote"
+resolved_reference = "d0335669e0bd6c05f0006b3394327b49340efe18"
 
 [[package]]
 name = "makefun"
@@ -2391,4 +2395,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0.0"
-content-hash = "877f27c11064aef87eee3f93502950592d4ffd1470166a6439a3d7293cfb26c6"
+content-hash = "2b14ddf03fa067216e71651b86c2fbdf4102d8cb4d542c3f68434d9825d98893"
