@@ -10,6 +10,7 @@ from fed_reg.quota.schemas import (
     BlockStorageQuotaBase,
     ComputeQuotaBase,
     NetworkQuotaBase,
+    ObjectStorageQuotaBase,
 )
 from fed_reg.region.schemas import RegionBase
 from pydantic import AnyHttpUrl, BaseModel, Field, IPvAnyAddress, validator
@@ -25,13 +26,30 @@ class Limits(BaseNode):
     network: Optional[NetworkQuotaBase] = Field(
         default=None, description="Network per user quota"
     )
+    object_store: Optional[ObjectStorageQuotaBase] = Field(
+        default=None, description="Object store per user quota"
+    )
 
     @validator("*")
     @classmethod
     def set_per_user(
         cls,
-        v: Optional[Union[BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase]],
-    ) -> Optional[Union[BlockStorageQuotaBase, ComputeQuotaBase, NetworkQuotaBase]]:
+        v: Optional[
+            Union[
+                BlockStorageQuotaBase,
+                ComputeQuotaBase,
+                NetworkQuotaBase,
+                ObjectStorageQuotaBase,
+            ]
+        ],
+    ) -> Optional[
+        Union[
+            BlockStorageQuotaBase,
+            ComputeQuotaBase,
+            NetworkQuotaBase,
+            ObjectStorageQuotaBase,
+        ]
+    ]:
         """These quotas applies to each user. Set per_user flag to true."""
         if v:
             v.per_user = True

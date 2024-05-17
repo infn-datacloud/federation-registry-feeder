@@ -13,18 +13,22 @@ from fed_reg.provider.schemas_extended import (
     NetworkCreateExtended,
     NetworkQuotaCreateExtended,
     NetworkServiceCreateExtended,
+    ObjectStorageQuotaCreateExtended,
+    ObjectStorageServiceCreateExtended,
     ProjectCreate,
 )
 from fed_reg.quota.schemas import (
     BlockStorageQuotaBase,
     ComputeQuotaBase,
     NetworkQuotaBase,
+    ObjectStorageQuotaBase,
 )
 from fed_reg.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
     IdentityServiceName,
     NetworkServiceName,
+    ObjectStorageServiceName,
 )
 from keystoneauth1.exceptions.auth_plugins import NoMatchingPlugin
 from keystoneauth1.exceptions.catalog import EndpointNotFound
@@ -71,6 +75,21 @@ def get_network_quotas(conn: Connection) -> NetworkQuotaCreateExtended:
     data["public_ips"] = data.pop("floating_ips")
     logger.debug(f"Network service quotas={data}")
     return NetworkQuotaCreateExtended(**data, project=conn.current_project_id)
+
+def get_object_store_quotas(conn: Connection) -> ObjectStorageQuotaCreateExtended:
+    logger.info("Retrieve current project accessible object storage quotas")
+    try:
+        # TODO: This method does not exist.
+        # TODO: Understand how to detect if a project has access to the object store
+        # quota = conn.object_store.get_quota(conn.current_project_id)
+        # data = quota.to_dict()
+        data = {}
+        print(conn.object_store.get_info())
+    except ForbiddenException as e:
+        logger.error(e)
+        data = {}
+    logger.debug(f"Object storage service quotas={data}")
+    return ObjectStorageQuotaCreateExtended(**data, project=conn.current_project_id)
 
 
 def get_flavor_extra_specs(extra_specs: Dict[str, Any]) -> Dict[str, Any]:
@@ -337,6 +356,40 @@ def get_network_service(
     return network_service
 
 
+def get_object_store_service(
+    conn: Connection,
+    *,
+    per_user_limits: Optional[ObjectStorageQuotaBase],
+) -> Optional[ObjectStorageServiceCreateExtended]:
+    """Retrieve project's object storage service.
+
+    Remove last part which corresponds to the project ID.
+    Retrieve current project corresponding quotas.
+    Add them to the object storage service.
+    """
+    try:
+        endpoint = conn.object_store.get_endpoint()
+    except EndpointNotFound as e:
+        logger.error(e)
+        return None
+    if not endpoint:
+        return None
+
+    object_store_service = ObjectStorageServiceCreateExtended(
+        endpoint=os.path.dirname(endpoint),
+        name=ObjectStorageServiceName.OPENSTACK_SWIFT,
+    )
+    object_store_service.quotas = [get_object_store_quotas(conn)]
+    if per_user_limits:
+        object_store_service.quotas.append(
+            ObjectStorageQuotaCreateExtended(
+                **per_user_limits.dict(exclude_none=True),
+                project=conn.current_project_id,
+            )
+        )
+    return object_store_service
+
+
 def connect_to_provider(
     *,
     provider_conf: Openstack,
@@ -378,6 +431,7 @@ def get_data_from_openstack(
         Optional[ComputeServiceCreateExtended],
         IdentityServiceCreate,
         Optional[NetworkServiceCreateExtended],
+        Optional[ObjectStorageServiceCreateExtended],
     ]
 ]:
     conn = connect_to_provider(
@@ -397,7 +451,8 @@ def get_data_from_openstack(
         # Create project entity
         project = get_project(conn)
 
-        # Retrieve provider services (block_storage, compute, identity and network)
+        # Retrieve provider services:
+        # block_storage, compute, identity (already done), network and object_store
         block_storage_service = get_block_storage_service(
             conn, per_user_limits=project_conf.per_user_limits.block_storage
         )
@@ -413,6 +468,9 @@ def get_data_from_openstack(
             default_private_net=project_conf.default_private_net,
             default_public_net=project_conf.default_public_net,
             proxy=project_conf.private_net_proxy,
+        )
+        object_store_service = get_object_store_service(
+            conn, per_user_limits=project_conf.per_user_limits.object_store
         )
     except (
         ConnectFailure,
@@ -434,4 +492,5 @@ def get_data_from_openstack(
         compute_service,
         identity_service,
         network_service,
+        object_store_service,
     )

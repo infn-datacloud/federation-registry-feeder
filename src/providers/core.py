@@ -8,6 +8,7 @@ from fed_reg.provider.schemas_extended import (
     IdentityProviderCreateExtended,
     IdentityServiceCreate,
     NetworkServiceCreateExtended,
+    ObjectStorageServiceCreateExtended,
     ProjectCreate,
     ProviderCreateExtended,
     RegionCreateExtended,
@@ -201,6 +202,20 @@ def update_region_network_services(
             current_services.append(new_service)
 
 
+def update_region_object_store_services(
+    *,
+    current_services: List[ObjectStorageServiceCreateExtended],
+    new_services: List[ObjectStorageServiceCreateExtended],
+) -> None:
+    for new_service in new_services:
+        for service in current_services:
+            if service.endpoint == new_service.endpoint:
+                service.quotas += new_service.quotas
+                break
+        else:
+            current_services.append(new_service)
+
+
 def update_regions(
     *, new_regions: List[RegionCreateExtended], include_projects: List[str]
 ) -> List[RegionCreateExtended]:
@@ -230,6 +245,10 @@ def update_regions(
             update_region_network_services(
                 current_services=current_region.network_services,
                 new_services=new_region.network_services,
+            )
+            update_region_object_store_services(
+                current_services=current_region.object_storage_services,
+                new_services=new_region.object_storage_services,
             )
     return list(d.values())
 
@@ -286,6 +305,7 @@ def get_idp_project_and_region(
         compute_service,
         identity_service,
         network_service,
+        object_store_service,
     ) = resp
 
     region = RegionCreateExtended(
@@ -294,6 +314,7 @@ def get_idp_project_and_region(
         compute_services=[compute_service] if compute_service else [],
         identity_services=[identity_service] if identity_service else [],
         network_services=[network_service] if network_service else [],
+        object_storage_services=[object_store_service] if object_store_service else [],
     )
 
     return identity_provider, project, region
