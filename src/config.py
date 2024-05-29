@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from pydantic import AnyHttpUrl, BaseModel, BaseSettings, Field, validator
 
@@ -82,8 +82,8 @@ class Settings(BaseSettings):
         description="Path to the directory containing the federated provider \
             yaml configurations.",
     )
-    OIDC_AGENT_CONTAINER_NAME: str = Field(
-        default="feeder-dev-oidc-agent",
+    OIDC_AGENT_CONTAINER_NAME: Optional[str] = Field(
+        default=None,
         description="Name of the container with the oidc-agent service instance.",
     )
     api_ver: APIVersions = Field(description="API versions.")
