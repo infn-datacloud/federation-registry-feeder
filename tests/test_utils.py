@@ -65,13 +65,12 @@ def test_invalid_conf_dir(settings: Settings) -> None:
     with pytest.raises(FileNotFoundError):
         get_conf_files(settings=settings)
 
-
-@patch("src.models.identity_provider.subprocess.run")
+@patch(
+    "src.models.identity_provider.retrieve_token", return_value=random_lower_string()
+)
 @parametrize_with_cases("fname", cases=CaseYamlFiles, has_tag="fname")
 def test_load_config_yaml(mock_cmd: Mock, fname: str) -> None:
     """Load provider configuration from yaml file."""
-    mock_cmd.return_value.returncode = 0
-    mock_cmd.return_value.stdout = random_lower_string()
     fpath = f"tests/configs/{fname}.config.yaml"
     config = load_config(fname=fpath)
     assert config if fname == "valid_provider" else not config
