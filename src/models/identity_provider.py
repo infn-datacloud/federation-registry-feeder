@@ -4,9 +4,34 @@ from typing import List
 from fed_reg.provider.schemas_extended import IdentityProviderCreate, find_duplicates
 from fed_reg.sla.schemas import SLABase
 from fed_reg.user_group.schemas import UserGroupBase
+from liboidcagent import get_access_token_by_issuer_url
 from pydantic import AnyHttpUrl, Field, validator
 
 from src.config import get_settings
+
+
+def retrieve_token(endpoint: str):
+    """Retrieve token using OIDC-Agent.
+
+    If the container name is set use perform a docker exec command, otherwise use a
+    local instance."""
+    settings = get_settings()
+    if settings.OIDC_AGENT_CONTAINER_NAME is not None:
+        token_cmd = subprocess.run(
+            [
+                "docker",
+                "exec",
+                settings.OIDC_AGENT_CONTAINER_NAME,
+                "oidc-token",
+                endpoint,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if token_cmd.returncode > 0:
+            raise ValueError(token_cmd.stderr if token_cmd.stderr else token_cmd.stdout)
+        return token_cmd.stdout.strip("\n")
+    return get_access_token_by_issuer_url(endpoint)
 
 
 class SLA(SLABase):
@@ -47,23 +72,6 @@ class Issuer(IdentityProviderCreate):
     @validator("token", pre=True, always=True)
     @classmethod
     def get_token(cls, v: str, values) -> str:
-        # Generate token
         if v == "":
-            settings = get_settings()
-            token_cmd = subprocess.run(
-                [
-                    "docker",
-                    "exec",
-                    settings.OIDC_AGENT_CONTAINER_NAME,
-                    "oidc-token",
-                    values.get("endpoint"),
-                ],
-                capture_output=True,
-                text=True,
-            )
-            if token_cmd.returncode > 0:
-                raise ValueError(
-                    token_cmd.stderr if token_cmd.stderr else token_cmd.stdout
-                )
-            return token_cmd.stdout.strip("\n")
+            return retrieve_token(values.get("endpoint"))
         return v
