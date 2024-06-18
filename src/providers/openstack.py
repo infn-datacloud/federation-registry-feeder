@@ -28,7 +28,7 @@ from fed_reg.service.enum import (
 )
 from keystoneauth1.exceptions.auth_plugins import NoMatchingPlugin
 from keystoneauth1.exceptions.catalog import EndpointNotFound
-from keystoneauth1.exceptions.connection import ConnectFailure, SSLError
+from keystoneauth1.exceptions.connection import ConnectFailure, ConnectTimeout, SSLError
 from keystoneauth1.exceptions.http import NotFound, Unauthorized
 from openstack import connect
 from openstack.compute.v2.flavor import Flavor
@@ -416,6 +416,7 @@ def get_data_from_openstack(
         )
     except (
         ConnectFailure,
+        ConnectTimeout,
         Unauthorized,
         NoMatchingPlugin,
         NotFound,
