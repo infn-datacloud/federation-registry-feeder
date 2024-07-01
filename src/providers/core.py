@@ -15,7 +15,7 @@ from fed_reg.provider.schemas_extended import (
     UserGroupCreateExtended,
 )
 
-from src.logger import logger
+from src.logger import create_logger, logger
 from src.models.identity_provider import SLA, Issuer, UserGroup
 from src.models.provider import AuthMethod, PerRegionProps, Project, Provider, Region
 from src.providers.openstack import get_data_from_openstack
@@ -299,57 +299,67 @@ def get_idp_project_and_region(
     return identity_provider, project, region
 
 
-def get_provider(
-    *, provider_conf: Provider, issuers: List[Issuer]
-) -> ProviderCreateExtended:
-    """Generate an Openstack virtual provider, reading information from a real openstack
-    instance.
-    """
-    if provider_conf.status != ProviderStatus.ACTIVE.value:
-        logger.info(f"Provider={provider_conf.name} not active: {provider_conf.status}")
-        return ProviderCreateExtended(
-            name=provider_conf.name,
-            type=provider_conf.type,
-            is_public=provider_conf.is_public,
-            support_emails=provider_conf.support_emails,
-            status=provider_conf.status,
+class ProviderThread:
+    def __init__(
+        self, *, provider_conf: Provider, issuers: List[Issuer], log_level: str
+    ) -> None:
+        self.provider_conf = provider_conf
+        self.issuers = issuers
+        self.logger = create_logger(
+            f"Provider {self.provider_conf.name}", level=log_level
         )
 
-    inputs = []
-    for region_conf in provider_conf.regions:
-        for project_conf in provider_conf.projects:
-            inputs.append(
-                {
-                    "provider_conf": provider_conf,
-                    "region_conf": region_conf,
-                    "project_conf": project_conf,
-                    "issuers": issuers,
-                }
+    def get_provider(self) -> ProviderCreateExtended:
+        """Generate an Openstack virtual provider, reading information from a real
+        openstack instance.
+        """
+        if self.provider_conf.status != ProviderStatus.ACTIVE.value:
+            self.logger.info("Provider not active: %s", self.provider_conf.status)
+            return ProviderCreateExtended(
+                name=self.provider_conf.name,
+                type=self.provider_conf.type,
+                is_public=self.provider_conf.is_public,
+                support_emails=self.provider_conf.support_emails,
+                status=self.provider_conf.status,
             )
 
-    with ThreadPoolExecutor() as executor:
-        responses = executor.map(lambda x: get_idp_project_and_region(**x), inputs)
-    responses = list(filter(lambda x: x, responses))
+        inputs = []
+        for region_conf in self.provider_conf.regions:
+            for project_conf in self.provider_conf.projects:
+                inputs.append(
+                    {
+                        "provider_conf": self.provider_conf,
+                        "region_conf": region_conf,
+                        "project_conf": project_conf,
+                        "issuers": self.issuers,
+                    }
+                )
 
-    identity_providers = []
-    projects = []
-    regions = []
-    if len(responses) > 0:
-        (identity_providers, projects, regions) = zip(*responses)
+        with ThreadPoolExecutor() as executor:
+            responses = executor.map(lambda x: get_idp_project_and_region(**x), inputs)
+        responses = list(filter(lambda x: x, responses))
 
-        projects = list({i.uuid: i for i in projects}.values())
-        identity_providers = update_identity_providers(new_issuers=identity_providers)
-        regions = update_regions(
-            new_regions=regions, include_projects=[i.uuid for i in projects]
+        identity_providers = []
+        projects = []
+        regions = []
+        if len(responses) > 0:
+            (identity_providers, projects, regions) = zip(*responses)
+
+            projects = list({i.uuid: i for i in projects}.values())
+            identity_providers = update_identity_providers(
+                new_issuers=identity_providers
+            )
+            regions = update_regions(
+                new_regions=regions, include_projects=[i.uuid for i in projects]
+            )
+
+        return ProviderCreateExtended(
+            name=self.provider_conf.name,
+            type=self.provider_conf.type,
+            is_public=self.provider_conf.is_public,
+            support_emails=self.provider_conf.support_emails,
+            status=self.provider_conf.status,
+            identity_providers=identity_providers,
+            projects=projects,
+            regions=regions,
         )
-
-    return ProviderCreateExtended(
-        name=provider_conf.name,
-        type=provider_conf.type,
-        is_public=provider_conf.is_public,
-        support_emails=provider_conf.support_emails,
-        status=provider_conf.status,
-        identity_providers=identity_providers,
-        projects=projects,
-        regions=regions,
-    )

@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from src.config import get_settings
 from src.logger import logger
 from src.parser import parser
-from src.providers.core import get_provider
+from src.providers.core import ProviderThread
 from src.utils import (
     get_conf_files,
     get_site_configs,
@@ -12,9 +12,11 @@ from src.utils import (
 )
 
 
-def main() -> None:
+def main(log_level: str) -> None:
     # Load Federation Registry configuration, infer Federation Registry endpoints and
     # read all yaml files containing providers configurations.
+    logger.setLevel(log_level)
+
     settings = get_settings()
     yaml_files = get_conf_files(settings=settings)
     site_configs = get_site_configs(yaml_files=yaml_files)
@@ -23,14 +25,16 @@ def main() -> None:
     for config in site_configs:
         prov_configs = [*config.openstack, *config.kubernetes]
         issuers = config.trusted_idps
-        prov_iss_list += [
-            {"provider_conf": conf, "issuers": issuers} for conf in prov_configs
-        ]
+        prov_iss_list: list[ProviderThread] = []
+        for conf in prov_configs:
+            prov_iss_list.append(
+                ProviderThread(provider_conf=conf, issuers=issuers, log_level=log_level)
+            )
 
     # Multithreading read.
     providers = []
     with ThreadPoolExecutor() as executor:
-        providers = executor.map(lambda x: get_provider(**x), prov_iss_list)
+        providers = executor.map(lambda x: x.get_provider(), prov_iss_list)
     providers = list(filter(lambda x: x, providers))
 
     # Update the Federation Registry
@@ -41,5 +45,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    logger.setLevel(args.loglevel.upper())
-    main()
+    main(args.loglevel.upper())
