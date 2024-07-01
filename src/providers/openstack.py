@@ -44,7 +44,9 @@ from src.models.provider import PrivateNetProxy, Project
 TIMEOUT = 2  # s
 
 
-def get_block_storage_quotas(conn: Connection) -> BlockStorageQuotaCreateExtended:
+def get_block_storage_quotas(
+    conn: Connection,
+) -> tuple[BlockStorageQuotaCreateExtended, BlockStorageQuotaCreateExtended]:
     logger.info("Retrieve current project accessible block storage quotas")
     try:
         quota = conn.block_storage.get_quota_set(conn.current_project_id, usage=True)
@@ -57,10 +59,16 @@ def get_block_storage_quotas(conn: Connection) -> BlockStorageQuotaCreateExtende
     data_usage = data_limits.pop("usage", {})
     logger.debug(f"Block storage service quota limits={data_limits}")
     logger.debug(f"Block storage service quota usage={data_usage}")
-    return BlockStorageQuotaCreateExtended(**data, project=conn.current_project_id)
+    return BlockStorageQuotaCreateExtended(
+        **data_limits, project=conn.current_project_id
+    ), BlockStorageQuotaCreateExtended(
+        **data_usage, project=conn.current_project_id, usage=True
+    )
 
 
-def get_compute_quotas(conn: Connection) -> ComputeQuotaCreateExtended:
+def get_compute_quotas(
+    conn: Connection,
+) -> tuple[ComputeQuotaCreateExtended, ComputeQuotaCreateExtended]:
     logger.info("Retrieve current project accessible compute quotas")
     quota = conn.compute.get_quota_set(
         conn.current_project_id, base_path="/os-quota-sets/%(project_id)s/detail"
@@ -71,10 +79,16 @@ def get_compute_quotas(conn: Connection) -> ComputeQuotaCreateExtended:
     data_usage = data_limits.pop("usage", {})
     logger.debug(f"Compute service quota limits={data_limits}")
     logger.debug(f"Compute service quota usage={data_usage}")
-    return ComputeQuotaCreateExtended(**data, project=conn.current_project_id)
+    return ComputeQuotaCreateExtended(
+        **data_limits, project=conn.current_project_id
+    ), ComputeQuotaCreateExtended(
+        **data_usage, project=conn.current_project_id, usage=True
+    )
 
 
-def get_network_quotas(conn: Connection) -> NetworkQuotaCreateExtended:
+def get_network_quotas(
+    conn: Connection,
+) -> tuple[NetworkQuotaCreateExtended, NetworkQuotaCreateExtended]:
     logger.info("Retrieve current project accessible network quotas")
     quota = conn.network.get_quota(conn.current_project_id, details=True)
     data = quota.to_dict()
@@ -88,7 +102,11 @@ def get_network_quotas(conn: Connection) -> NetworkQuotaCreateExtended:
             data_usage[new_k] = v.get("used")
     logger.debug(f"Network service quota limits={data_limits}")
     logger.debug(f"Network service quota usage={data_usage}")
-    return NetworkQuotaCreateExtended(**data, project=conn.current_project_id)
+    return NetworkQuotaCreateExtended(
+        **data_limits, project=conn.current_project_id
+    ), NetworkQuotaCreateExtended(
+        **data_usage, project=conn.current_project_id, usage=True
+    )
 
 
 def get_flavor_extra_specs(extra_specs: Dict[str, Any]) -> Dict[str, Any]:
@@ -270,7 +288,7 @@ def get_block_storage_service(
         endpoint=os.path.dirname(endpoint),
         name=BlockStorageServiceName.OPENSTACK_CINDER,
     )
-    block_storage_service.quotas = [get_block_storage_quotas(conn)]
+    block_storage_service.quotas = [*get_block_storage_quotas(conn)]
     if per_user_limits:
         block_storage_service.quotas.append(
             BlockStorageQuotaCreateExtended(
@@ -305,7 +323,7 @@ def get_compute_service(
     )
     compute_service.flavors = get_flavors(conn)
     compute_service.images = get_images(conn, tags=tags)
-    compute_service.quotas = [get_compute_quotas(conn)]
+    compute_service.quotas = [*get_compute_quotas(conn)]
     if per_user_limits:
         compute_service.quotas.append(
             ComputeQuotaCreateExtended(
@@ -344,7 +362,7 @@ def get_network_service(
         proxy=proxy,
         tags=tags,
     )
-    network_service.quotas = [get_network_quotas(conn)]
+    network_service.quotas = [*get_network_quotas(conn)]
     if per_user_limits:
         network_service.quotas.append(
             NetworkQuotaCreateExtended(
