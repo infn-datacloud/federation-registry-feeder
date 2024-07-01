@@ -53,6 +53,10 @@ def get_block_storage_quotas(conn: Connection) -> BlockStorageQuotaCreateExtende
         logger.error(e)
         data = {}
     logger.debug(f"Block storage service quotas={data}")
+    data_limits = {**data}
+    data_usage = data_limits.pop("usage", {})
+    logger.debug(f"Block storage service quota limits={data_limits}")
+    logger.debug(f"Block storage service quota usage={data_usage}")
     return BlockStorageQuotaCreateExtended(**data, project=conn.current_project_id)
 
 
@@ -63,6 +67,10 @@ def get_compute_quotas(conn: Connection) -> ComputeQuotaCreateExtended:
     )
     data = quota.to_dict()
     logger.debug(f"Compute service quotas={data}")
+    data_limits = {**data}
+    data_usage = data_limits.pop("usage", {})
+    logger.debug(f"Compute service quota limits={data_limits}")
+    logger.debug(f"Compute service quota usage={data_usage}")
     return ComputeQuotaCreateExtended(**data, project=conn.current_project_id)
 
 
@@ -70,8 +78,16 @@ def get_network_quotas(conn: Connection) -> NetworkQuotaCreateExtended:
     logger.info("Retrieve current project accessible network quotas")
     quota = conn.network.get_quota(conn.current_project_id, details=True)
     data = quota.to_dict()
-    data["public_ips"] = data.pop("floating_ips")
     logger.debug(f"Network service quotas={data}")
+    data_limits = {}
+    data_usage = {}
+    for k, v in data.items():
+        new_k = "public_ips" if k == "floating_ips" else k
+        if v is not None:
+            data_limits[new_k] = v.get("limit")
+            data_usage[new_k] = v.get("used")
+    logger.debug(f"Network service quota limits={data_limits}")
+    logger.debug(f"Network service quota usage={data_usage}")
     return NetworkQuotaCreateExtended(**data, project=conn.current_project_id)
 
 
