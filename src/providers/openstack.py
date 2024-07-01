@@ -47,7 +47,7 @@ TIMEOUT = 2  # s
 def get_block_storage_quotas(conn: Connection) -> BlockStorageQuotaCreateExtended:
     logger.info("Retrieve current project accessible block storage quotas")
     try:
-        quota = conn.block_storage.get_quota_set(conn.current_project_id)
+        quota = conn.block_storage.get_quota_set(conn.current_project_id, usage=True)
         data = quota.to_dict()
     except ForbiddenException as e:
         logger.error(e)
@@ -68,7 +68,7 @@ def get_compute_quotas(conn: Connection) -> ComputeQuotaCreateExtended:
 
 def get_network_quotas(conn: Connection) -> NetworkQuotaCreateExtended:
     logger.info("Retrieve current project accessible network quotas")
-    quota = conn.network.get_quota(conn.current_project_id)
+    quota = conn.network.get_quota(conn.current_project_id, details=True)
     data = quota.to_dict()
     data["public_ips"] = data.pop("floating_ips")
     logger.debug(f"Network service quotas={data}")
