@@ -1,8 +1,8 @@
-import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from src.config import get_settings
 from src.logger import logger
+from src.parser import parser
 from src.providers.core import get_provider
 from src.utils import (
     get_conf_files,
@@ -40,5 +40,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    logger.setLevel(logging.INFO)
+    args = parser.parse_args()
+    logger.setLevel(args.loglevel.upper())
     main()
