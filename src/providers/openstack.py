@@ -58,7 +58,9 @@ def get_block_storage_quotas(conn: Connection) -> BlockStorageQuotaCreateExtende
 
 def get_compute_quotas(conn: Connection) -> ComputeQuotaCreateExtended:
     logger.info("Retrieve current project accessible compute quotas")
-    quota = conn.compute.get_quota_set(conn.current_project_id)
+    quota = conn.compute.get_quota_set(
+        conn.current_project_id, base_path="/os-quota-sets/%(project_id)s/detail"
+    )
     data = quota.to_dict()
     logger.debug(f"Compute service quotas={data}")
     return ComputeQuotaCreateExtended(**data, project=conn.current_project_id)
