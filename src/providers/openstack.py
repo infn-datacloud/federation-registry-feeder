@@ -76,6 +76,7 @@ def get_network_quotas(conn: Connection) -> NetworkQuotaCreateExtended:
     logger.debug(f"Network service quotas={data}")
     return NetworkQuotaCreateExtended(**data, project=conn.current_project_id)
 
+
 def get_object_store_quotas(conn: Connection) -> ObjectStorageQuotaCreateExtended:
     logger.info("Retrieve current project accessible object storage quotas")
     try:
@@ -90,6 +91,15 @@ def get_object_store_quotas(conn: Connection) -> ObjectStorageQuotaCreateExtende
         data = {}
     logger.debug(f"Object storage service quotas={data}")
     return ObjectStorageQuotaCreateExtended(**data, project=conn.current_project_id)
+
+
+def get_s3_quotas(conn: Connection) -> ObjectStorageQuotaCreateExtended:
+    logger.info("Retrieve current project accessible S3 quotas")
+    # TODO: Understand where to retrieve project quotas when dealing with S3 services.
+    logger.debug("Fake quota")
+    return ObjectStorageQuotaCreateExtended(
+        description="placeholder", project=conn.current_project_id
+    )
 
 
 def get_flavor_extra_specs(extra_specs: Dict[str, Any]) -> Dict[str, Any]:
@@ -390,6 +400,40 @@ def get_object_store_service(
     return object_store_service
 
 
+def get_s3_services(
+    conn: Connection,
+    *,
+    per_user_limits: Optional[ObjectStorageQuotaBase],
+    region: str,
+):
+    """Retrieve project's object storage services implementing S3.
+
+    Retrieve the list of services from the service catalog.
+    Filter them by type (S3), endpoint interface (public) and region.
+    """
+    s3_services = []
+    for service in filter(lambda x: x.get("type") == "s3", conn.service_catalog):
+        for endpoint in filter(
+            lambda x: x.get("interface") == "public" and x.get("region") == region,
+            service.get("endpoints"),
+        ):
+            if service.get("name") == "swift_s3":
+                s3_service = ObjectStorageServiceCreateExtended(
+                    endpoint=endpoint.get("url"),
+                    name=ObjectStorageServiceName.OPENSTACK_SWIFT_S3,
+                )
+                s3_service.quotas = [get_s3_quotas(conn)]
+                if per_user_limits:
+                    s3_service.quotas.append(
+                        ObjectStorageQuotaCreateExtended(
+                            **per_user_limits.dict(exclude_none=True),
+                            project=conn.current_project_id,
+                        )
+                    )
+                s3_services.append(s3_service)
+    return s3_services
+
+
 def connect_to_provider(
     *,
     provider_conf: Openstack,
@@ -431,7 +475,7 @@ def get_data_from_openstack(
         Optional[ComputeServiceCreateExtended],
         IdentityServiceCreate,
         Optional[NetworkServiceCreateExtended],
-        Optional[ObjectStorageServiceCreateExtended],
+        List[ObjectStorageServiceCreateExtended],
     ]
 ]:
     conn = connect_to_provider(
@@ -469,8 +513,16 @@ def get_data_from_openstack(
             default_public_net=project_conf.default_public_net,
             proxy=project_conf.private_net_proxy,
         )
+        object_store_services = []
         object_store_service = get_object_store_service(
             conn, per_user_limits=project_conf.per_user_limits.object_store
+        )
+        if object_store_service is not None:
+            object_store_services.append(object_store_service)
+        object_store_services += get_s3_services(
+            conn,
+            per_user_limits=project_conf.per_user_limits.object_store,
+            region=region_name,
         )
     except (
         ConnectFailure,
@@ -492,5 +544,5 @@ def get_data_from_openstack(
         compute_service,
         identity_service,
         network_service,
-        object_store_service,
+        object_store_services,
     )

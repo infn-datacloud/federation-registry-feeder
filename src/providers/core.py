@@ -305,7 +305,7 @@ def get_idp_project_and_region(
         compute_service,
         identity_service,
         network_service,
-        object_store_service,
+        object_store_services,
     ) = resp
 
     region = RegionCreateExtended(
@@ -314,7 +314,7 @@ def get_idp_project_and_region(
         compute_services=[compute_service] if compute_service else [],
         identity_services=[identity_service] if identity_service else [],
         network_services=[network_service] if network_service else [],
-        object_storage_services=[object_store_service] if object_store_service else [],
+        object_storage_services=object_store_services,
     )
 
     return identity_provider, project, region
