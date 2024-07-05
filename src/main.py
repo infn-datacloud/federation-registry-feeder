@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 
 from src.config import get_settings
-from src.logger import logger
+from src.logger import create_logger
 from src.parser import parser
 from src.providers.core import ProviderThread
 from src.utils import (
@@ -15,11 +15,12 @@ from src.utils import (
 def main(log_level: str) -> None:
     # Load Federation Registry configuration, infer Federation Registry endpoints and
     # read all yaml files containing providers configurations.
+    logger = create_logger("Federation-Registry-Feeder", level="INFO")
     logger.setLevel(log_level)
 
     settings = get_settings()
-    yaml_files = get_conf_files(settings=settings)
-    site_configs = get_site_configs(yaml_files=yaml_files)
+    yaml_files = get_conf_files(settings=settings, logger=logger)
+    site_configs = get_site_configs(yaml_files=yaml_files, log_level=log_level)
 
     prov_iss_list = []
     for config in site_configs:
@@ -39,8 +40,10 @@ def main(log_level: str) -> None:
 
     # Update the Federation Registry
     token = site_configs[0].trusted_idps[0].token if len(site_configs) > 0 else ""
-    fed_reg_endpoints = infer_service_endpoints(settings=settings)
-    update_database(service_api_url=fed_reg_endpoints, token=token, items=providers)
+    fed_reg_endpoints = infer_service_endpoints(settings=settings, logger=logger)
+    update_database(
+        service_api_url=fed_reg_endpoints, token=token, items=providers, logger=logger
+    )
 
 
 if __name__ == "__main__":

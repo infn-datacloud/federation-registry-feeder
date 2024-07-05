@@ -11,8 +11,6 @@ from fed_reg.provider.schemas_extended import (
 )
 from pydantic import AnyHttpUrl, BaseModel, Field, validator
 
-from src.logger import logger
-
 TIMEOUT = 30  # s
 
 
@@ -21,6 +19,7 @@ class CRUD(BaseModel):
     read_headers: Dict[str, str]
     write_headers: Dict[str, str]
     single_url: Optional[AnyHttpUrl]
+    logger: Any
 
     @validator("single_url", pre=True, always=True)
     @classmethod
@@ -29,26 +28,26 @@ class CRUD(BaseModel):
 
     def read(self) -> List[ProviderRead]:
         """Retrieve all providers from the Federation-Registry."""
-        logger.info("Looking for all Providers")
-        logger.debug(f"Url={self.multi_url}")
+        self.logger.info("Looking for all Providers")
+        self.logger.debug(f"Url={self.multi_url}")
 
         resp = requests.get(
             url=self.multi_url, headers=self.read_headers, timeout=TIMEOUT
         )
         if resp.status_code == status.HTTP_200_OK:
-            logger.info("Retrieved")
-            logger.debug(f"{resp.json()}")
+            self.logger.info("Retrieved")
+            self.logger.debug(f"{resp.json()}")
             return [ProviderRead(**i) for i in resp.json()]
 
-        logger.debug(f"Status code: {resp.status_code}")
-        logger.debug(f"Message: {resp.text}")
+        self.logger.debug(f"Status code: {resp.status_code}")
+        self.logger.debug(f"Message: {resp.text}")
         resp.raise_for_status()
 
     def create(self, *, data: ProviderCreateExtended) -> ProviderReadExtended:
         """Create new instance."""
-        logger.info(f"Creating Provider={data.name}")
-        logger.debug(f"Url={self.multi_url}")
-        logger.debug(f"New Data={data}")
+        self.logger.info(f"Creating Provider={data.name}")
+        self.logger.debug(f"Url={self.multi_url}")
+        self.logger.debug(f"New Data={data}")
 
         resp = requests.post(
             url=self.multi_url,
@@ -57,22 +56,22 @@ class CRUD(BaseModel):
             timeout=TIMEOUT,
         )
         if resp.status_code == status.HTTP_201_CREATED:
-            logger.info(f"Provider={data.name} created")
-            logger.debug(f"{resp.json()}")
+            self.logger.info(f"Provider={data.name} created")
+            self.logger.debug(f"{resp.json()}")
             return ProviderReadExtended(**resp.json())
         elif resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
-            logger.error(f"Provider={data.name} has not been created.")
-            logger.error(f"{resp.json()}")
+            self.logger.error(f"Provider={data.name} has not been created.")
+            self.logger.error(f"{resp.json()}")
             return None
 
-        logger.debug(f"Status code: {resp.status_code}")
-        logger.debug(f"Message: {resp.text}")
+        self.logger.debug(f"Status code: {resp.status_code}")
+        self.logger.debug(f"Message: {resp.text}")
         resp.raise_for_status()
 
     def remove(self, *, item: ProviderRead) -> None:
         """Remove item."""
-        logger.info(f"Removing Provider={item.name}.")
-        logger.debug(f"Url={self.single_url.format(uid=item.uid)}")
+        self.logger.info(f"Removing Provider={item.name}.")
+        self.logger.debug(f"Url={self.single_url.format(uid=item.uid)}")
 
         resp = requests.delete(
             url=self.single_url.format(uid=item.uid),
@@ -80,20 +79,20 @@ class CRUD(BaseModel):
             timeout=TIMEOUT,
         )
         if resp.status_code == status.HTTP_204_NO_CONTENT:
-            logger.info(f"Provider={item.name} removed")
+            self.logger.info(f"Provider={item.name} removed")
             return None
 
-        logger.debug(f"Status code: {resp.status_code}")
-        logger.debug(f"Message: {resp.text}")
+        self.logger.debug(f"Status code: {resp.status_code}")
+        self.logger.debug(f"Message: {resp.text}")
         resp.raise_for_status()
 
     def update(
         self, *, new_data: ProviderCreateExtended, old_data: ProviderRead
     ) -> Optional[ProviderReadExtended]:
         """Update existing instance."""
-        logger.info(f"Updating Provider={new_data.name}.")
-        logger.debug(f"Url={self.single_url.format(uid=old_data.uid)}")
-        logger.debug(f"New Data={new_data}")
+        self.logger.info(f"Updating Provider={new_data.name}.")
+        self.logger.debug(f"Url={self.single_url.format(uid=old_data.uid)}")
+        self.logger.debug(f"New Data={new_data}")
 
         resp = requests.put(
             url=self.single_url.format(uid=old_data.uid),
@@ -102,19 +101,19 @@ class CRUD(BaseModel):
             timeout=TIMEOUT,
         )
         if resp.status_code == status.HTTP_200_OK:
-            logger.info(f"Provider={new_data.name} updated")
-            logger.debug(f"{resp.json()}")
+            self.logger.info(f"Provider={new_data.name} updated")
+            self.logger.debug(f"{resp.json()}")
             return ProviderReadExtended(**resp.json())
         elif resp.status_code == status.HTTP_304_NOT_MODIFIED:
-            logger.info(
+            self.logger.info(
                 f"New data match stored data. Provider={new_data.name} not modified"
             )
             return None
         elif resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
-            logger.error(f"Provider={new_data.name} has not been updated.")
-            logger.error(f"{resp.json()}")
+            self.logger.error(f"Provider={new_data.name} has not been updated.")
+            self.logger.error(f"{resp.json()}")
             return None
 
-        logger.debug(f"Status code: {resp.status_code}")
-        logger.debug(f"Message: {resp.text}")
+        self.logger.debug(f"Status code: {resp.status_code}")
+        self.logger.debug(f"Message: {resp.text}")
         resp.raise_for_status()

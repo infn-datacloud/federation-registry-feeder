@@ -1,3 +1,4 @@
+from logging import Logger
 import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple
@@ -7,11 +8,11 @@ from fed_reg.provider.schemas_extended import ProviderCreateExtended
 
 from src.config import Settings, URLs
 from src.crud import CRUD
-from src.logger import logger
+from src.logger import create_logger
 from src.models.config import SiteConfig
 
 
-def infer_service_endpoints(*, settings: Settings) -> URLs:
+def infer_service_endpoints(*, settings: Settings, logger: Logger) -> URLs:
     """Detect Federation Registry endpoints from given configuration."""
     logger.info("Building Federation-Registry endpoints from configuration.")
     logger.debug(f"{settings!r}")
@@ -24,7 +25,7 @@ def infer_service_endpoints(*, settings: Settings) -> URLs:
     return endpoints
 
 
-def get_conf_files(*, settings: Settings) -> List[str]:
+def get_conf_files(*, settings: Settings, logger: Logger) -> List[str]:
     """Get the list of the yaml files with the provider configurations."""
     logger.info("Detecting yaml files with provider configurations.")
     file_extension = ".config.yaml"
@@ -37,8 +38,9 @@ def get_conf_files(*, settings: Settings) -> List[str]:
     return yaml_files
 
 
-def load_config(*, fname: str) -> Optional[SiteConfig]:
+def load_config(*, fname: str, log_level: str) -> Optional[SiteConfig]:
     """Load provider configuration from yaml file."""
+    logger = create_logger(fname, level=log_level)
     logger.info(f"Loading provider configuration from file: {fname}")
     with open(fname) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
@@ -57,10 +59,12 @@ def load_config(*, fname: str) -> Optional[SiteConfig]:
     return config
 
 
-def get_site_configs(*, yaml_files: List[str]) -> List[SiteConfig]:
+def get_site_configs(*, yaml_files: List[str], log_level: str) -> List[SiteConfig]:
     """Create a list of SiteConfig from a list of yaml files."""
     with ThreadPoolExecutor() as executor:
-        site_configs = executor.map(lambda x: load_config(fname=x), yaml_files)
+        site_configs = executor.map(
+            lambda x: load_config(fname=x, log_level=log_level), yaml_files
+        )
     return list(filter(lambda x: x, site_configs))
 
 
@@ -76,7 +80,11 @@ def get_read_write_headers(*, token: str) -> Tuple[Dict[str, str], Dict[str, str
 
 
 def update_database(
-    *, service_api_url: URLs, items: List[ProviderCreateExtended], token: str
+    *,
+    service_api_url: URLs,
+    items: List[ProviderCreateExtended],
+    token: str,
+    logger: Logger,
 ) -> None:
     """Update the Federation-Registry data.
 
@@ -93,6 +101,7 @@ def update_database(
         url=service_api_url.providers,
         read_headers=read_header,
         write_headers=write_header,
+        logger=logger,
     )
 
     logger.info("Retrieving data from Federation Registry")

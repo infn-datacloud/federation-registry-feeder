@@ -29,6 +29,3 @@ def create_logger(name: str, level: str) -> Logger:
     logger.addHandler(stderr_handler)
 
     return logger
-
-
-logger = create_logger("Federation Registry populator", level="INFO")
