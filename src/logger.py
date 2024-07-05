@@ -16,7 +16,7 @@ class StderrFilter(logging.Filter):
 def create_logger(name: str, level: str) -> Logger:
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    formatter = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    formatter = Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
 
     stdout_handler = StreamHandler(sys.stdout)
     stdout_handler.setFormatter(formatter)

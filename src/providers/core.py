@@ -15,7 +15,7 @@ from fed_reg.provider.schemas_extended import (
     UserGroupCreateExtended,
 )
 
-from src.logger import create_logger, logger
+from src.logger import create_logger
 from src.models.identity_provider import SLA, Issuer, UserGroup
 from src.models.provider import AuthMethod, PerRegionProps, Project, Provider, Region
 from src.providers.openstack import get_data_from_openstack
@@ -234,69 +234,88 @@ def update_regions(
     return list(d.values())
 
 
-def get_idp_project_and_region(
-    *,
-    provider_conf: Provider,
-    region_conf: Region,
-    project_conf: Project,
-    issuers: List[Issuer],
-) -> Optional[
-    Tuple[IdentityProviderCreateExtended, ProjectCreate, RegionCreateExtended]
-]:
-    # Find region props matching current region.
-    region_props = next(
-        filter(
-            lambda x: x.region_name == region_conf.name,
-            project_conf.per_region_props,
-        ),
-        None,
-    )
-    proj_conf = get_project_conf_params(
-        project_conf=project_conf, region_props=region_props
-    )
+class ConnectionThread:
+    def __init__(
+        self,
+        *,
+        provider_conf: Provider,
+        region_conf: Region,
+        project_conf: Project,
+        issuers: List[Issuer],
+        log_level: str,
+    ) -> None:
+        self.provider_conf = provider_conf
+        self.region_conf = region_conf
+        self.project_conf = project_conf
+        self.issuers = issuers
+        self.log_level = log_level
+        logger_name = f"Provider {self.provider_conf.name}, "
+        logger_name += f"Region {self.region_conf.name}, "
+        logger_name += f"Project {self.project_conf.id}"
+        self.logger = create_logger(logger_name, level=log_level)
 
-    try:
-        identity_provider, token = get_identity_provider_info_for_project(
-            issuers=issuers,
-            auth_methods=provider_conf.identity_providers,
-            project=proj_conf,
+    def get_idp_project_and_region(
+        self,
+    ) -> Optional[
+        Tuple[IdentityProviderCreateExtended, ProjectCreate, RegionCreateExtended]
+    ]:
+        # Find region props matching current region.
+        region_props = next(
+            filter(
+                lambda x: x.region_name == self.region_conf.name,
+                self.project_conf.per_region_props,
+            ),
+            None,
         )
-    except ValueError as e:
-        logger.error(e)
-        logger.error(f"Skipping project {proj_conf.id}.")
-        return None
-
-    if provider_conf.type == ProviderType.OS.value:
-        resp = get_data_from_openstack(
-            provider_conf=provider_conf,
-            project_conf=proj_conf,
-            region_name=region_conf.name,
-            identity_provider=identity_provider,
-            token=token,
+        proj_conf = get_project_conf_params(
+            project_conf=self.project_conf, region_props=region_props
         )
-    if provider_conf.type == ProviderType.K8S.value:
-        # Not yet implemented
-        resp = None
-    if not resp:
-        return None
 
-    (
-        project,
-        block_storage_service,
-        compute_service,
-        identity_service,
-        network_service,
-    ) = resp
+        try:
+            identity_provider, token = get_identity_provider_info_for_project(
+                issuers=self.issuers,
+                auth_methods=self.provider_conf.identity_providers,
+                project=proj_conf,
+            )
+        except ValueError as e:
+            self.logger.error(e)
+            self.logger.error("Skipping project")
+            return None
 
-    region = RegionCreateExtended(
-        **region_conf.dict(),
-        block_storage_services=[block_storage_service] if block_storage_service else [],
-        compute_services=[compute_service] if compute_service else [],
-        identity_services=[identity_service] if identity_service else [],
-        network_services=[network_service] if network_service else [],
-    )
+        if self.provider_conf.type == ProviderType.OS.value:
+            resp = get_data_from_openstack(
+                provider_conf=self.provider_conf,
+                project_conf=proj_conf,
+                region_name=self.region_conf.name,
+                identity_provider=identity_provider,
+                token=token,
+                logger=self.logger,
+            )
+        if self.provider_conf.type == ProviderType.K8S.value:
+            # Not yet implemented
+            resp = None
+        if not resp:
+            return None
 
-    return identity_provider, project, region
+        (
+            project,
+            block_storage_service,
+            compute_service,
+            identity_service,
+            network_service,
+        ) = resp
+
+        region = RegionCreateExtended(
+            **self.region_conf.dict(),
+            block_storage_services=[block_storage_service]
+            if block_storage_service
+            else [],
+            compute_services=[compute_service] if compute_service else [],
+            identity_services=[identity_service] if identity_service else [],
+            network_services=[network_service] if network_service else [],
+        )
+
+        return identity_provider, project, region
 
 
 class ProviderThread:
@@ -305,6 +324,7 @@ class ProviderThread:
     ) -> None:
         self.provider_conf = provider_conf
         self.issuers = issuers
+        self.log_level = log_level
         self.logger = create_logger(
             f"Provider {self.provider_conf.name}", level=log_level
         )
@@ -323,20 +343,21 @@ class ProviderThread:
                 status=self.provider_conf.status,
             )
 
-        inputs = []
+        inputs: list[ConnectionThread] = []
         for region_conf in self.provider_conf.regions:
             for project_conf in self.provider_conf.projects:
                 inputs.append(
-                    {
-                        "provider_conf": self.provider_conf,
-                        "region_conf": region_conf,
-                        "project_conf": project_conf,
-                        "issuers": self.issuers,
-                    }
+                    ConnectionThread(
+                        provider_conf=self.provider_conf,
+                        region_conf=region_conf,
+                        project_conf=project_conf,
+                        issuers=self.issuers,
+                        log_level=self.log_level,
+                    )
                 )
 
         with ThreadPoolExecutor() as executor:
-            responses = executor.map(lambda x: get_idp_project_and_region(**x), inputs)
+            responses = executor.map(lambda x: x.get_idp_project_and_region(), inputs)
         responses = list(filter(lambda x: x, responses))
 
         identity_providers = []

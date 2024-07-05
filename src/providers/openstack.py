@@ -1,4 +1,5 @@
 import os
+from logging import Logger
 from typing import Any, Dict, List, Optional, Tuple
 
 from fed_reg.provider.schemas_extended import (
@@ -371,6 +372,7 @@ def get_data_from_openstack(
     identity_provider: IdentityProviderCreateExtended,
     region_name: str,
     token: str,
+    logger: Logger,
 ) -> Optional[
     Tuple[
         ProjectCreate,
