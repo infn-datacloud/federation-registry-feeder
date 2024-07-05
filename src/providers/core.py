@@ -18,7 +18,7 @@ from fed_reg.provider.schemas_extended import (
 from src.logger import create_logger
 from src.models.identity_provider import SLA, Issuer, UserGroup
 from src.models.provider import AuthMethod, PerRegionProps, Project, Provider, Region
-from src.providers.openstack import get_data_from_openstack
+from src.providers.openstack import OpenstackData
 
 
 def filter_projects_on_compute_service(
@@ -283,7 +283,7 @@ class ConnectionThread:
             return None
 
         if self.provider_conf.type == ProviderType.OS.value:
-            resp = get_data_from_openstack(
+            data = OpenstackData(
                 provider_conf=self.provider_conf,
                 project_conf=proj_conf,
                 region_name=self.region_conf.name,
@@ -293,29 +293,21 @@ class ConnectionThread:
             )
         if self.provider_conf.type == ProviderType.K8S.value:
             # Not yet implemented
-            resp = None
-        if not resp:
+            data = None
+        if not data:
             return None
-
-        (
-            project,
-            block_storage_service,
-            compute_service,
-            identity_service,
-            network_service,
-        ) = resp
 
         region = RegionCreateExtended(
             **self.region_conf.dict(),
-            block_storage_services=[block_storage_service]
-            if block_storage_service
+            block_storage_services=[data.block_storage_service]
+            if data.block_storage_service
             else [],
-            compute_services=[compute_service] if compute_service else [],
-            identity_services=[identity_service] if identity_service else [],
-            network_services=[network_service] if network_service else [],
+            compute_services=[data.compute_service] if data.compute_service else [],
+            identity_services=[data.identity_service] if data.identity_service else [],
+            network_services=[data.network_service] if data.network_service else [],
         )
 
-        return identity_provider, project, region
+        return identity_provider, data.project, region
 
 
 class ProviderThread:
