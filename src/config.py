@@ -72,7 +72,7 @@ class APIVersions(BaseSettings):
 
 class Settings(BaseSettings):
     FED_REG_API_URL: AnyHttpUrl = Field(
-        default="http://localhost:8000/api", description="Federation Registry base URL"
+        default="http://localhost:8000/api", description="Federation-Registry base URL"
     )
     BLOCK_STORAGE_VOL_LABELS: List[str] = Field(
         default_factory=list, description="List of accepted volume type labels."

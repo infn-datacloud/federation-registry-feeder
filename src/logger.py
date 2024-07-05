@@ -14,6 +14,11 @@ class StderrFilter(logging.Filter):
 
 
 def create_logger(name: str, level: str) -> Logger:
+    """Create a logger with 2 stream handlers.
+
+    Log to stdout messages with level lower or equal then WARNING otherwise log them
+    to stderr.
+    """
     logger = logging.getLogger(name)
     logger.setLevel(level)
     formatter = Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
