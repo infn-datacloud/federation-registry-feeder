@@ -52,24 +52,26 @@ def load_config(
             config = SiteConfig(**config)
             logger.info("Configuration loaded")
             logger.debug("%r", config)
+            return config
         except ValueError as e:
             logger.error(e)
-            config = None
+            return None
     else:
         logger.error("Empty configuration")
-
-    return config
+        return None
 
 
 def get_site_configs(
     *, yaml_files: List[str], log_level: str | int | None = None
-) -> List[SiteConfig]:
+) -> tuple[List[SiteConfig], bool]:
     """Create a list of SiteConfig from a list of yaml files."""
     with ThreadPoolExecutor() as executor:
         site_configs = executor.map(
             lambda x: load_config(fname=x, log_level=log_level), yaml_files
         )
-    return list(filter(lambda x: x is not None, site_configs))
+    return list(filter(lambda x: x is not None, site_configs)), any(
+        [x is None for x in site_configs]
+    )
 
 
 def get_read_write_headers(*, token: str) -> Tuple[Dict[str, str], Dict[str, str]]:
@@ -89,7 +91,7 @@ def update_database(
     items: List[ProviderCreateExtended],
     token: str,
     logger: Logger,
-) -> None:
+) -> bool:
     """Update the Federation-Registry data.
 
     Create the read and write headers to use in requests.
@@ -99,6 +101,8 @@ def update_database(
     data. Once all the current federated providers have been added or updated, remove
     the remaining providers retrieved from the Federation-Registry, they are no more
     tracked.
+
+    Return True if no errors happened otherwise False.
     """
     read_header, write_header = get_read_write_headers(token=token)
     crud = CRUD(
@@ -118,3 +122,5 @@ def update_database(
             crud.update(new_data=item, old_data=db_item)
     for db_item in db_items.values():
         crud.remove(item=db_item)
+
+    return crud.error

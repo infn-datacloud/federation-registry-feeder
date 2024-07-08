@@ -39,11 +39,14 @@ class ConnectionThread:
         self.region_conf = region_conf
         self.project_conf = project_conf
         self.issuers = issuers
+
         self.log_level = log_level
         logger_name = f"Provider {self.provider_conf.name}, "
         logger_name += f"Region {self.region_conf.name}, "
         logger_name += f"Project {self.project_conf.id}"
         self.logger = create_logger(logger_name, level=log_level)
+
+        self.error = False
 
     def get_provider_siblings(self) -> Optional[ProviderSiblings]:
         """Retrieve the provider region, project and identity provider.
@@ -60,6 +63,7 @@ class ConnectionThread:
         except ValueError as e:
             self.logger.error(e)
             self.logger.error("Skipping project")
+            self.error = True
             return None
 
         if self.provider_conf.type == ProviderType.OS.value:
@@ -72,7 +76,9 @@ class ConnectionThread:
                     token=token,
                     logger=self.logger,
                 )
+                self.error |= data.error
             except ProviderException:
+                self.error = True
                 return None
         elif self.provider_conf.type == ProviderType.K8S.value:
             self.logger.warning("Not yet implemented")
@@ -176,6 +182,7 @@ class ProviderThread:
         self.logger = create_logger(
             f"Provider {self.provider_conf.name}", level=log_level
         )
+        self.error = False
 
     def get_provider(self) -> ProviderCreateExtended:
         """Generate a list of generic providers.
@@ -214,6 +221,7 @@ class ProviderThread:
         siblings: list[ProviderSiblings] = list(
             filter(lambda x: x is not None, siblings)
         )
+        self.error = any([x.error for x in connections])
 
         identity_providers: dict[str, IdentityProviderCreateExtended] = {}
         projects: dict[str, ProjectCreate] = {}

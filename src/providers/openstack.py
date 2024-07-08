@@ -66,6 +66,7 @@ class OpenstackData:
         self.identity_provider = identity_provider
         self.region_name = region_name
         self.logger = logger
+        self.error = False
 
         # Connection can stay outside the try because it is only defined, not yet opened
         self.conn = self.connect_to_provider(token=token)
@@ -131,6 +132,7 @@ class OpenstackData:
             data = quota.to_dict()
         except ForbiddenException as e:
             self.logger.error(e)
+            self.error = True
             data = {}
         self.logger.debug("Block storage service quotas=%s", data)
         data_limits = {**data}
@@ -205,6 +207,7 @@ class OpenstackData:
                 projects.add(i.get("tenant_id"))
         except ForbiddenException as e:
             self.logger.error(e)
+            self.error = True
         return list(projects)
 
     def get_flavors(self) -> List[FlavorCreateExtended]:
@@ -347,6 +350,7 @@ class OpenstackData:
             endpoint = self.conn.block_storage.get_endpoint()
         except EndpointNotFound as e:
             self.logger.error(e)
+            self.error = True
             return None
         if not endpoint:
             return None
@@ -377,6 +381,7 @@ class OpenstackData:
             endpoint = self.conn.compute.get_endpoint()
         except EndpointNotFound as e:
             self.logger.error(e)
+            self.error = True
             return None
         if not endpoint:
             return None
@@ -402,6 +407,7 @@ class OpenstackData:
             endpoint = self.conn.network.get_endpoint()
         except EndpointNotFound as e:
             self.logger.error(e)
+            self.error = True
             return None
         if not endpoint:
             return None

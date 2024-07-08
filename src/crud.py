@@ -1,5 +1,6 @@
 import os
-from typing import Any, Dict, List, Optional
+from logging import Logger
+from typing import List, Optional
 
 import requests
 from fastapi import status
@@ -9,27 +10,31 @@ from fed_reg.provider.schemas_extended import (
     ProviderRead,
     ProviderReadExtended,
 )
-from pydantic import AnyHttpUrl, BaseModel, Field, validator
+from pydantic import AnyHttpUrl
 
 TIMEOUT = 30  # s
 
 
-class CRUD(BaseModel):
+class CRUD:
     """Class with create read update and delete operations.
 
     Each operation makes a call to the Federation-Registry.
     """
 
-    multi_url: AnyHttpUrl = Field(alias="url")
-    read_headers: Dict[str, str]
-    write_headers: Dict[str, str]
-    single_url: Optional[AnyHttpUrl]
-    logger: Any
-
-    @validator("single_url", pre=True, always=True)
-    @classmethod
-    def build_single_url(cls, v: Optional[str], values: Dict[str, Any]) -> str:
-        return os.path.join(values.get("multi_url"), "{uid}")
+    def __init__(
+        self,
+        *,
+        url: AnyHttpUrl,
+        read_headers: dict[str, str],
+        write_headers: dict[str, str],
+        logger: Logger,
+    ) -> None:
+        self.multi_url = url
+        self.single_url = os.path.join(self.multi_url, "{uid}")
+        self.read_headers = read_headers
+        self.write_headers = write_headers
+        self.logger = logger
+        self.error = False
 
     def read(self) -> List[ProviderRead]:
         """Retrieve all providers from the Federation-Registry."""
@@ -67,6 +72,7 @@ class CRUD(BaseModel):
         elif resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
             self.logger.error("Provider=%s has not been created.", data.name)
             self.logger.error(resp.json())
+            self.error = True
             return None
 
         self.logger.debug("Status code: %s", resp.status_code)
@@ -117,6 +123,7 @@ class CRUD(BaseModel):
         elif resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
             self.logger.error("Provider=%s has not been updated.", new_data.name)
             self.logger.error(resp.json())
+            self.error = True
             return None
 
         self.logger.debug("Status code: %s", resp.status_code)
