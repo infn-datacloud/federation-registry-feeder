@@ -1,3 +1,4 @@
+import logging
 import os
 from random import getrandbits, randint
 from typing import Any, Dict, List, Tuple, Union
@@ -16,6 +17,7 @@ from fed_reg.provider.schemas_extended import (
     ProviderCreateExtended,
     ProviderRead,
     ProviderReadExtended,
+    RegionCreateExtended,
     SLACreateExtended,
     UserGroupCreateExtended,
 )
@@ -79,7 +81,12 @@ def crud() -> CRUD:
     The CRUD object is used to interact with the federation-registry API.
     """
     read_header, write_header = get_read_write_headers(token=random_lower_string())
-    return CRUD(url=random_url(), read_headers=read_header, write_headers=write_header)
+    return CRUD(
+        url=random_url(),
+        read_headers=read_header,
+        write_headers=write_header,
+        logger=logging.getLogger(),
+    )
 
 
 @pytest.fixture
@@ -395,6 +402,23 @@ def identity_provider_create(
         endpoint=random_url(),
         group_claim=random_lower_string(),
         relationship=auth_method_create,
+    )
+
+
+@pytest.fixture
+def region_create(
+    block_storage_service_create: BlockStorageServiceCreateExtended,
+    compute_service_create: ComputeServiceCreateExtended,
+    identity_service_create: IdentityServiceCreate,
+    network_service_create: NetworkServiceCreateExtended,
+):
+    """Fixture with a RegionCreateExtended"""
+    return RegionCreateExtended(
+        name=random_lower_string(),
+        block_storage_services=[block_storage_service_create],
+        compute_services=[compute_service_create],
+        identity_services=[identity_service_create],
+        network_services=[network_service_create],
     )
 
 
