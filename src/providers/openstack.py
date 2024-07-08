@@ -16,11 +16,6 @@ from fed_reg.provider.schemas_extended import (
     NetworkServiceCreateExtended,
     ProjectCreate,
 )
-from fed_reg.quota.schemas import (
-    BlockStorageQuotaBase,
-    ComputeQuotaBase,
-    NetworkQuotaBase,
-)
 from fed_reg.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
@@ -46,6 +41,8 @@ TIMEOUT = 2  # s
 
 
 class OpenstackData:
+    """Class to organize data retrieved from and Openstack instance."""
+
     def __init__(
         self,
         *,
@@ -64,19 +61,18 @@ class OpenstackData:
             Optional[NetworkServiceCreateExtended],
         ]
     ]:
+        self.provider_conf = provider_conf
+        self.project_conf = project_conf
+        self.identity_provider = identity_provider
+        self.region_name = region_name
         self.logger = logger
+
         # Connection can stay outside the try because it is only defined, not yet opened
-        self.conn = self.connect_to_provider(
-            provider_conf=provider_conf,
-            idp=identity_provider,
-            project_id=project_conf.id,
-            region_name=region_name,
-            token=token,
-        )
+        self.conn = self.connect_to_provider(token=token)
 
         try:
             self.identity_service = IdentityServiceCreate(
-                endpoint=provider_conf.auth_url,
+                endpoint=self.provider_conf.auth_url,
                 name=IdentityServiceName.OPENSTACK_KEYSTONE,
             )
 
@@ -84,20 +80,9 @@ class OpenstackData:
             self.project = self.get_project()
 
             # Retrieve provider services (block_storage, compute, identity and network)
-            self.block_storage_service = self.get_block_storage_service(
-                per_user_limits=project_conf.per_user_limits.block_storage
-            )
-            self.compute_service = self.get_compute_service(
-                per_user_limits=project_conf.per_user_limits.compute,
-                tags=provider_conf.image_tags,
-            )
-            self.network_service = self.get_network_service(
-                per_user_limits=project_conf.per_user_limits.network,
-                tags=provider_conf.network_tags,
-                default_private_net=project_conf.default_private_net,
-                default_public_net=project_conf.default_public_net,
-                proxy=project_conf.private_net_proxy,
-            )
+            self.block_storage_service = self.get_block_storage_service()
+            self.compute_service = self.get_compute_service()
+            self.network_service = self.get_network_service()
         except (
             ConnectFailure,
             ConnectTimeout,
@@ -113,7 +98,31 @@ class OpenstackData:
             self.conn.close()
             self.logger.info("Connection closed")
 
+    def connect_to_provider(self, *, token: str) -> Connection:
+        """Connect to Openstack provider"""
+        self.logger.info(
+            "Connecting through IDP '%s' to openstack '%s' and region '%s'.",
+            (
+                self.identity_provider.endpoint,
+                self.provider_conf.name,
+                self.region_name,
+            ),
+        )
+        self.logger.info("Accessing with project ID: %s", self.project_conf.id)
+        auth_type = "v3oidcaccesstoken"
+        return connect(
+            auth_url=self.provider_conf.auth_url,
+            auth_type=auth_type,
+            identity_provider=self.identity_provider.relationship.idp_name,
+            protocol=self.identity_provider.relationship.protocol,
+            access_token=token,
+            project_id=self.project_conf.id,
+            region_name=self.region_name,
+            timeout=TIMEOUT,
+        )
+
     def get_block_storage_quotas(self) -> BlockStorageQuotaCreateExtended:
+        """Retrieve current project accessible block storage quota"""
         self.logger.info("Retrieve current project accessible block storage quotas")
         try:
             quota = self.conn.block_storage.get_quota_set(self.conn.current_project_id)
@@ -121,27 +130,29 @@ class OpenstackData:
         except ForbiddenException as e:
             self.logger.error(e)
             data = {}
-        self.logger.debug(f"Block storage service quotas={data}")
+        self.logger.debug("Block storage service quotas=%s", data)
         return BlockStorageQuotaCreateExtended(
             **data, project=self.conn.current_project_id
         )
 
     def get_compute_quotas(self) -> ComputeQuotaCreateExtended:
+        """Retrieve current project accessible compute quota"""
         self.logger.info("Retrieve current project accessible compute quotas")
         quota = self.conn.compute.get_quota_set(self.conn.current_project_id)
         data = quota.to_dict()
-        self.logger.debug(f"Compute service quotas={data}")
+        self.logger.debug("Compute service quotas=%s", data)
         return ComputeQuotaCreateExtended(**data, project=self.conn.current_project_id)
 
     def get_network_quotas(self) -> NetworkQuotaCreateExtended:
+        """Retrieve current project accessible network quota"""
         self.logger.info("Retrieve current project accessible network quotas")
         quota = self.conn.network.get_quota(self.conn.current_project_id)
         data = quota.to_dict()
         data["public_ips"] = data.pop("floating_ips")
-        self.logger.debug(f"Network service quotas={data}")
+        self.logger.debug("Network service quotas=%s", data)
         return NetworkQuotaCreateExtended(**data, project=self.conn.current_project_id)
 
-    def get_flavor_extra_specs(extra_specs: Dict[str, Any]) -> Dict[str, Any]:
+    def get_flavor_extra_specs(self, extra_specs: Dict[str, Any]) -> Dict[str, Any]:
         """Format flavor extra specs into a dictionary."""
         data = {}
         data["gpus"] = int(extra_specs.get("gpu_number", 0))
@@ -164,10 +175,11 @@ class OpenstackData:
         return list(projects)
 
     def get_flavors(self) -> List[FlavorCreateExtended]:
+        """Map Openstack flavor instance into FlavorCreateExtended instance."""
         self.logger.info("Retrieve current project accessible flavors")
         flavors = []
         for flavor in self.conn.compute.flavors(is_disabled=False):
-            self.logger.debug(f"Flavor received data={flavor!r}")
+            self.logger.debug("Flavor received data=%r", flavor)
             projects = []
             if not flavor.is_public:
                 projects = self.get_flavor_projects(flavor)
@@ -180,7 +192,7 @@ class OpenstackData:
             extra = data.pop("extra_specs")
             if extra:
                 data = {**self.get_flavor_extra_specs(extra), **data}
-            self.logger.debug(f"Flavor manipulated data={data}")
+            self.logger.debug("Flavor manipulated data=%s", data)
             flavors.append(FlavorCreateExtended(**data, projects=list(projects)))
         return flavors
 
@@ -196,6 +208,7 @@ class OpenstackData:
     def get_images(
         self, *, tags: Optional[List[str]] = None
     ) -> List[ImageCreateExtended]:
+        """Map Openstack image istance into ImageCreateExtended instance."""
         if tags is None:
             tags = []
         self.logger.info("Retrieve current project accessible images")
@@ -203,7 +216,7 @@ class OpenstackData:
         for image in self.conn.image.images(
             status="active", tag=None if len(tags) == 0 else tags
         ):
-            self.logger.debug(f"Image received data={image!r}")
+            self.logger.debug("Image received data=%r", image)
             is_public = True
             projects = []
             if image.visibility == "private":
@@ -221,7 +234,7 @@ class OpenstackData:
             # Openstack image object does not have `description` field
             data["description"] = ""
             data["is_public"] = is_public
-            self.logger.debug(f"Image manipulated data={data}")
+            self.logger.debug("Image manipulated data=%s", data)
             images.append(ImageCreateExtended(**data, projects=list(projects)))
         return images
 
@@ -247,6 +260,7 @@ class OpenstackData:
         proxy: Optional[PrivateNetProxy] = None,
         tags: Optional[List[str]] = None,
     ) -> List[NetworkCreateExtended]:
+        """Map Openstack network instance in NetworkCreateExtended instance."""
         if tags is None:
             tags = []
         self.logger.info("Retrieve current project accessible networks")
@@ -254,7 +268,7 @@ class OpenstackData:
         for network in self.conn.network.networks(
             status="active", tag=None if len(tags) == 0 else tags
         ):
-            self.logger.debug(f"Network received data={network!r}")
+            self.logger.debug("Network received data=%s", network)
             project = None
             if not network.is_shared:
                 if self.conn.current_project_id != network.project_id:
@@ -273,26 +287,23 @@ class OpenstackData:
             if proxy:
                 data["proxy_host"] = str(proxy.host)
                 data["proxy_user"] = proxy.user
-            self.logger.debug(f"Network manipulated data={data}")
+            self.logger.debug("Network manipulated data=%s", data)
             networks.append(NetworkCreateExtended(**data, project=project))
         return networks
 
     def get_project(self) -> ProjectCreate:
+        """Map current project values into ProjectCreate instance."""
         self.logger.info("Retrieve current project data")
         project = self.conn.identity.get_project(self.conn.current_project_id)
-        self.logger.debug(f"Project received data={project!r}")
+        self.logger.debug("Project received data=%r", project)
         data = project.to_dict()
         data["uuid"] = data.pop("id")
         if data.get("description") is None:
             data["description"] = ""
-        self.logger.debug(f"Project manipulated data={data}")
+        self.logger.debug("Project manipulated data=%s", data)
         return ProjectCreate(**data)
 
-    def get_block_storage_service(
-        self,
-        *,
-        per_user_limits: Optional[BlockStorageQuotaBase],
-    ) -> Optional[BlockStorageServiceCreateExtended]:
+    def get_block_storage_service(self) -> Optional[BlockStorageServiceCreateExtended]:
         """Retrieve project's block storage service.
 
         Remove last part which corresponds to the project ID.
@@ -312,21 +323,18 @@ class OpenstackData:
             name=BlockStorageServiceName.OPENSTACK_CINDER,
         )
         block_storage_service.quotas = [self.get_block_storage_quotas()]
-        if per_user_limits:
+        if self.project_conf.per_user_limits.block_storage:
             block_storage_service.quotas.append(
                 BlockStorageQuotaCreateExtended(
-                    **per_user_limits.dict(exclude_none=True),
+                    **self.project_conf.per_user_limits.block_storage.dict(
+                        exclude_none=True
+                    ),
                     project=self.conn.current_project_id,
                 )
             )
         return block_storage_service
 
-    def get_compute_service(
-        self,
-        *,
-        per_user_limits: Optional[ComputeQuotaBase],
-        tags: List[str],
-    ) -> Optional[ComputeServiceCreateExtended]:
+    def get_compute_service(self) -> Optional[ComputeServiceCreateExtended]:
         """Create region's compute service.
 
         Retrieve flavors, images and current project corresponding quotas.
@@ -344,26 +352,18 @@ class OpenstackData:
             endpoint=endpoint, name=ComputeServiceName.OPENSTACK_NOVA
         )
         compute_service.flavors = self.get_flavors()
-        compute_service.images = self.get_images(tags=tags)
+        compute_service.images = self.get_images(tags=self.provider_conf.image_tags)
         compute_service.quotas = [self.get_compute_quotas()]
-        if per_user_limits:
+        if self.project_conf.per_user_limits.compute:
             compute_service.quotas.append(
                 ComputeQuotaCreateExtended(
-                    **per_user_limits.dict(exclude_none=True),
+                    **self.project_conf.per_user_limits.compute.dict(exclude_none=True),
                     project=self.conn.current_project_id,
                 )
             )
         return compute_service
 
-    def get_network_service(
-        self,
-        *,
-        per_user_limits: Optional[NetworkQuotaBase],
-        tags: List[str],
-        default_private_net: Optional[str],
-        default_public_net: Optional[str],
-        proxy: Optional[PrivateNetProxy],
-    ) -> Optional[NetworkServiceCreateExtended]:
+    def get_network_service(self) -> Optional[NetworkServiceCreateExtended]:
         """Retrieve region's network service."""
         try:
             endpoint = self.conn.network.get_endpoint()
@@ -377,44 +377,17 @@ class OpenstackData:
             endpoint=endpoint, name=NetworkServiceName.OPENSTACK_NEUTRON
         )
         network_service.networks = self.get_networks(
-            default_private_net=default_private_net,
-            default_public_net=default_public_net,
-            proxy=proxy,
-            tags=tags,
+            default_private_net=self.project_conf.default_private_net,
+            default_public_net=self.project_conf.default_public_net,
+            proxy=self.project_conf.private_net_proxy,
+            tags=self.provider_conf.network_tags,
         )
         network_service.quotas = [self.get_network_quotas()]
-        if per_user_limits:
+        if self.project_conf.per_user_limits.network:
             network_service.quotas.append(
                 NetworkQuotaCreateExtended(
-                    **per_user_limits.dict(exclude_none=True),
+                    **self.project_conf.per_user_limits.network.dict(exclude_none=True),
                     project=self.conn.current_project_id,
                 )
             )
         return network_service
-
-    def connect_to_provider(
-        self,
-        *,
-        provider_conf: Openstack,
-        idp: IdentityProviderCreateExtended,
-        project_id: str,
-        region_name: str,
-        token: str,
-    ) -> Connection:
-        """Connect to Openstack provider"""
-        self.logger.info(
-            f"Connecting through IDP {idp.endpoint} to openstack "
-            f"'{provider_conf.name}' and region '{region_name}'. "
-            f"Accessing with project ID: {project_id}"
-        )
-        auth_type = "v3oidcaccesstoken"
-        return connect(
-            auth_url=provider_conf.auth_url,
-            auth_type=auth_type,
-            identity_provider=idp.relationship.idp_name,
-            protocol=idp.relationship.protocol,
-            access_token=token,
-            project_id=project_id,
-            region_name=region_name,
-            timeout=TIMEOUT,
-        )
