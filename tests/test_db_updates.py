@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import Mock, patch
 
 import pytest
@@ -23,7 +24,10 @@ def test_do_nothing_to_db(
     """No entries in the database and no new providers to add."""
     mock_crud_read.return_value = []
     update_database(
-        service_api_url=service_endpoints, items=[], token=random_lower_string()
+        service_api_url=service_endpoints,
+        items=[],
+        token=random_lower_string(),
+        logger=logging.getLogger(),
     )
     mock_crud_read.assert_called_once()
     mock_crud_create.assert_not_called()
@@ -49,6 +53,7 @@ def test_add_provider_to_db(
         service_api_url=service_endpoints,
         items=[provider_create],
         token=random_lower_string(),
+        logger=logging.getLogger(),
     )
     mock_crud_read.assert_called_once()
     mock_crud_create.assert_called_once()
@@ -71,7 +76,10 @@ def test_delete_provider_from_db(
     """One entry in the database and no tracked providers."""
     mock_crud_read.return_value = [provider_read]
     update_database(
-        service_api_url=service_endpoints, items=[], token=random_lower_string()
+        service_api_url=service_endpoints,
+        items=[],
+        token=random_lower_string(),
+        logger=logging.getLogger(),
     )
     mock_crud_read.assert_called_once()
     mock_crud_create.assert_not_called()
@@ -97,6 +105,7 @@ def test_update_provider_in_db(
         service_api_url=service_endpoints,
         items=[provider_create],
         token=random_lower_string(),
+        logger=logging.getLogger(),
     )
     mock_crud_read.assert_called_once()
     mock_crud_create.assert_not_called()
@@ -122,6 +131,7 @@ def test_read_error(
             service_api_url=service_endpoints,
             items=[provider_create],
             token=random_lower_string(),
+            logger=logging.getLogger(),
         )
     mock_crud_read.assert_called_once()
     mock_crud_create.assert_not_called()
@@ -148,6 +158,7 @@ def test_create_error(
             service_api_url=service_endpoints,
             items=[provider_create],
             token=random_lower_string(),
+            logger=logging.getLogger(),
         )
     mock_crud_read.assert_called_once()
     mock_crud_create.assert_called_once()
@@ -174,6 +185,7 @@ def test_delete_error(
             service_api_url=service_endpoints,
             items=[],
             token=random_lower_string(),
+            logger=logging.getLogger(),
         )
     mock_crud_read.assert_called_once()
     mock_crud_create.assert_not_called()
@@ -201,6 +213,7 @@ def test_update_error(
             service_api_url=service_endpoints,
             items=[provider_create],
             token=random_lower_string(),
+            logger=logging.getLogger(),
         )
     mock_crud_read.assert_called_once()
     mock_crud_create.assert_not_called()
