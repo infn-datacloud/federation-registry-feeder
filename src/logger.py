@@ -13,14 +13,19 @@ class StderrFilter(logging.Filter):
         return record.levelno >= logging.ERROR
 
 
-def create_logger(name: str, level: str) -> Logger:
+def create_logger(name: str, level: str | int | None) -> Logger:
     """Create a logger with 2 stream handlers.
 
     Log to stdout messages with level lower or equal then WARNING otherwise log them
     to stderr.
     """
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    try:
+        if level is not None:
+            logger.setLevel(level)
+        error_msg = None
+    except TypeError:
+        error_msg = f"Invalid log level: {level}"
     formatter = Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
 
     stdout_handler = StreamHandler(sys.stdout)
@@ -32,5 +37,8 @@ def create_logger(name: str, level: str) -> Logger:
     stderr_handler.setFormatter(formatter)
     stderr_handler.addFilter(StderrFilter())
     logger.addHandler(stderr_handler)
+
+    if error_msg is not None:
+        logger.error(error_msg)
 
     return logger

@@ -38,7 +38,9 @@ def get_conf_files(*, settings: Settings, logger: Logger) -> List[str]:
     return yaml_files
 
 
-def load_config(*, fname: str, log_level: str) -> Optional[SiteConfig]:
+def load_config(
+    *, fname: str, log_level: str | int | None = None
+) -> Optional[SiteConfig]:
     """Load provider configuration from yaml file."""
     logger = create_logger(f"Yaml file {fname}", level=log_level)
     logger.info("Loading provider configuration from file")
@@ -59,7 +61,9 @@ def load_config(*, fname: str, log_level: str) -> Optional[SiteConfig]:
     return config
 
 
-def get_site_configs(*, yaml_files: List[str], log_level: str) -> List[SiteConfig]:
+def get_site_configs(
+    *, yaml_files: List[str], log_level: str | int | None = None
+) -> List[SiteConfig]:
     """Create a list of SiteConfig from a list of yaml files."""
     with ThreadPoolExecutor() as executor:
         site_configs = executor.map(

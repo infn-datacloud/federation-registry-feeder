@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 from typing import List
@@ -36,7 +37,7 @@ def test_infer_fed_reg_urls(settings: Settings) -> None:
     Inferred urls are made up combining the fed-reg base url, api version and target
     entity (lower case).
     """
-    endpoints = infer_service_endpoints(settings=settings)
+    endpoints = infer_service_endpoints(settings=settings, logger=logging.getLogger())
     for k, v in endpoints.dict().items():
         version = settings.api_ver.__getattribute__(k.upper())
         assert v == os.path.join(settings.FED_REG_API_URL, f"{version}", f"{k}")
@@ -54,7 +55,7 @@ def test_conf_file_retrieval(tmp_path: Path, settings: Settings) -> None:
         f = d / fname
         f.write_text("")
     settings.PROVIDERS_CONF_DIR = d
-    yaml_files = get_conf_files(settings=settings)
+    yaml_files = get_conf_files(settings=settings, logger=logging.getLogger())
     assert len(yaml_files) == 1
     assert yaml_files[0] == os.path.join(settings.PROVIDERS_CONF_DIR, fnames[0])
 
@@ -63,7 +64,8 @@ def test_invalid_conf_dir(settings: Settings) -> None:
     """Invalid conf dir."""
     settings.PROVIDERS_CONF_DIR = "invalid_path"
     with pytest.raises(FileNotFoundError):
-        get_conf_files(settings=settings)
+        get_conf_files(settings=settings, logger=logging.getLogger())
+
 
 @patch(
     "src.models.identity_provider.retrieve_token", return_value=random_lower_string()
