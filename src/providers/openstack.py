@@ -40,6 +40,7 @@ from openstack.network.v2.network import Network
 
 from src.models.config import Openstack
 from src.models.provider import PrivateNetProxy, Project
+from src.providers.exceptions import ProviderException
 
 TIMEOUT = 2  # s
 
@@ -64,6 +65,7 @@ class OpenstackData:
         ]
     ]:
         self.logger = logger
+        # Connection can stay outside the try because it is only defined, not yet opened
         self.conn = self.connect_to_provider(
             provider_conf=provider_conf,
             idp=identity_provider,
@@ -106,10 +108,10 @@ class OpenstackData:
             SSLError,
         ) as e:
             self.logger.error(e)
-
-        # TODO Check if the closing action can raise an exception
-        self.conn.close()
-        self.logger.info("Connection closed")
+            raise ProviderException from e
+        finally:
+            self.conn.close()
+            self.logger.info("Connection closed")
 
     def get_block_storage_quotas(self) -> BlockStorageQuotaCreateExtended:
         self.logger.info("Retrieve current project accessible block storage quotas")

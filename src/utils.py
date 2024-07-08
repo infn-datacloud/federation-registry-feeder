@@ -65,7 +65,7 @@ def get_site_configs(*, yaml_files: List[str], log_level: str) -> List[SiteConfi
         site_configs = executor.map(
             lambda x: load_config(fname=x, log_level=log_level), yaml_files
         )
-    return list(filter(lambda x: x, site_configs))
+    return list(filter(lambda x: x is not None, site_configs))
 
 
 def get_read_write_headers(*, token: str) -> Tuple[Dict[str, str], Dict[str, str]]:

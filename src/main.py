@@ -1,5 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 
+from fed_reg.provider.schemas_extended import ProviderCreateExtended
+
 from src.config import get_settings
 from src.logger import create_logger
 from src.parser import parser
@@ -42,7 +44,7 @@ def main(log_level: str) -> None:
     providers = []
     with ThreadPoolExecutor() as executor:
         providers = executor.map(lambda x: x.get_provider(), prov_iss_list)
-    providers = list(filter(lambda x: x, providers))
+    providers: list[ProviderCreateExtended] = list(filter(lambda x: x, providers))
 
     # Update the Federation-Registry
     token = site_configs[0].trusted_idps[0].token if len(site_configs) > 0 else ""

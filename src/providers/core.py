@@ -5,8 +5,10 @@ from fed_reg.provider.enum import ProviderStatus, ProviderType
 from fed_reg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
+    FlavorCreateExtended,
     IdentityProviderCreateExtended,
     IdentityServiceCreate,
+    ImageCreateExtended,
     NetworkServiceCreateExtended,
     ProjectCreate,
     ProviderCreateExtended,
@@ -17,8 +19,8 @@ from fed_reg.provider.schemas_extended import (
 
 from src.logger import create_logger
 from src.models.identity_provider import SLA, Issuer, UserGroup
-from src.models.provider import Project, Provider, Region
-from src.providers.openstack import OpenstackData
+from src.models.provider import Project, Provider, ProviderSiblings, Region
+from src.providers.openstack import OpenstackData, ProviderException
 
 
 class ConnectionThread:
@@ -43,32 +45,35 @@ class ConnectionThread:
         logger_name += f"Project {self.project_conf.id}"
         self.logger = create_logger(logger_name, level=log_level)
 
-    def get_idp_project_and_region(
-        self,
-    ) -> Optional[
-        Tuple[IdentityProviderCreateExtended, ProjectCreate, RegionCreateExtended]
-    ]:
+    def get_provider_siblings(self) -> Optional[ProviderSiblings]:
+        """Retrieve the provider region, project and identity provider.
+
+        From the current configuration, connect to the correct provider and retrieve the
+        current configuration and resources.
+
+        Return an object with 3 main entities: region, project and identity provider.
+        """
         project = self.get_project_conf_params()
 
         try:
-            identity_provider, token = self.get_identity_provider_info_for_project(
-                project
-            )
+            identity_provider, token = self.get_idp_matching_project(project)
         except ValueError as e:
             self.logger.error(e)
             self.logger.error("Skipping project")
             return None
 
         if self.provider_conf.type == ProviderType.OS.value:
-            # TODO catch error if creation fails and return None.
-            data = OpenstackData(
-                provider_conf=self.provider_conf,
-                project_conf=project,
-                region_name=self.region_conf.name,
-                identity_provider=identity_provider,
-                token=token,
-                logger=self.logger,
-            )
+            try:
+                data = OpenstackData(
+                    provider_conf=self.provider_conf,
+                    project_conf=project,
+                    region_name=self.region_conf.name,
+                    identity_provider=identity_provider,
+                    token=token,
+                    logger=self.logger,
+                )
+            except ProviderException:
+                return None
         elif self.provider_conf.type == ProviderType.K8S.value:
             self.logger.warning("Not yet implemented")
             self.logger.warning("Skipping project")
@@ -84,7 +89,9 @@ class ConnectionThread:
             network_services=[data.network_service] if data.network_service else [],
         )
 
-        return identity_provider, data.project, region
+        return ProviderSiblings(
+            identity_provider=identity_provider, project=data.project, region=region
+        )
 
     def get_project_conf_params(self) -> Project:
         """Get project parameters defined in the yaml file.
@@ -108,7 +115,7 @@ class ConnectionThread:
             new_conf.per_user_limits = region_props.per_user_limits
         return new_conf
 
-    def get_identity_provider_info_for_project(
+    def get_idp_matching_project(
         self, project: Project
     ) -> Tuple[IdentityProviderCreateExtended, str]:
         """Find the identity provider with an SLA matching the target project's one.
@@ -176,7 +183,6 @@ class ProviderThread:
         Read data from real instances.
         Supported providers:
         - Openstack
-
         """
         if self.provider_conf.status != ProviderStatus.ACTIVE.value:
             self.logger.info("Provider not active: %s", self.provider_conf.status)
@@ -204,24 +210,44 @@ class ProviderThread:
                 )
 
         with ThreadPoolExecutor() as executor:
-            responses = executor.map(
-                lambda x: x.get_idp_project_and_region(), connections
-            )
-        responses = list(filter(lambda x: x, responses))
+            siblings = executor.map(lambda x: x.get_provider_siblings(), connections)
+        siblings: list[ProviderSiblings] = list(
+            filter(lambda x: x is not None, siblings)
+        )
 
-        identity_providers = []
-        projects = []
-        regions = []
-        if len(responses) > 0:
-            (identity_providers, projects, regions) = zip(*responses)
+        identity_providers: dict[str, IdentityProviderCreateExtended] = {}
+        projects: dict[str, ProjectCreate] = {}
+        regions: dict[str, RegionCreateExtended] = {}
+        for sibling in siblings:
+            projects[sibling.project.uuid] = sibling.project
+            if identity_providers.get(sibling.identity_provider.endpoint) is None:
+                identity_providers[
+                    sibling.identity_provider.endpoint
+                ] = sibling.identity_provider
+            else:
+                identity_providers[
+                    sibling.identity_provider.endpoint
+                ] = self.update_idp_user_groups(
+                    current_issuer=identity_providers[
+                        sibling.identity_provider.endpoint
+                    ],
+                    new_issuer=sibling.identity_provider,
+                )
+            if regions.get(sibling.region.name) is None:
+                regions[sibling.region.name] = sibling.region
+            else:
+                regions[sibling.region.name] = self.update_region_services(
+                    current_region=regions[sibling.region.name],
+                    new_region=sibling.region,
+                )
 
-            projects = list({i.uuid: i for i in projects}.values())
-            identity_providers = self.update_identity_providers(
-                new_issuers=identity_providers
-            )
-            regions = self.update_regions(
-                new_regions=regions, include_projects=[i.uuid for i in projects]
-            )
+        for region in regions.values():
+            for service in region.compute_services:
+                flavors, images = self.filter_projects_on_compute_service(
+                    service=service, include_projects=projects.keys()
+                )
+                service.flavors = flavors
+                service.images = images
 
         return ProviderCreateExtended(
             name=self.provider_conf.name,
@@ -229,86 +255,63 @@ class ProviderThread:
             is_public=self.provider_conf.is_public,
             support_emails=self.provider_conf.support_emails,
             status=self.provider_conf.status,
-            identity_providers=identity_providers,
-            projects=projects,
-            regions=regions,
+            identity_providers=identity_providers.values(),
+            projects=projects.values(),
+            regions=regions.values(),
         )
 
-    def update_regions(
-        self, *, new_regions: List[RegionCreateExtended], include_projects: List[str]
-    ) -> List[RegionCreateExtended]:
-        d = {}
-        for new_region in new_regions:
-            if len(new_region.compute_services) > 0:
-                self.filter_projects_on_compute_service(
-                    service=new_region.compute_services[0],
-                    include_projects=include_projects,
-                )
-            current_region: RegionCreateExtended = d.get(new_region.name)
-            if not current_region:
-                d[new_region.name] = new_region
-            else:
-                self.update_region_block_storage_services(
-                    current_services=current_region.block_storage_services,
-                    new_services=new_region.block_storage_services,
-                )
-                self.update_region_compute_services(
-                    current_services=current_region.compute_services,
-                    new_services=new_region.compute_services,
-                )
-                self.update_region_identity_services(
-                    current_services=current_region.identity_services,
-                    new_services=new_region.identity_services,
-                )
-                self.update_region_network_services(
-                    current_services=current_region.network_services,
-                    new_services=new_region.network_services,
-                )
-        return list(d.values())
-
-    def filter_projects_on_compute_service(
-        self, *, service: ComputeServiceCreateExtended, include_projects: List[str]
-    ) -> None:
-        """Remove from compute resources projects not imported in the Federation-Registry.
-
-        Apply the filtering only on public flavors and images.
-
-        Since resources not matching at least the project used to discover them have already
-        been discarded, on a specific resource, after the filtering projects, there can't be
-        an empty projects list.
+    def update_idp_user_groups(
+        self,
+        *,
+        current_issuer: IdentityProviderCreateExtended,
+        new_issuer: IdentityProviderCreateExtended,
+    ) -> IdentityProviderCreateExtended:
         """
-        for flavor in filter(lambda x: not x.is_public, service.flavors):
-            flavor.projects = list(
-                filter(lambda x: x in include_projects, flavor.projects)
-            )
-        for image in filter(lambda x: not x.is_public, service.images):
-            image.projects = list(
-                filter(lambda x: x in include_projects, image.projects)
-            )
+        Update the identity provider user groups.
 
-    def update_identity_providers(
-        self, *, new_issuers: List[IdentityProviderCreateExtended]
-    ) -> List[IdentityProviderCreateExtended]:
-        d = {}
-        for new_issuer in new_issuers:
-            current_issuer: IdentityProviderCreateExtended = d.get(new_issuer.endpoint)
-            if not current_issuer:
-                d[new_issuer.endpoint] = new_issuer
-            else:
-                # Since for each provider a user group can have just one SLA pointing to
-                # exactly one project. If the user group is not already in the current
-                # identity provider user groups add it, otherwise skip.
-                names = [i.name for i in current_issuer.user_groups]
-                if new_issuer.user_groups[0].name not in names:
-                    current_issuer.user_groups.append(new_issuer.user_groups[0])
-        return list(d.values())
+        Since for each provider a user group can have just one SLA pointing to exactly
+        one project. If the user group is not already in the current identity provider
+        user groups add it, otherwise skip.
+        """
+        names = [i.name for i in current_issuer.user_groups]
+        if new_issuer.user_groups[0].name not in names:
+            current_issuer.user_groups.append(new_issuer.user_groups[0])
+        return current_issuer
+
+    def update_region_services(
+        self, *, current_region: RegionCreateExtended, new_region: RegionCreateExtended
+    ) -> RegionCreateExtended:
+        """Update region services."""
+        current_region.block_storage_services = (
+            self.update_region_block_storage_services(
+                current_services=current_region.block_storage_services,
+                new_services=new_region.block_storage_services,
+            )
+        )
+        current_region.compute_services = self.update_region_compute_services(
+            current_services=current_region.compute_services,
+            new_services=new_region.compute_services,
+        )
+        current_region.identity_services = self.update_region_identity_services(
+            current_services=current_region.identity_services,
+            new_services=new_region.identity_services,
+        )
+        current_region.network_services = self.update_region_network_services(
+            current_services=current_region.network_services,
+            new_services=new_region.network_services,
+        )
+        return current_region
 
     def update_region_block_storage_services(
         self,
         *,
         current_services: List[BlockStorageServiceCreateExtended],
         new_services: List[BlockStorageServiceCreateExtended],
-    ) -> None:
+    ) -> List[BlockStorageServiceCreateExtended]:
+        """Update Block Storage services.
+
+        If the service does not exist, add it; otherwise, add new quotas.
+        """
         for new_service in new_services:
             for service in current_services:
                 if service.endpoint == new_service.endpoint:
@@ -316,13 +319,19 @@ class ProviderThread:
                     break
             else:
                 current_services.append(new_service)
+        return current_services
 
     def update_region_compute_services(
         self,
         *,
         current_services: List[ComputeServiceCreateExtended],
         new_services: List[ComputeServiceCreateExtended],
-    ) -> None:
+    ) -> List[ComputeServiceCreateExtended]:
+        """Update Compute services.
+
+        If the service does not exist, add it; otherwise, add new quotas, flavors and
+        images.
+        """
         for new_service in new_services:
             for service in current_services:
                 if service.endpoint == new_service.endpoint:
@@ -344,26 +353,36 @@ class ProviderThread:
                     break
             else:
                 current_services.append(new_service)
+        return current_services
 
     def update_region_identity_services(
         self,
         *,
         current_services: List[IdentityServiceCreate],
         new_services: List[IdentityServiceCreate],
-    ) -> None:
+    ) -> List[IdentityServiceCreate]:
+        """Update Identity services.
+
+        If the service does not exist, add it.
+        """
         for new_service in new_services:
             for service in current_services:
                 if service.endpoint == new_service.endpoint:
                     break
             else:
                 current_services.append(new_service)
+        return current_services
 
     def update_region_network_services(
         self,
         *,
         current_services: List[NetworkServiceCreateExtended],
         new_services: List[NetworkServiceCreateExtended],
-    ) -> None:
+    ) -> List[NetworkServiceCreateExtended]:
+        """Update Network services.
+
+        If the service does not exist, add it; otherwise, add new quotas and networks.
+        """
         for new_service in new_services:
             for service in current_services:
                 if service.endpoint == new_service.endpoint:
@@ -378,3 +397,25 @@ class ProviderThread:
                     break
             else:
                 current_services.append(new_service)
+        return current_services
+
+    def filter_projects_on_compute_service(
+        self, *, service: ComputeServiceCreateExtended, include_projects: List[str]
+    ) -> tuple[List[FlavorCreateExtended], List[ImageCreateExtended]]:
+        """Remove from compute resources projects not imported in the Fed-Reg.
+
+        Apply the filtering only on private flavors and images.
+
+        Since resources not matching at least the project used to discover them have
+        already been discarded, on a specific resource, after the filtering projects,
+        there can't be an empty projects list.
+        """
+        for flavor in filter(lambda x: not x.is_public, service.flavors):
+            flavor.projects = list(
+                filter(lambda x: x in include_projects, flavor.projects)
+            )
+        for image in filter(lambda x: not x.is_public, service.images):
+            image.projects = list(
+                filter(lambda x: x in include_projects, image.projects)
+            )
+        return service.flavors, service.images
