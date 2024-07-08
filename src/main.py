@@ -30,11 +30,10 @@ def main(log_level: str) -> None:
     site_configs = get_site_configs(yaml_files=yaml_files, log_level=log_level)
 
     # Prepare data (merge issuers and provider configurations)
-    prov_iss_list = []
+    prov_iss_list: list[ProviderThread]  = []
     for config in site_configs:
         prov_configs = [*config.openstack, *config.kubernetes]
         issuers = config.trusted_idps
-        prov_iss_list: list[ProviderThread] = []
         for conf in prov_configs:
             prov_iss_list.append(
                 ProviderThread(provider_conf=conf, issuers=issuers, log_level=log_level)

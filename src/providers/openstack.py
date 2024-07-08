@@ -101,12 +101,10 @@ class OpenstackData:
     def connect_to_provider(self, *, token: str) -> Connection:
         """Connect to Openstack provider"""
         self.logger.info(
-            "Connecting through IDP '%s' to openstack '%s' and region '%s'.",
-            (
-                self.identity_provider.endpoint,
-                self.provider_conf.name,
-                self.region_name,
-            ),
+            "Connecting through IDP '%s' to openstack '%s' and region '%s'",
+            self.identity_provider.endpoint,
+            self.provider_conf.name,
+            self.region_name,
         )
         self.logger.info("Accessing with project ID: %s", self.project_conf.id)
         auth_type = "v3oidcaccesstoken"
