@@ -1,5 +1,5 @@
 # Create requirements.txt from poetry dependencies
-FROM python:3.9-slim AS requirements
+FROM python:3.10-slim AS requirements
 
 WORKDIR /tmp
 
@@ -12,7 +12,7 @@ RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
 
 
 # Stage used in production
-FROM python:3.9-slim AS production
+FROM python:3.10 AS production
 
 WORKDIR /app/
 
@@ -26,7 +26,7 @@ RUN apt-get update \
     && apt-get clean
 
 # Upgrade pip and install requirements
-RUN pip install --user --upgrade pip==20.2.4 \
+RUN pip install --user --upgrade pip \
     && pip install --user --no-cache-dir --upgrade -r /app/requirements.txt
 
 ENV PYTHONPATH="${PYTHONPATH}:/app/src"
