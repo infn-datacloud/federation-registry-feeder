@@ -27,30 +27,35 @@ def main(log_level: str) -> None:
 
     # Read all yaml files containing providers configurations.
     yaml_files = get_conf_files(settings=settings, logger=logger)
-    site_configs = get_site_configs(yaml_files=yaml_files, log_level=log_level)
+    site_configs, error = get_site_configs(yaml_files=yaml_files, log_level=log_level)
 
     # Prepare data (merge issuers and provider configurations)
-    prov_iss_list: list[ProviderThread]  = []
+    pthreads: list[ProviderThread] = []
     for config in site_configs:
         prov_configs = [*config.openstack, *config.kubernetes]
         issuers = config.trusted_idps
         for conf in prov_configs:
-            prov_iss_list.append(
+            pthreads.append(
                 ProviderThread(provider_conf=conf, issuers=issuers, log_level=log_level)
             )
 
     # Multithreading read
     providers = []
     with ThreadPoolExecutor() as executor:
-        providers = executor.map(lambda x: x.get_provider(), prov_iss_list)
+        providers = executor.map(lambda x: x.get_provider(), pthreads)
     providers: list[ProviderCreateExtended] = list(filter(lambda x: x, providers))
+    error |= any([x.error for x in pthreads])
 
     # Update the Federation-Registry
     token = site_configs[0].trusted_idps[0].token if len(site_configs) > 0 else ""
     fed_reg_endpoints = infer_service_endpoints(settings=settings, logger=logger)
-    update_database(
+    error |= update_database(
         service_api_url=fed_reg_endpoints, token=token, items=providers, logger=logger
     )
+
+    if error:
+        logger.error("Found at least one error.")
+        exit(1)
 
 
 if __name__ == "__main__":
