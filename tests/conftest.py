@@ -1,3 +1,4 @@
+import logging
 import os
 from random import getrandbits, randint
 from typing import Any, Dict, List, Tuple, Union
@@ -80,7 +81,12 @@ def crud() -> CRUD:
     The CRUD object is used to interact with the federation-registry API.
     """
     read_header, write_header = get_read_write_headers(token=random_lower_string())
-    return CRUD(url=random_url(), read_headers=read_header, write_headers=write_header)
+    return CRUD(
+        url=random_url(),
+        read_headers=read_header,
+        write_headers=write_header,
+        logger=logging.getLogger(),
+    )
 
 
 @pytest.fixture
