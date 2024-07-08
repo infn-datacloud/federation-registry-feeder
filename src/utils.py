@@ -1,5 +1,6 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
+from logging import Logger
 from typing import Dict, List, Optional, Tuple
 
 import yaml
@@ -7,24 +8,24 @@ from fed_reg.provider.schemas_extended import ProviderCreateExtended
 
 from src.config import Settings, URLs
 from src.crud import CRUD
-from src.logger import logger
+from src.logger import create_logger
 from src.models.config import SiteConfig
 
 
-def infer_service_endpoints(*, settings: Settings) -> URLs:
-    """Detect Federation Registry endpoints from given configuration."""
+def infer_service_endpoints(*, settings: Settings, logger: Logger) -> URLs:
+    """Detect Federation-Registry endpoints from given configuration."""
     logger.info("Building Federation-Registry endpoints from configuration.")
-    logger.debug(f"{settings!r}")
+    logger.debug("%r", settings)
     d = {}
     for k, v in settings.api_ver.dict().items():
         d[k.lower()] = os.path.join(settings.FED_REG_API_URL, f"{v}", f"{k.lower()}")
     endpoints = URLs(**d)
     logger.info("Federation-Registry endpoints detected")
-    logger.debug(f"{endpoints!r}")
+    logger.debug("%r", endpoints)
     return endpoints
 
 
-def get_conf_files(*, settings: Settings) -> List[str]:
+def get_conf_files(*, settings: Settings, logger: Logger) -> List[str]:
     """Get the list of the yaml files with the provider configurations."""
     logger.info("Detecting yaml files with provider configurations.")
     file_extension = ".config.yaml"
@@ -33,13 +34,16 @@ def get_conf_files(*, settings: Settings) -> List[str]:
     )
     yaml_files = [os.path.join(settings.PROVIDERS_CONF_DIR, i) for i in yaml_files]
     logger.info("Files retrieved")
-    logger.debug(f"{yaml_files}")
+    logger.debug(yaml_files)
     return yaml_files
 
 
-def load_config(*, fname: str) -> Optional[SiteConfig]:
+def load_config(
+    *, fname: str, log_level: str | int | None = None
+) -> Optional[SiteConfig]:
     """Load provider configuration from yaml file."""
-    logger.info(f"Loading provider configuration from file: {fname}")
+    logger = create_logger(f"Yaml file {fname}", level=log_level)
+    logger.info("Loading provider configuration from file")
     with open(fname) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
@@ -47,7 +51,7 @@ def load_config(*, fname: str) -> Optional[SiteConfig]:
         try:
             config = SiteConfig(**config)
             logger.info("Configuration loaded")
-            logger.debug(f"{config!r}")
+            logger.debug("%r", config)
         except ValueError as e:
             logger.error(e)
             config = None
@@ -57,11 +61,15 @@ def load_config(*, fname: str) -> Optional[SiteConfig]:
     return config
 
 
-def get_site_configs(*, yaml_files: List[str]) -> List[SiteConfig]:
+def get_site_configs(
+    *, yaml_files: List[str], log_level: str | int | None = None
+) -> List[SiteConfig]:
     """Create a list of SiteConfig from a list of yaml files."""
     with ThreadPoolExecutor() as executor:
-        site_configs = executor.map(lambda x: load_config(fname=x), yaml_files)
-    return list(filter(lambda x: x, site_configs))
+        site_configs = executor.map(
+            lambda x: load_config(fname=x, log_level=log_level), yaml_files
+        )
+    return list(filter(lambda x: x is not None, site_configs))
 
 
 def get_read_write_headers(*, token: str) -> Tuple[Dict[str, str], Dict[str, str]]:
@@ -76,7 +84,11 @@ def get_read_write_headers(*, token: str) -> Tuple[Dict[str, str], Dict[str, str
 
 
 def update_database(
-    *, service_api_url: URLs, items: List[ProviderCreateExtended], token: str
+    *,
+    service_api_url: URLs,
+    items: List[ProviderCreateExtended],
+    token: str,
+    logger: Logger,
 ) -> None:
     """Update the Federation-Registry data.
 
@@ -93,9 +105,10 @@ def update_database(
         url=service_api_url.providers,
         read_headers=read_header,
         write_headers=write_header,
+        logger=logger,
     )
 
-    logger.info("Retrieving data from Federation Registry")
+    logger.info("Retrieving data from Federation-Registry")
     db_items = {db_item.name: db_item for db_item in crud.read()}
     for item in items:
         db_item = db_items.pop(item.name, None)

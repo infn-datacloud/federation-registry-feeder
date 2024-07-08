@@ -13,11 +13,11 @@ class SiteConfig(BaseModel):
     )
     openstack: List[Openstack] = Field(
         default_factory=list,
-        description="Openstack providers to integrate in the Federation Registry",
+        description="Openstack providers to integrate in the Federation-Registry",
     )
     kubernetes: List[Kubernetes] = Field(
         default_factory=list,
-        description="Kubernetes providers to integrate in the Federation Registry",
+        description="Kubernetes providers to integrate in the Federation-Registry",
     )
 
     @validator("trusted_idps")
