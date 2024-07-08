@@ -119,36 +119,71 @@ class OpenstackData:
             timeout=TIMEOUT,
         )
 
-    def get_block_storage_quotas(self) -> BlockStorageQuotaCreateExtended:
+    def get_block_storage_quotas(
+        self,
+    ) -> tuple[BlockStorageQuotaCreateExtended, BlockStorageQuotaCreateExtended]:
         """Retrieve current project accessible block storage quota"""
         self.logger.info("Retrieve current project accessible block storage quotas")
         try:
-            quota = self.conn.block_storage.get_quota_set(self.conn.current_project_id)
+            quota = self.conn.block_storage.get_quota_set(
+                self.conn.current_project_id, usage=True
+            )
             data = quota.to_dict()
         except ForbiddenException as e:
             self.logger.error(e)
             data = {}
         self.logger.debug("Block storage service quotas=%s", data)
+        data_limits = {**data}
+        data_usage = data_limits.pop("usage", {})
+        self.logger.debug("Block storage service quota limits=%s", data_limits)
+        self.logger.debug("Block storage service quota usage=%s", data_usage)
         return BlockStorageQuotaCreateExtended(
-            **data, project=self.conn.current_project_id
+            **data_limits, project=self.conn.current_project_id
+        ), BlockStorageQuotaCreateExtended(
+            **data_usage, project=self.conn.current_project_id, usage=True
         )
 
-    def get_compute_quotas(self) -> ComputeQuotaCreateExtended:
+    def get_compute_quotas(
+        self,
+    ) -> tuple[ComputeQuotaCreateExtended, ComputeQuotaCreateExtended]:
         """Retrieve current project accessible compute quota"""
         self.logger.info("Retrieve current project accessible compute quotas")
-        quota = self.conn.compute.get_quota_set(self.conn.current_project_id)
+        quota = self.conn.compute.get_quota_set(
+            self.conn.current_project_id,
+            base_path="/os-quota-sets/%(project_id)s/detail",
+        )
         data = quota.to_dict()
         self.logger.debug("Compute service quotas=%s", data)
-        return ComputeQuotaCreateExtended(**data, project=self.conn.current_project_id)
+        data_limits = {**data}
+        data_usage = data_limits.pop("usage", {})
+        self.logger.debug("Compute service quota limits=%s", data_limits)
+        self.logger.debug("Compute service quota usage=%s", data_usage)
+        return ComputeQuotaCreateExtended(
+            **data_limits, project=self.conn.current_project_id
+        ), ComputeQuotaCreateExtended(
+            **data_usage, project=self.conn.current_project_id, usage=True
+        )
 
     def get_network_quotas(self) -> NetworkQuotaCreateExtended:
         """Retrieve current project accessible network quota"""
         self.logger.info("Retrieve current project accessible network quotas")
-        quota = self.conn.network.get_quota(self.conn.current_project_id)
+        quota = self.conn.network.get_quota(self.conn.current_project_id, details=True)
         data = quota.to_dict()
-        data["public_ips"] = data.pop("floating_ips")
         self.logger.debug("Network service quotas=%s", data)
-        return NetworkQuotaCreateExtended(**data, project=self.conn.current_project_id)
+        data_limits = {}
+        data_usage = {}
+        for k, v in data.items():
+            new_k = "public_ips" if k == "floating_ips" else k
+            if v is not None:
+                data_limits[new_k] = v.get("limit")
+                data_usage[new_k] = v.get("used")
+        self.logger.debug("Network service quota limits=%s", data_limits)
+        self.logger.debug("Network service quota usage=%s", data_usage)
+        return NetworkQuotaCreateExtended(
+            **data_limits, project=self.conn.current_project_id
+        ), NetworkQuotaCreateExtended(
+            **data_usage, project=self.conn.current_project_id, usage=True
+        )
 
     def get_flavor_extra_specs(self, extra_specs: Dict[str, Any]) -> Dict[str, Any]:
         """Format flavor extra specs into a dictionary."""
@@ -266,7 +301,7 @@ class OpenstackData:
         for network in self.conn.network.networks(
             status="active", tag=None if len(tags) == 0 else tags
         ):
-            self.logger.debug("Network received data=%s", network)
+            self.logger.debug("Network received data=%r", network)
             project = None
             if not network.is_shared:
                 if self.conn.current_project_id != network.project_id:
@@ -320,7 +355,7 @@ class OpenstackData:
             endpoint=os.path.dirname(endpoint),
             name=BlockStorageServiceName.OPENSTACK_CINDER,
         )
-        block_storage_service.quotas = [self.get_block_storage_quotas()]
+        block_storage_service.quotas = [*self.get_block_storage_quotas()]
         if self.project_conf.per_user_limits.block_storage:
             block_storage_service.quotas.append(
                 BlockStorageQuotaCreateExtended(
@@ -351,7 +386,7 @@ class OpenstackData:
         )
         compute_service.flavors = self.get_flavors()
         compute_service.images = self.get_images(tags=self.provider_conf.image_tags)
-        compute_service.quotas = [self.get_compute_quotas()]
+        compute_service.quotas = [*self.get_compute_quotas()]
         if self.project_conf.per_user_limits.compute:
             compute_service.quotas.append(
                 ComputeQuotaCreateExtended(
@@ -380,7 +415,7 @@ class OpenstackData:
             proxy=self.project_conf.private_net_proxy,
             tags=self.provider_conf.network_tags,
         )
-        network_service.quotas = [self.get_network_quotas()]
+        network_service.quotas = [*self.get_network_quotas()]
         if self.project_conf.per_user_limits.network:
             network_service.quotas.append(
                 NetworkQuotaCreateExtended(
