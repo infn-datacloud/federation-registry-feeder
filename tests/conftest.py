@@ -16,6 +16,7 @@ from fed_reg.provider.schemas_extended import (
     ProviderCreateExtended,
     ProviderRead,
     ProviderReadExtended,
+    RegionCreateExtended,
     SLACreateExtended,
     UserGroupCreateExtended,
 )
@@ -395,6 +396,23 @@ def identity_provider_create(
         endpoint=random_url(),
         group_claim=random_lower_string(),
         relationship=auth_method_create,
+    )
+
+
+@pytest.fixture
+def region_create(
+    block_storage_service_create: BlockStorageServiceCreateExtended,
+    compute_service_create: ComputeServiceCreateExtended,
+    identity_service_create: IdentityServiceCreate,
+    network_service_create: NetworkServiceCreateExtended,
+):
+    """Fixture with a RegionCreateExtended"""
+    return RegionCreateExtended(
+        name=random_lower_string(),
+        block_storage_services=[block_storage_service_create],
+        compute_services=[compute_service_create],
+        identity_services=[identity_service_create],
+        network_services=[network_service_create],
     )
 
 
