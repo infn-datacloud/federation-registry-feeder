@@ -232,73 +232,10 @@ class ProviderThread:
 
         # Merge regions, identity providers and projects retrieved from previous
         # parallel step.
-        identity_providers: dict[str, IdentityProviderCreateExtended] = {}
-        projects: dict[str, ProjectCreate] = {}
-        regions: dict[str, RegionCreateExtended] = {}
-        for sibling in siblings:
-            projects[sibling.project.uuid] = sibling.project
-            if identity_providers.get(sibling.identity_provider.endpoint) is None:
-                identity_providers[
-                    sibling.identity_provider.endpoint
-                ] = sibling.identity_provider
-            else:
-                identity_providers[
-                    sibling.identity_provider.endpoint
-                ] = self.update_idp_user_groups(
-                    current_issuer=identity_providers[
-                        sibling.identity_provider.endpoint
-                    ],
-                    new_issuer=sibling.identity_provider,
-                )
-            if regions.get(sibling.region.name) is None:
-                regions[sibling.region.name] = sibling.region
-            else:
-                regions[sibling.region.name] = self.update_region_services(
-                    current_region=regions[sibling.region.name],
-                    new_region=sibling.region,
-                )
-
-        # Filter non-federated projects from shared resources
-        for region in regions.values():
-            for service in region.compute_services:
-                flavors, images = self.filter_projects_on_compute_service(
-                    service=service, include_projects=projects.keys()
-                )
-                service.flavors = flavors
-                service.images = images
+        identity_providers, projects, regions = self.merge_data(siblings)
 
         # Send data to kafka
-        if self.kafka_prod is not None:
-            for region in regions.values():
-                for service in [
-                    *region.block_storage_services,
-                    *region.compute_services,
-                    *region.network_services,
-                ]:
-                    data_list = {}
-                    for quota in service.quotas:
-                        data_list[quota.project] = data_list.get(quota.project, {})
-                        for k, v in quota.dict(
-                            exclude={
-                                "description",
-                                "per_user",
-                                "project",
-                                "type",
-                                "usage",
-                            }
-                        ).items():
-                            data_list[quota.project][
-                                f"usage_{k}" if quota.usage else f"limit_{k}"
-                            ] = v
-                    for project, data in data_list.items():
-                        data = {
-                            **data,
-                            "provider": self.provider_conf.name,
-                            "project": project,
-                            "service": service.endpoint,
-                            "type": service.type,
-                        }
-                        self.kafka_prod.send(data)
+        self.send_kafka_messages(regions.values())
 
         return ProviderCreateExtended(
             name=self.provider_conf.name,
@@ -470,3 +407,79 @@ class ProviderThread:
                 filter(lambda x: x in include_projects, image.projects)
             )
         return service.flavors, service.images
+
+    def merge_data(
+        self, siblings: list[ProviderSiblings]
+    ) -> tuple[list[IdentityProviderCreateExtended], list[ProjectCreate], list[Region]]:
+        """Merge regions, identity providers and projects."""
+        identity_providers: dict[str, IdentityProviderCreateExtended] = {}
+        projects: dict[str, ProjectCreate] = {}
+        regions: dict[str, RegionCreateExtended] = {}
+
+        for sibling in siblings:
+            projects[sibling.project.uuid] = sibling.project
+            if identity_providers.get(sibling.identity_provider.endpoint) is None:
+                identity_providers[
+                    sibling.identity_provider.endpoint
+                ] = sibling.identity_provider
+            else:
+                identity_providers[
+                    sibling.identity_provider.endpoint
+                ] = self.update_idp_user_groups(
+                    current_issuer=identity_providers[
+                        sibling.identity_provider.endpoint
+                    ],
+                    new_issuer=sibling.identity_provider,
+                )
+            if regions.get(sibling.region.name) is None:
+                regions[sibling.region.name] = sibling.region
+            else:
+                regions[sibling.region.name] = self.update_region_services(
+                    current_region=regions[sibling.region.name],
+                    new_region=sibling.region,
+                )
+
+        # Filter non-federated projects from shared resources
+        for region in regions.values():
+            for service in region.compute_services:
+                flavors, images = self.filter_projects_on_compute_service(
+                    service=service, include_projects=projects.keys()
+                )
+                service.flavors = flavors
+                service.images = images
+
+        return identity_providers, projects, regions
+
+    def send_kafka_messages(self, regions: list[RegionCreateExtended]):
+        """Organize quotas data and send them to kafka."""
+        if self.kafka_prod is not None:
+            for region in regions:
+                for service in [
+                    *region.block_storage_services,
+                    *region.compute_services,
+                    *region.network_services,
+                ]:
+                    data_list = {}
+                    for quota in service.quotas:
+                        data_list[quota.project] = data_list.get(quota.project, {})
+                        for k, v in quota.dict(
+                            exclude={
+                                "description",
+                                "per_user",
+                                "project",
+                                "type",
+                                "usage",
+                            }
+                        ).items():
+                            data_list[quota.project][
+                                f"usage_{k}" if quota.usage else f"limit_{k}"
+                            ] = v
+                    for project, data in data_list.items():
+                        data = {
+                            **data,
+                            "provider": self.provider_conf.name,
+                            "project": project,
+                            "service": service.endpoint,
+                            "type": service.type,
+                        }
+                        self.kafka_prod.send(data)
