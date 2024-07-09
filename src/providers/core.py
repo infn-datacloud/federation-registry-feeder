@@ -17,6 +17,7 @@ from fed_reg.provider.schemas_extended import (
     UserGroupCreateExtended,
 )
 
+from src.kafka_conn import Producer
 from src.logger import create_logger
 from src.models.identity_provider import SLA, Issuer, UserGroup
 from src.models.provider import Project, Provider, ProviderSiblings, Region
@@ -33,7 +34,7 @@ class ConnectionThread:
         region_conf: Region,
         project_conf: Project,
         issuers: List[Issuer],
-        log_level: str,
+        log_level: str | int | None = None,
     ) -> None:
         self.provider_conf = provider_conf
         self.region_conf = region_conf
@@ -174,10 +175,16 @@ class ProviderThread:
     """Provider data shared between the same thread."""
 
     def __init__(
-        self, *, provider_conf: Provider, issuers: List[Issuer], log_level: str
+        self,
+        *,
+        provider_conf: Provider,
+        issuers: List[Issuer],
+        kafka_prod: Producer | None = None,
+        log_level: str | int | None = None,
     ) -> None:
         self.provider_conf = provider_conf
         self.issuers = issuers
+        self.kafka_prod = kafka_prod
         self.log_level = log_level
         self.logger = create_logger(
             f"Provider {self.provider_conf.name}", level=log_level
@@ -223,6 +230,8 @@ class ProviderThread:
         )
         self.error = any([x.error for x in connections])
 
+        # Merge regions, identity providers and projects retrieved from previous
+        # parallel step.
         identity_providers: dict[str, IdentityProviderCreateExtended] = {}
         projects: dict[str, ProjectCreate] = {}
         regions: dict[str, RegionCreateExtended] = {}
@@ -249,6 +258,7 @@ class ProviderThread:
                     new_region=sibling.region,
                 )
 
+        # Filter non-federated projects from shared resources
         for region in regions.values():
             for service in region.compute_services:
                 flavors, images = self.filter_projects_on_compute_service(
@@ -256,6 +266,39 @@ class ProviderThread:
                 )
                 service.flavors = flavors
                 service.images = images
+
+        # Send data to kafka
+        if self.kafka_prod is not None:
+            for region in regions.values():
+                for service in [
+                    *region.block_storage_services,
+                    *region.compute_services,
+                    *region.network_services,
+                ]:
+                    data_list = {}
+                    for quota in service.quotas:
+                        data_list[quota.project] = data_list.get(quota.project, {})
+                        for k, v in quota.dict(
+                            exclude={
+                                "description",
+                                "per_user",
+                                "project",
+                                "type",
+                                "usage",
+                            }
+                        ).items():
+                            data_list[quota.project][
+                                f"usage_{k}" if quota.usage else f"limit_{k}"
+                            ] = v
+                    for project, data in data_list.items():
+                        data = {
+                            **data,
+                            "provider": self.provider_conf.name,
+                            "project": project,
+                            "service": service.endpoint,
+                            "type": service.type,
+                        }
+                        self.kafka_prod.send(data)
 
         return ProviderCreateExtended(
             name=self.provider_conf.name,
