@@ -1,7 +1,7 @@
+import logging
 from typing import List
 from unittest.mock import Mock, patch
 
-from fed_reg.provider.schemas_extended import ProviderCreateExtended
 from pytest_cases import parametrize_with_cases
 
 from src.config import URLs
@@ -26,17 +26,14 @@ class CaseSiteConfigs:
 
 
 @patch("src.main.update_database")
-@patch("src.main.get_provider")
 @patch("src.main.get_site_configs")
 @patch("src.main.infer_service_endpoints")
 @parametrize_with_cases("site_configs", cases=CaseSiteConfigs)
 def test_main(
     mock_infer_urls: Mock,
     mock_load_conf: Mock,
-    mock_get_prov: Mock,
     mock_edit_db: Mock,
     service_endpoints: URLs,
-    provider_create: ProviderCreateExtended,
     site_configs: List[SiteConfig],
 ) -> None:
     """text the execution of the main function.
@@ -46,9 +43,8 @@ def test_main(
     """
     mock_infer_urls.return_value = service_endpoints
     mock_load_conf.return_value = site_configs
-    mock_get_prov.return_value = provider_create
     mock_edit_db.return_value = None
 
-    main()
+    main(log_level=logging.INFO)
 
     mock_edit_db.assert_called_once()

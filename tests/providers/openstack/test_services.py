@@ -143,10 +143,11 @@ def test_retrieve_block_storage_service(
     assert item.endpoint == endpoint
     assert item.type == ServiceType.BLOCK_STORAGE.value
     assert item.name == BlockStorageServiceName.OPENSTACK_CINDER.value
-    assert len(item.quotas) == 2 if user_quota else 1
+    assert len(item.quotas) == 3 if user_quota else 2
+    assert not item.quotas[0].per_user
+    assert item.quotas[1].usage
     if user_quota:
-        assert not item.quotas[0].per_user
-        assert item.quotas[1].per_user
+        assert item.quotas[2].per_user
 
 
 @patch("src.providers.openstack.Connection.compute")
@@ -169,10 +170,11 @@ def test_retrieve_compute_service(
     assert item.endpoint == endpoint
     assert item.type == ServiceType.COMPUTE.value
     assert item.name == ComputeServiceName.OPENSTACK_NOVA.value
-    assert len(item.quotas) == 2 if user_quota else 1
+    assert len(item.quotas) == 3 if user_quota else 2
+    assert not item.quotas[0].per_user
+    assert item.quotas[1].usage
     if user_quota:
-        assert not item.quotas[0].per_user
-        assert item.quotas[1].per_user
+        assert item.quotas[2].per_user
 
 
 @patch("src.providers.openstack.Connection.network")
@@ -202,10 +204,11 @@ def test_retrieve_network_service(
     assert item.endpoint == endpoint
     assert item.type == ServiceType.NETWORK.value
     assert item.name == NetworkServiceName.OPENSTACK_NEUTRON.value
-    assert len(item.quotas) == 2 if user_quota else 1
+    assert len(item.quotas) == 3 if user_quota else 2
+    assert not item.quotas[0].per_user
+    assert item.quotas[1].usage
     if user_quota:
-        assert not item.quotas[0].per_user
-        assert item.quotas[1].per_user
+        assert item.quotas[2].per_user
 
 
 @patch("src.providers.openstack.Connection.compute.get_flavor_access")

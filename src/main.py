@@ -1,9 +1,12 @@
-import logging
 from concurrent.futures import ThreadPoolExecutor
 
+from fed_reg.provider.schemas_extended import ProviderCreateExtended
+
 from src.config import get_settings
-from src.logger import logger
-from src.providers.core import get_provider
+from src.kafka_conn import Producer
+from src.logger import create_logger
+from src.parser import parser
+from src.providers.core import ProviderThread
 from src.utils import (
     get_conf_files,
     get_site_configs,
@@ -12,33 +15,62 @@ from src.utils import (
 )
 
 
-def main() -> None:
-    # Load Federation Registry configuration, infer Federation Registry endpoints and
-    # read all yaml files containing providers configurations.
-    settings = get_settings()
-    yaml_files = get_conf_files(settings=settings)
-    site_configs = get_site_configs(yaml_files=yaml_files)
+def main(log_level: str) -> None:
+    """Main function.
 
-    prov_iss_list = []
+    - Read yaml files
+    - Organize data
+    - Connect to federated provider and retrieve resources
+    - Update Federation-Registry
+    """
+    logger = create_logger("Federation-Registry-Feeder", level=log_level)
+    settings = get_settings()
+
+    # Create kafka producer if needed
+    kafka_prod = None
+    if not (settings.KAFKA_SERVER_URL is None or settings.KAFKA_TOPIC is None):
+        kafka_prod = Producer(
+            server_url=settings.KAFKA_SERVER_URL, topic=settings.KAFKA_TOPIC
+        )
+
+    # Read all yaml files containing providers configurations.
+    yaml_files = get_conf_files(settings=settings, logger=logger)
+    site_configs, error = get_site_configs(yaml_files=yaml_files, log_level=log_level)
+
+    # Prepare data (merge issuers and provider configurations)
+    pthreads: list[ProviderThread] = []
     for config in site_configs:
         prov_configs = [*config.openstack, *config.kubernetes]
         issuers = config.trusted_idps
-        prov_iss_list += [
-            {"provider_conf": conf, "issuers": issuers} for conf in prov_configs
-        ]
+        for conf in prov_configs:
+            pthreads.append(
+                ProviderThread(
+                    provider_conf=conf,
+                    issuers=issuers,
+                    kafka_prod=kafka_prod,
+                    log_level=log_level,
+                )
+            )
 
-    # Multithreading read.
+    # Multithreading read
     providers = []
     with ThreadPoolExecutor() as executor:
-        providers = executor.map(lambda x: get_provider(**x), prov_iss_list)
-    providers = list(filter(lambda x: x, providers))
+        providers = executor.map(lambda x: x.get_provider(), pthreads)
+    providers: list[ProviderCreateExtended] = list(filter(lambda x: x, providers))
+    error |= any([x.error for x in pthreads])
 
-    # Update the Federation Registry
+    # Update the Federation-Registry
     token = site_configs[0].trusted_idps[0].token if len(site_configs) > 0 else ""
-    fed_reg_endpoints = infer_service_endpoints(settings=settings)
-    update_database(service_api_url=fed_reg_endpoints, token=token, items=providers)
+    fed_reg_endpoints = infer_service_endpoints(settings=settings, logger=logger)
+    error |= update_database(
+        service_api_url=fed_reg_endpoints, token=token, items=providers, logger=logger
+    )
+
+    if error:
+        logger.error("Found at least one error.")
+        exit(1)
 
 
 if __name__ == "__main__":
-    logger.setLevel(logging.INFO)
-    main()
+    args = parser.parse_args()
+    main(args.loglevel.upper())

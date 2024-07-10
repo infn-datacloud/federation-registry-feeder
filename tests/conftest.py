@@ -1,3 +1,4 @@
+import logging
 import os
 from random import getrandbits, randint
 from typing import Any, Dict, List, Tuple, Union
@@ -16,6 +17,7 @@ from fed_reg.provider.schemas_extended import (
     ProviderCreateExtended,
     ProviderRead,
     ProviderReadExtended,
+    RegionCreateExtended,
     SLACreateExtended,
     UserGroupCreateExtended,
 )
@@ -31,7 +33,7 @@ from openstack.compute.v2.flavor import Flavor as OpenstackFlavor
 from openstack.compute.v2.quota_set import QuotaSet as OpenstackComputeQuotaSet
 from openstack.image.v2.image import Image as OpenstackImage
 from openstack.network.v2.network import Network as OpenstackNetwork
-from openstack.network.v2.quota import Quota as OpenstackNetworkQuota
+from openstack.network.v2.quota import QuotaDetails as OpenstackNetworkQuota
 from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.config import APIVersions, Settings, URLs
@@ -79,7 +81,12 @@ def crud() -> CRUD:
     The CRUD object is used to interact with the federation-registry API.
     """
     read_header, write_header = get_read_write_headers(token=random_lower_string())
-    return CRUD(url=random_url(), read_headers=read_header, write_headers=write_header)
+    return CRUD(
+        url=random_url(),
+        read_headers=read_header,
+        write_headers=write_header,
+        logger=logging.getLogger(),
+    )
 
 
 @pytest.fixture
@@ -398,6 +405,23 @@ def identity_provider_create(
     )
 
 
+@pytest.fixture
+def region_create(
+    block_storage_service_create: BlockStorageServiceCreateExtended,
+    compute_service_create: ComputeServiceCreateExtended,
+    identity_service_create: IdentityServiceCreate,
+    network_service_create: NetworkServiceCreateExtended,
+):
+    """Fixture with a RegionCreateExtended"""
+    return RegionCreateExtended(
+        name=random_lower_string(),
+        block_storage_services=[block_storage_service_create],
+        compute_services=[compute_service_create],
+        identity_services=[identity_service_create],
+        network_services=[network_service_create],
+    )
+
+
 # Openstack specific
 
 
@@ -695,7 +719,7 @@ def openstack_compute_quotas_dict() -> Dict[str, int]:
 def openstack_network_quotas_dict() -> Dict[str, int]:
     """Dict with the network quotas attributes."""
     return {
-        "check_limit": False,
+        # "check_limit": False,
         "floating_ips": randint(0, 100),
         "health_monitors": randint(0, 100),
         "listeners": randint(0, 100),
@@ -717,16 +741,26 @@ def openstack_network_quotas_dict() -> Dict[str, int]:
 @pytest.fixture
 def openstack_block_storage_quotas() -> OpenstackBlockStorageQuotaSet:
     """Fixture with the block storage quotas."""
-    return OpenstackBlockStorageQuotaSet(**openstack_block_storage_quotas_dict())
+    return OpenstackBlockStorageQuotaSet(
+        **openstack_block_storage_quotas_dict(),
+        usage=openstack_block_storage_quotas_dict(),
+    )
 
 
 @pytest.fixture
 def openstack_compute_quotas() -> OpenstackComputeQuotaSet:
     """Fixture with the compute quotas."""
-    return OpenstackComputeQuotaSet(**openstack_compute_quotas_dict())
+    return OpenstackComputeQuotaSet(
+        **openstack_compute_quotas_dict(), usage=openstack_compute_quotas_dict()
+    )
 
 
 @pytest.fixture
 def openstack_network_quotas() -> OpenstackNetworkQuota:
     """Fixture with the network quotas."""
-    return OpenstackNetworkQuota(**openstack_network_quotas_dict())
+    d = {}
+    limit_dict = openstack_network_quotas_dict()
+    usage_dict = openstack_network_quotas_dict()
+    for k in limit_dict.keys():
+        d[k] = {"limit": limit_dict[k], "used": usage_dict[k]}
+    return OpenstackNetworkQuota(**d)
