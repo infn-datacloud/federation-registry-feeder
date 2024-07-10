@@ -10,7 +10,7 @@ from fed_reg.provider.schemas_extended import (
     IdentityServiceCreate,
     ImageCreateExtended,
     NetworkServiceCreateExtended,
-    ObjectStorageServiceCreateExtended,
+    ObjectStoreServiceCreateExtended,
     ProjectCreate,
     ProviderCreateExtended,
     RegionCreateExtended,
@@ -290,9 +290,9 @@ class ProviderThread:
             current_services=current_region.network_services,
             new_services=new_region.network_services,
         )
-        current_region.object_storage_services = self.update_region_object_store_services(
-            current_services=current_region.object_storage_services,
-            new_services=new_region.object_storage_services,
+        current_region.object_store_services = self.update_region_object_store_services(
+            current_services=current_region.object_store_services,
+            new_services=new_region.object_store_services,
         )
         return current_region
 
@@ -396,9 +396,9 @@ class ProviderThread:
     def update_region_object_store_services(
         self,
         *,
-        current_services: List[ObjectStorageServiceCreateExtended],
-        new_services: List[ObjectStorageServiceCreateExtended],
-    ) -> List[ObjectStorageServiceCreateExtended]:
+        current_services: List[ObjectStoreServiceCreateExtended],
+        new_services: List[ObjectStoreServiceCreateExtended],
+    ) -> List[ObjectStoreServiceCreateExtended]:
         """Update Object store services.
 
         If the service does not exist, add it; otherwise, add new quotas and networks.
