@@ -35,6 +35,7 @@ from openstack.connection import Connection
 from openstack.exceptions import ForbiddenException
 from openstack.image.v2.image import Image
 from openstack.network.v2.network import Network
+from requests import Response
 
 from src.models.config import Openstack
 from src.models.provider import PrivateNetProxy, Project
@@ -191,20 +192,18 @@ class OpenstackData:
         self,
     ) -> tuple[ObjectStoreQuotaCreateExtended, ObjectStoreQuotaCreateExtended]:
         self.logger.info("Retrieve current project accessible object storage quotas")
-        try:
-            # TODO: This method does not exist.
-            # TODO: Understand how to detect if a project has access to the object store
-            # quota = conn.object_store.get_quota(conn.current_project_id)
-            # data = quota.to_dict()
-            data = {}
-            print(self.conn.object_store.get_info())
-        except ForbiddenException as e:
-            self.logger.error(e)
-            self.error = True
-            data = {}
-        self.logger.debug("Object storage service quotas=%s", data)
-        data_limits = {**data}
-        data_usage = data_limits.pop("usage", {})
+        resp: Response = self.conn.object_store.get(self.conn.object_store.get_endpoint())
+        info = self.conn.object_store.get_info()
+        self.logger.debug("Object storage service headers=%s", resp.headers)
+        self.logger.debug("Object storage service info=%s", info)
+        data_limits = {}
+        data_usage = {}
+        data_usage["bytes"] = resp.headers.pop("X-Account-Bytes-Used", 0)
+        data_usage["containers"] = resp.headers.pop("X-Account-Container-Count", 0)
+        data_usage["objects"] = resp.headers.pop("X-Account-Object-Count", 0)
+        data_limits["bytes"] = resp.headers.pop("X-Account-Meta-Quota-Bytes", -1)
+        data_limits["containers"] = info.swift.pop("container_listing_limit", 10000)
+        data_limits["objects"] = -1
         self.logger.debug("Block storage service quota limits=%s", data_limits)
         self.logger.debug("Block storage service quota usage=%s", data_usage)
         return ObjectStoreQuotaCreateExtended(
@@ -489,6 +488,7 @@ class OpenstackData:
             name=ObjectStoreServiceName.OPENSTACK_SWIFT,
         )
         object_store_service.quotas = [*self.get_object_store_quotas()]
+        print(object_store_service.quotas)
         if self.project_conf.per_user_limits.object_store:
             object_store_service.quotas.append(
                 ObjectStoreQuotaCreateExtended(
