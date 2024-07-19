@@ -488,7 +488,6 @@ class OpenstackData:
             name=ObjectStoreServiceName.OPENSTACK_SWIFT,
         )
         object_store_service.quotas = [*self.get_object_store_quotas()]
-        print(object_store_service.quotas)
         if self.project_conf.per_user_limits.object_store:
             object_store_service.quotas.append(
                 ObjectStoreQuotaCreateExtended(
