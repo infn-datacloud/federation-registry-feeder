@@ -56,7 +56,7 @@ pipeline {
                 sonarsource/sonar-scanner-cli \
                 -D sonar.projectKey=${SONAR_ORGANIZATION}_${SONAR_PROJECT} \
                 -D sonar.organization=${SONAR_ORGANIZATION} \
-                -D sonar.sources=fed_reg \
+                -D sonar.sources=src \
                 -D sonar.tests=tests \
                 -D sonar.python.version='3.10, 3.11'
                 '''
