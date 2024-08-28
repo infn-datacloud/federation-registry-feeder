@@ -16,6 +16,8 @@ def retrieve_token(endpoint: str):
     If the container name is set use perform a docker exec command, otherwise use a
     local instance."""
     settings = get_settings()
+    min_valid_period = 5 * 60  # 5 min
+
     if settings.OIDC_AGENT_CONTAINER_NAME is not None:
         token_cmd = subprocess.run(
             [
@@ -23,6 +25,7 @@ def retrieve_token(endpoint: str):
                 "exec",
                 settings.OIDC_AGENT_CONTAINER_NAME,
                 "oidc-token",
+                f"--time={min_valid_period}",
                 endpoint,
             ],
             capture_output=True,
@@ -30,8 +33,11 @@ def retrieve_token(endpoint: str):
         )
         if token_cmd.returncode > 0:
             raise ValueError(token_cmd.stderr if token_cmd.stderr else token_cmd.stdout)
-        return token_cmd.stdout.strip("\n")
-    return get_access_token_by_issuer_url(endpoint)
+        token = token_cmd.stdout.strip("\n")
+        return token
+
+    token = get_access_token_by_issuer_url(endpoint, min_valid_period=min_valid_period)
+    return token
 
 
 class SLA(SLABase):
