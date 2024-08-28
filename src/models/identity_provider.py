@@ -31,7 +31,9 @@ def retrieve_token(endpoint: str):
         if token_cmd.returncode > 0:
             raise ValueError(token_cmd.stderr if token_cmd.stderr else token_cmd.stdout)
         return token_cmd.stdout.strip("\n")
-    return get_access_token_by_issuer_url(endpoint)
+
+    min_valid_period = 5 * 60  # 5 min
+    return get_access_token_by_issuer_url(endpoint, min_valid_period=min_valid_period)
 
 
 class SLA(SLABase):
