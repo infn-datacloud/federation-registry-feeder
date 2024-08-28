@@ -11,18 +11,20 @@ void pushImage(String srcImage, String targetImageName, String registryUrl, Stri
     }
 }
 
-void updateDockeHubReadMe(String imageName, String registryUser, String registryPassword) {
+void updateReadMe(String provider, String imageName, String registryUser, String registryPassword, String registryHost) {
     // Login to target registry, retrieve docker image and push it to the registry
     sh """docker run --rm \
         -v ${WORKSPACE}:/myvol \
         -e DOCKER_USER=${registryUser} \
         -e DOCKER_PASS=${registryPassword} \
         chko/docker-pushrm:1 \
+        --provider ${provider} \
         --file /myvol/README.md \
         --debug \
-        ${imageName}
+        ${registryHost}/${imageName}
         """
 }
+
 
 pipeline {
     agent {
@@ -58,12 +60,21 @@ pipeline {
             parallel {
                 stage('Harbor') {
                     steps {
-                        pushImage(
-                            "${PROJECT_NAME}",
-                            "${HARBOR_ORGANIZATION}/${PROJECT_NAME}",
-                            "${HARBOR_URL}",
-                            "${HARBOR_CREDENTIALS_NAME}",
-                        )
+                        script {
+                            pushImage(
+                                "${PROJECT_NAME}",
+                                "${HARBOR_ORGANIZATION}/${PROJECT_NAME}",
+                                "${HARBOR_URL}",
+                                "${HARBOR_CREDENTIALS_NAME}",
+                            )
+                            updateReadMe(
+                                'harbor2',
+                                "${HARBOR_ORGANIZATION}/${PROJECT_NAME}",
+                                '${HARBOR_CREDENTIALS_USR}',
+                                '${HARBOR_CREDENTIALS_PSW}',
+                                'harbor.cloud.infn.it',
+                            )
+                        }
                     }
                 }
                 stage('DockerHub') {
@@ -75,10 +86,12 @@ pipeline {
                                 "${DOCKER_HUB_URL}",
                                 "${DOCKER_HUB_CREDENTIALS_NAME}",
                             )
-                            updateDockeHubReadMe(
+                            updateReadMe(
+                                'dockerhub',
                                 "${DOCKER_HUB_ORGANIZATION}/${PROJECT_NAME}",
                                 '${DOCKER_HUB_CREDENTIALS_USR}',
                                 '${DOCKER_HUB_CREDENTIALS_PSW}',
+                                'docker.io',
                             )
                         }
                     }
