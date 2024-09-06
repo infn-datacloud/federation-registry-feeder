@@ -615,14 +615,14 @@ fastapi = "^0.108"
 flaat = "^1.1.15"
 neomodel = "^5.3.0"
 pycountry = "^22.3.5"
-pydantic = {version = "^1.10.9", extras = ["email"]}
+pydantic = {version = ">=1.10.9,<2.0.0", extras = ["email"]}
 uvicorn = "^0.22.0"
 
 [package.source]
 type = "git"
 url = "https://github.com/infn-datacloud/federation-registry.git"
-reference = "HEAD"
-resolved_reference = "4944c5407f3c6bbde5afea782de1074b0140d402"
+reference = "v1.0.0-alpha.8"
+resolved_reference = "7a0522263ab5a24f9e55cd4f20a108081b22ed9e"
 
 [[package]]
 name = "filelock"
@@ -2374,4 +2374,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0.0"
-content-hash = "972fc6b4e73db9ae3ee542508d8dcf683593d89f1dd0629ebd902b2984cc5115"
+content-hash = "d867364a59aac41748e4120acfb7c6ede8538e359db5c8cc184252ee7662cee6"

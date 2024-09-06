@@ -12,7 +12,7 @@ from fed_reg.provider.schemas_extended import (
 )
 from pydantic import AnyHttpUrl
 
-TIMEOUT = 30  # s
+from src.config import get_settings
 
 
 class CRUD:
@@ -29,12 +29,14 @@ class CRUD:
         write_headers: dict[str, str],
         logger: Logger,
     ) -> None:
+        settings = get_settings()
         self.multi_url = url
         self.single_url = os.path.join(self.multi_url, "{uid}")
         self.read_headers = read_headers
         self.write_headers = write_headers
         self.logger = logger
         self.error = False
+        self.timeout = settings.FED_REG_TIMEOUT
 
     def read(self) -> List[ProviderRead]:
         """Retrieve all providers from the Federation-Registry."""
@@ -42,7 +44,7 @@ class CRUD:
         self.logger.debug("Url=%s", self.multi_url)
 
         resp = requests.get(
-            url=self.multi_url, headers=self.read_headers, timeout=TIMEOUT
+            url=self.multi_url, headers=self.read_headers, timeout=self.timeout
         )
         if resp.status_code == status.HTTP_200_OK:
             self.logger.info("Retrieved")
@@ -63,7 +65,7 @@ class CRUD:
             url=self.multi_url,
             json=jsonable_encoder(data),
             headers=self.write_headers,
-            timeout=TIMEOUT,
+            timeout=self.timeout,
         )
         if resp.status_code == status.HTTP_201_CREATED:
             self.logger.info("Provider=%s created", data.name)
@@ -87,7 +89,7 @@ class CRUD:
         resp = requests.delete(
             url=self.single_url.format(uid=item.uid),
             headers=self.write_headers,
-            timeout=TIMEOUT,
+            timeout=self.timeout,
         )
         if resp.status_code == status.HTTP_204_NO_CONTENT:
             self.logger.info("Provider=%s removed", item.name)
@@ -109,7 +111,7 @@ class CRUD:
             url=self.single_url.format(uid=old_data.uid),
             json=jsonable_encoder(new_data),
             headers=self.write_headers,
-            timeout=TIMEOUT,
+            timeout=self.timeout,
         )
         if resp.status_code == status.HTTP_200_OK:
             self.logger.info("Provider=%s updated", new_data.name)

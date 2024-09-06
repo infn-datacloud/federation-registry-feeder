@@ -28,11 +28,11 @@ from fed_reg.service.enum import (
 from keystoneauth1.exceptions.auth_plugins import NoMatchingPlugin
 from keystoneauth1.exceptions.catalog import EndpointNotFound
 from keystoneauth1.exceptions.connection import ConnectFailure, ConnectTimeout, SSLError
-from keystoneauth1.exceptions.http import NotFound, Unauthorized
+from keystoneauth1.exceptions.http import GatewayTimeout, NotFound, Unauthorized
 from openstack import connect
 from openstack.compute.v2.flavor import Flavor
 from openstack.connection import Connection
-from openstack.exceptions import ForbiddenException
+from openstack.exceptions import ForbiddenException, HttpException
 from openstack.image.v2.image import Image
 from openstack.network.v2.network import Network
 from requests import Response
@@ -93,6 +93,8 @@ class OpenstackData:
             NotFound,
             ForbiddenException,
             SSLError,
+            GatewayTimeout,
+            HttpException,
         ) as e:
             self.logger.error(e)
             raise ProviderException from e
@@ -192,7 +194,9 @@ class OpenstackData:
         self,
     ) -> tuple[ObjectStoreQuotaCreateExtended, ObjectStoreQuotaCreateExtended]:
         self.logger.info("Retrieve current project accessible object storage quotas")
-        resp: Response = self.conn.object_store.get(self.conn.object_store.get_endpoint())
+        resp: Response = self.conn.object_store.get(
+            self.conn.object_store.get_endpoint()
+        )
         info = self.conn.object_store.get_info()
         self.logger.debug("Object storage service headers=%s", resp.headers)
         self.logger.debug("Object storage service info=%s", info)
@@ -216,7 +220,7 @@ class OpenstackData:
         self,
     ) -> tuple[ObjectStoreQuotaCreateExtended, ObjectStoreQuotaCreateExtended]:
         self.logger.info("Retrieve current project accessible S3 quotas")
-        # TODO: Understand where to retrieve project quotas when dealing with S3 services.
+        # TODO: Understand where to retrieve quotas when dealing with S3 services.
         self.logger.debug("Fake quota")
         return ObjectStoreQuotaCreateExtended(
             description="placeholder", project=self.conn.current_project_id
