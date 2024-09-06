@@ -29,7 +29,7 @@ from keystoneauth1.exceptions.http import GatewayTimeout, NotFound, Unauthorized
 from openstack import connect
 from openstack.compute.v2.flavor import Flavor
 from openstack.connection import Connection
-from openstack.exceptions import ForbiddenException
+from openstack.exceptions import ForbiddenException, HttpException
 from openstack.image.v2.image import Image
 from openstack.network.v2.network import Network
 
@@ -93,6 +93,7 @@ class OpenstackData:
             ForbiddenException,
             SSLError,
             GatewayTimeout,
+            HttpException,
         ) as e:
             self.logger.error(e)
             raise ProviderException from e
