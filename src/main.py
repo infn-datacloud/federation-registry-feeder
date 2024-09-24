@@ -30,8 +30,12 @@ def main(log_level: str) -> None:
     kafka_prod = None
     if not (settings.KAFKA_SERVER_URL is None or settings.KAFKA_TOPIC is None):
         kafka_prod = Producer(
-            server_url=settings.KAFKA_SERVER_URL, topic=settings.KAFKA_TOPIC
+            server_url=settings.KAFKA_SERVER_URL,
+            topic=settings.KAFKA_TOPIC,
+            logger=logger,
         )
+        if kafka_prod.producer is None:
+            kafka_prod = None
 
     # Read all yaml files containing providers configurations.
     yaml_files = get_conf_files(settings=settings, logger=logger)
