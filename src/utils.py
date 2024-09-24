@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Tuple
 
 import yaml
 from fed_reg.provider.schemas_extended import ProviderCreateExtended
+from requests.exceptions import ConnectionError
 
 from src.config import Settings, URLs
 from src.crud import CRUD
@@ -113,14 +114,19 @@ def update_database(
     )
 
     logger.info("Retrieving data from Federation-Registry")
-    db_items = {db_item.name: db_item for db_item in crud.read()}
-    for item in items:
-        db_item = db_items.pop(item.name, None)
-        if db_item is None or db_item.type != item.type:
-            crud.create(data=item)
-        else:
-            crud.update(new_data=item, old_data=db_item)
-    for db_item in db_items.values():
-        crud.remove(item=db_item)
+    try:
+        db_items = {db_item.name: db_item for db_item in crud.read()}
+        for item in items:
+            db_item = db_items.pop(item.name, None)
+            if db_item is None or db_item.type != item.type:
+                crud.create(data=item)
+            else:
+                crud.update(new_data=item, old_data=db_item)
+        for db_item in db_items.values():
+            crud.remove(item=db_item)
+    except ConnectionError as e:
+        logger.error("Can't connect to Federation Registry.")
+        logger.error(e)
+        return True
 
     return crud.error
