@@ -1,7 +1,9 @@
 import json
+from logging import Logger
 from typing import Any
 
 from kafka import KafkaProducer
+from kafka.errors import NoBrokersAvailable
 
 
 class Producer:
@@ -28,3 +30,15 @@ class Producer:
     def send(self, data: dict[str, Any]):
         """Send message to kafka"""
         self.producer.send(self.topic, data)
+
+
+def get_kafka_prod(
+    *, url: str | None, topic: str | None, logger: Logger
+) -> Producer | None:
+    """Return kafka producer if broker exists."""
+    if not (url is None or topic is None):
+        try:
+            return Producer(server_url=url, topic=topic)
+        except NoBrokersAvailable:
+            logger.warning("No brokers available at %s", url)
+    return None
