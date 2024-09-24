@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from fed_reg.provider.schemas_extended import ProviderCreateExtended
 
 from src.config import get_settings
-from src.kafka_conn import Producer
+from src.kafka_conn import get_kafka_prod
 from src.logger import create_logger
 from src.parser import parser
 from src.providers.core import ProviderThread
@@ -27,15 +27,9 @@ def main(log_level: str) -> None:
     settings = get_settings()
 
     # Create kafka producer if needed
-    kafka_prod = None
-    if not (settings.KAFKA_SERVER_URL is None or settings.KAFKA_TOPIC is None):
-        kafka_prod = Producer(
-            server_url=settings.KAFKA_SERVER_URL,
-            topic=settings.KAFKA_TOPIC,
-            logger=logger,
-        )
-        if kafka_prod.producer is None:
-            kafka_prod = None
+    kafka_prod = get_kafka_prod(
+        url=settings.KAFKA_SERVER_URL, topic=settings.KAFKA_TOPIC, logger=logger
+    )
 
     # Read all yaml files containing providers configurations.
     yaml_files = get_conf_files(settings=settings, logger=logger)
