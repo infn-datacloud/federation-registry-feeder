@@ -235,7 +235,9 @@ class ProviderThread:
         identity_providers, projects, regions = self.merge_data(siblings)
 
         # Send data to kafka
-        self.send_kafka_messages(regions.values())
+        self.send_kafka_messages(
+            regions.values(), identity_providers=identity_providers.values()
+        )
 
         return ProviderCreateExtended(
             name=self.provider_conf.name,
@@ -450,7 +452,11 @@ class ProviderThread:
 
         return identity_providers, projects, regions
 
-    def send_kafka_messages(self, regions: list[RegionCreateExtended]):
+    def send_kafka_messages(
+        self,
+        regions: list[RegionCreateExtended],
+        identity_providers: list[IdentityProviderCreateExtended],
+    ):
         """Organize quotas data and send them to kafka."""
         if self.kafka_prod is not None:
             for region in regions:
@@ -475,11 +481,25 @@ class ProviderThread:
                                 f"usage_{k}" if quota.usage else f"limit_{k}"
                             ] = v
                     for project, data in data_list.items():
+                        issuer, user_group = self.find_issuer_and_user_group(
+                            identity_providers, project
+                        )
                         data = {
                             **data,
                             "provider": self.provider_conf.name,
                             "project": project,
-                            "service": service.endpoint,
+                            "service": str(service.endpoint),
                             "type": service.type,
+                            "issuer": issuer,
+                            "user_group": user_group,
                         }
                         self.kafka_prod.send(data)
+
+    def find_issuer_and_user_group(
+        self, identity_providers: list[IdentityProviderCreateExtended], project: str
+    ) -> tuple[str, str]:
+        """Return issuer and user group matching project."""
+        for issuer in identity_providers:
+            for user_group in issuer.user_groups:
+                if project == user_group.sla.project:
+                    return str(issuer.endpoint), user_group.name
