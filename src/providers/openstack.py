@@ -193,7 +193,7 @@ class OpenstackData:
     def get_object_store_quotas(
         self,
     ) -> tuple[ObjectStoreQuotaCreateExtended, ObjectStoreQuotaCreateExtended]:
-        self.logger.info("Retrieve current project accessible object storage quotas")
+        self.logger.info("Retrieve current project accessible object store quotas")
         resp: Response = self.conn.object_store.get(
             self.conn.object_store.get_endpoint()
         )
@@ -473,11 +473,11 @@ class OpenstackData:
         return network_service
 
     def get_object_store_service(self) -> Optional[ObjectStoreServiceCreateExtended]:
-        """Retrieve project's object storage service.
+        """Retrieve project's object store service.
 
         Remove last part which corresponds to the project ID.
         Retrieve current project corresponding quotas.
-        Add them to the object storage service.
+        Add them to the object store service.
         """
         try:
             endpoint = self.conn.object_store.get_endpoint()
@@ -504,7 +504,7 @@ class OpenstackData:
         return object_store_service
 
     def get_s3_services(self):
-        """Retrieve project's object storage services implementing S3.
+        """Retrieve project's object store services implementing S3.
 
         Retrieve the list of services from the service catalog.
         Filter them by type (S3), endpoint interface (public) and region.
