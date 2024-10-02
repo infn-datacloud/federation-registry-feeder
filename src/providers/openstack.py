@@ -81,9 +81,9 @@ class OpenstackData:
             self.compute_service = self.get_compute_service()
             self.network_service = self.get_network_service()
             self.object_store_services = []
-            object_store_service = self.get_object_store_service()
-            if object_store_service is not None:
-                self.object_store_services.append(object_store_service)
+            # object_store_service = self.get_object_store_service()
+            # if object_store_service is not None:
+            #     self.object_store_services.append(object_store_service)
             self.object_store_services += self.get_s3_services()
         except (
             ConnectFailure,
