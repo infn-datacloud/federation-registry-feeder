@@ -460,14 +460,22 @@ class ProviderThread:
         """Organize quotas data and send them to kafka."""
         if self.kafka_prod is not None:
             for region in regions:
+                data_list = {}
                 for service in [
                     *region.block_storage_services,
                     *region.compute_services,
                     *region.network_services,
                 ]:
-                    data_list = {}
+                    service_type = service.type.replace("-", "_")
+                    service_endpoint = str(service.endpoint)
                     for quota in service.quotas:
                         data_list[quota.project] = data_list.get(quota.project, {})
+                        data_list[quota.project][service_endpoint] = data_list[
+                            quota.project
+                        ].get(
+                            service_endpoint,
+                            {f"{service_type}_service": service_endpoint},
+                        )
                         for k, v in quota.dict(
                             exclude={
                                 "description",
@@ -477,23 +485,29 @@ class ProviderThread:
                                 "usage",
                             }
                         ).items():
-                            data_list[quota.project][
-                                f"usage_{k}" if quota.usage else f"limit_{k}"
-                            ] = v
-                    for project, data in data_list.items():
-                        issuer, user_group = self.find_issuer_and_user_group(
-                            identity_providers, project
-                        )
-                        data = {
-                            **data,
-                            "provider": self.provider_conf.name,
-                            "project": project,
-                            "service": str(service.endpoint),
-                            "type": service.type,
-                            "issuer": issuer,
-                            "user_group": user_group,
-                        }
-                        self.kafka_prod.send(data)
+                            if quota.usage:
+                                data_list[quota.project][service_endpoint][
+                                    f"{service_type}_usage_{k}"
+                                ] = v
+                            else:
+                                data_list[quota.project][service_endpoint][
+                                    f"{service_type}_limit_{k}"
+                                ] = v
+
+                for project, value in data_list.items():
+                    issuer, user_group = self.find_issuer_and_user_group(
+                        identity_providers, project
+                    )
+                    msg_data = {
+                        "provider": self.provider_conf.name,
+                        "region": region.name,
+                        "project": project,
+                        "issuer": issuer,
+                        "user_group": user_group,
+                    }
+                    for data in value.values():
+                        msg_data = {**msg_data, **data}
+                    self.kafka_prod.send(data)
 
     def find_issuer_and_user_group(
         self, identity_providers: list[IdentityProviderCreateExtended], project: str
