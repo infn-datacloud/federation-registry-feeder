@@ -193,6 +193,7 @@ When registering a client:
 
 - Choose a user having access to every project defined in the `.config.yaml` files. This is essential to have read access to the target projects.
 - The chosen user must be associated to one of the emails defined in the `federation-registry` `ADMIN_EMAIL_LIST` env variable, and it's hosting identity provider must be in the `TRUSTED_IDP_LIST`. This is essential to have write access to the `federation-registry` instance.
+- **If the default profile for that issuer is not iam (for example wlcg), add to the scopes `iam`.**
 
 If you don't have an already running instance, we suggest to deploy your instance using the [opensciencegrid/oidc-agent](https://hub.docker.com/r/opensciencegrid/oidc-agent) docker image available on DockerHub.
 
@@ -201,12 +202,12 @@ If you don't have an already running instance, we suggest to deploy your instanc
 If you are using a container run the following command to register a new client using the oidc-agent inside that container. The provided scopes are not mandatory.
 
 ```bash
-docker exec <oidc-agent-container-name> \
+docker exec -it <oidc-agent-container-name> \
     oidc-gen \
     --flow device \
     --iss <issuer-url> \
     --dae <device-code-url> \
-    --scope="openid profile offline_access email" \
+    --scope="openid profile offline_access email iam" \
     <config-name>
 ```
 
