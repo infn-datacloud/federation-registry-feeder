@@ -92,6 +92,7 @@ def update_database(
     items: List[ProviderCreateExtended],
     token: str,
     logger: Logger,
+    settings: Settings,
 ) -> bool:
     """Update the Federation-Registry data.
 
@@ -111,6 +112,7 @@ def update_database(
         read_headers=read_header,
         write_headers=write_header,
         logger=logger,
+        settings=settings,
     )
 
     logger.info("Retrieving data from Federation-Registry")

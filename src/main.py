@@ -61,7 +61,11 @@ def main(log_level: str) -> None:
     token = site_configs[0].trusted_idps[0].token if len(site_configs) > 0 else ""
     fed_reg_endpoints = infer_service_endpoints(settings=settings, logger=logger)
     error |= update_database(
-        service_api_url=fed_reg_endpoints, token=token, items=providers, logger=logger
+        service_api_url=fed_reg_endpoints,
+        token=token,
+        items=providers,
+        logger=logger,
+        settings=settings,
     )
 
     if error:
