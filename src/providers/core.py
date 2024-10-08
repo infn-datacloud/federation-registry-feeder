@@ -10,6 +10,7 @@ from fed_reg.provider.schemas_extended import (
     IdentityServiceCreate,
     ImageCreateExtended,
     NetworkServiceCreateExtended,
+    ObjectStoreServiceCreateExtended,
     ProjectCreate,
     ProviderCreateExtended,
     RegionCreateExtended,
@@ -94,6 +95,7 @@ class ConnectionThread:
             compute_services=[data.compute_service] if data.compute_service else [],
             identity_services=[data.identity_service] if data.identity_service else [],
             network_services=[data.network_service] if data.network_service else [],
+            object_store_services=data.object_store_services,
         )
 
         return ProviderSiblings(
@@ -290,6 +292,10 @@ class ProviderThread:
             current_services=current_region.network_services,
             new_services=new_region.network_services,
         )
+        current_region.object_store_services = self.update_region_object_store_services(
+            current_services=current_region.object_store_services,
+            new_services=new_region.object_store_services,
+        )
         return current_region
 
     def update_region_block_storage_services(
@@ -383,6 +389,25 @@ class ProviderThread:
                             new_service.networks,
                         )
                     )
+                    service.quotas += new_service.quotas
+                    break
+            else:
+                current_services.append(new_service)
+        return current_services
+
+    def update_region_object_store_services(
+        self,
+        *,
+        current_services: List[ObjectStoreServiceCreateExtended],
+        new_services: List[ObjectStoreServiceCreateExtended],
+    ) -> List[ObjectStoreServiceCreateExtended]:
+        """Update Object store services.
+
+        If the service does not exist, add it; otherwise, add new quotas and networks.
+        """
+        for new_service in new_services:
+            for service in current_services:
+                if service.endpoint == new_service.endpoint:
                     service.quotas += new_service.quotas
                     break
             else:

@@ -719,7 +719,7 @@ def openstack_compute_quotas_dict() -> Dict[str, int]:
 def openstack_network_quotas_dict() -> Dict[str, int]:
     """Dict with the network quotas attributes."""
     return {
-        #"check_limit": False,
+        # "check_limit": False,
         "floating_ips": randint(0, 100),
         "health_monitors": randint(0, 100),
         "listeners": randint(0, 100),

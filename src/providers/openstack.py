@@ -1,6 +1,6 @@
 import os
 from logging import Logger
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from fed_reg.provider.schemas_extended import (
     BlockStorageQuotaCreateExtended,
@@ -14,6 +14,8 @@ from fed_reg.provider.schemas_extended import (
     NetworkCreateExtended,
     NetworkQuotaCreateExtended,
     NetworkServiceCreateExtended,
+    ObjectStoreQuotaCreateExtended,
+    ObjectStoreServiceCreateExtended,
     ProjectCreate,
 )
 from fed_reg.service.enum import (
@@ -21,6 +23,7 @@ from fed_reg.service.enum import (
     ComputeServiceName,
     IdentityServiceName,
     NetworkServiceName,
+    ObjectStoreServiceName,
 )
 from keystoneauth1.exceptions.auth_plugins import NoMatchingPlugin
 from keystoneauth1.exceptions.catalog import EndpointNotFound
@@ -32,6 +35,7 @@ from openstack.connection import Connection
 from openstack.exceptions import ForbiddenException, HttpException
 from openstack.image.v2.image import Image
 from openstack.network.v2.network import Network
+from requests import Response
 
 from src.models.config import Openstack
 from src.models.provider import PrivateNetProxy, Project
@@ -52,15 +56,7 @@ class OpenstackData:
         region_name: str,
         token: str,
         logger: Logger,
-    ) -> Optional[
-        Tuple[
-            ProjectCreate,
-            Optional[BlockStorageServiceCreateExtended],
-            Optional[ComputeServiceCreateExtended],
-            IdentityServiceCreate,
-            Optional[NetworkServiceCreateExtended],
-        ]
-    ]:
+    ) -> None:
         self.provider_conf = provider_conf
         self.project_conf = project_conf
         self.identity_provider = identity_provider
@@ -84,6 +80,11 @@ class OpenstackData:
             self.block_storage_service = self.get_block_storage_service()
             self.compute_service = self.get_compute_service()
             self.network_service = self.get_network_service()
+            self.object_store_services = []
+            # object_store_service = self.get_object_store_service()
+            # if object_store_service is not None:
+            #     self.object_store_services.append(object_store_service)
+            self.object_store_services += self.get_s3_services()
         except (
             ConnectFailure,
             ConnectTimeout,
@@ -187,6 +188,44 @@ class OpenstackData:
             **data_limits, project=self.conn.current_project_id
         ), NetworkQuotaCreateExtended(
             **data_usage, project=self.conn.current_project_id, usage=True
+        )
+
+    def get_object_store_quotas(
+        self,
+    ) -> tuple[ObjectStoreQuotaCreateExtended, ObjectStoreQuotaCreateExtended]:
+        self.logger.info("Retrieve current project accessible object store quotas")
+        resp: Response = self.conn.object_store.get(
+            self.conn.object_store.get_endpoint()
+        )
+        info = self.conn.object_store.get_info()
+        self.logger.debug("Object storage service headers=%s", resp.headers)
+        self.logger.debug("Object storage service info=%s", info)
+        data_limits = {}
+        data_usage = {}
+        data_usage["bytes"] = resp.headers.pop("X-Account-Bytes-Used", 0)
+        data_usage["containers"] = resp.headers.pop("X-Account-Container-Count", 0)
+        data_usage["objects"] = resp.headers.pop("X-Account-Object-Count", 0)
+        data_limits["bytes"] = resp.headers.pop("X-Account-Meta-Quota-Bytes", -1)
+        data_limits["containers"] = info.swift.pop("container_listing_limit", 10000)
+        data_limits["objects"] = -1
+        self.logger.debug("Block storage service quota limits=%s", data_limits)
+        self.logger.debug("Block storage service quota usage=%s", data_usage)
+        return ObjectStoreQuotaCreateExtended(
+            **data_limits, project=self.conn.current_project_id
+        ), ObjectStoreQuotaCreateExtended(
+            **data_usage, project=self.conn.current_project_id, usage=True
+        )
+
+    def get_s3_quotas(
+        self,
+    ) -> tuple[ObjectStoreQuotaCreateExtended, ObjectStoreQuotaCreateExtended]:
+        self.logger.info("Retrieve current project accessible S3 quotas")
+        # TODO: Understand where to retrieve quotas when dealing with S3 services.
+        self.logger.debug("Fake quota")
+        return ObjectStoreQuotaCreateExtended(
+            description="placeholder", project=self.conn.current_project_id
+        ), ObjectStoreQuotaCreateExtended(
+            description="placeholder", project=self.conn.current_project_id, usage=True
         )
 
     def get_flavor_extra_specs(self, extra_specs: Dict[str, Any]) -> Dict[str, Any]:
@@ -432,3 +471,67 @@ class OpenstackData:
                 )
             )
         return network_service
+
+    def get_object_store_service(self) -> Optional[ObjectStoreServiceCreateExtended]:
+        """Retrieve project's object store service.
+
+        Remove last part which corresponds to the project ID.
+        Retrieve current project corresponding quotas.
+        Add them to the object store service.
+        """
+        try:
+            endpoint = self.conn.object_store.get_endpoint()
+        except EndpointNotFound as e:
+            self.logger.warning(e)
+            return None
+        if not endpoint:
+            return None
+
+        object_store_service = ObjectStoreServiceCreateExtended(
+            endpoint=os.path.dirname(endpoint),
+            name=ObjectStoreServiceName.OPENSTACK_SWIFT,
+        )
+        object_store_service.quotas = [*self.get_object_store_quotas()]
+        if self.project_conf.per_user_limits.object_store:
+            object_store_service.quotas.append(
+                ObjectStoreQuotaCreateExtended(
+                    **self.project_conf.per_user_limits.object_store.dict(
+                        exclude_none=True
+                    ),
+                    project=self.conn.current_project_id,
+                )
+            )
+        return object_store_service
+
+    def get_s3_services(self):
+        """Retrieve project's object store services implementing S3.
+
+        Retrieve the list of services from the service catalog.
+        Filter them by type (S3), endpoint interface (public) and region.
+        """
+        s3_services = []
+        for service in filter(
+            lambda x: x.get("type") == "s3", self.conn.service_catalog
+        ):
+            for endpoint in filter(
+                lambda x: x.get("interface") == "public"
+                and x.get("region") == self.region_name,
+                service.get("endpoints"),
+            ):
+                if service.get("name") == "swift_s3":
+                    s3_service = ObjectStoreServiceCreateExtended(
+                        endpoint=endpoint.get("url"),
+                        name=ObjectStoreServiceName.OPENSTACK_SWIFT_S3,
+                    )
+                    s3_service.quotas = [*self.get_s3_quotas()]
+                    if self.project_conf.per_user_limits.object_store:
+                        s3_service.quotas.append(
+                            ObjectStoreQuotaCreateExtended(
+                                **self.project_conf.per_user_limits.object_store.dict(
+                                    exclude_none=True
+                                ),
+                                project=self.conn.current_project_id,
+                            )
+                        )
+                    s3_services.append(s3_service)
+        return s3_services
