@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Tuple
 
 import yaml
 from fed_reg.provider.schemas_extended import ProviderCreateExtended
+from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
 from requests.exceptions import ConnectionError
 
 from src.config import Settings, URLs
@@ -54,7 +55,7 @@ def load_config(
             logger.info("Configuration loaded")
             logger.debug("%r", config)
             return config
-        except ValueError as e:
+        except (ValueError, OidcAgentConnectError, OidcAgentError) as e:
             logger.error(e)
             return None
     else:
@@ -106,6 +107,10 @@ def update_database(
 
     Return True if no errors happened otherwise False.
     """
+    if token == "":
+        logger.warning("No token found. Skipping communication with Fed-Reg.")
+        return True
+
     read_header, write_header = get_read_write_headers(token=token)
     crud = CRUD(
         url=service_api_url.providers,
