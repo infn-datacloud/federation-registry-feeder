@@ -1,4 +1,3 @@
-import logging
 import os
 from random import getrandbits, randint
 from typing import Any, Dict, List, Union
@@ -13,9 +12,6 @@ from fed_reg.provider.schemas_extended import (
     IdentityServiceCreate,
     NetworkServiceCreateExtended,
     ProjectCreate,
-    ProviderCreateExtended,
-    ProviderRead,
-    ProviderReadExtended,
     RegionCreateExtended,
     SLACreateExtended,
     UserGroupCreateExtended,
@@ -30,9 +26,6 @@ from openstack.network.v2.network import Network as OpenstackNetwork
 from openstack.network.v2.quota import QuotaDetails as OpenstackNetworkQuota
 from pytest_cases import case, parametrize, parametrize_with_cases
 
-from src.config import APIVersions, Settings, URLs
-from src.crud import CRUD
-from src.utils import get_read_write_headers
 from tests.providers.openstack.utils import random_image_status, random_network_status
 from tests.schemas.utils import (
     random_block_storage_service_name,
@@ -42,7 +35,6 @@ from tests.schemas.utils import (
     random_image_os_type,
     random_lower_string,
     random_network_service_name,
-    random_provider_type,
     random_url,
     sla_dict,
 )
@@ -54,48 +46,48 @@ def clear_os_environment() -> None:
     os.environ.clear()
 
 
-@pytest.fixture
-def crud() -> CRUD:
-    """Fixture with a CRUD object.
+# @pytest.fixture
+# def crud() -> CRUD:
+#     """Fixture with a CRUD object.
 
-    The CRUD object is used to interact with the federation-registry API.
-    """
-    read_header, write_header = get_read_write_headers(token=random_lower_string())
-    return CRUD(
-        url=random_url(),
-        read_headers=read_header,
-        write_headers=write_header,
-        logger=logging.getLogger(),
-    )
-
-
-@pytest.fixture
-def api_ver() -> APIVersions:
-    """Fixture with an APIVersions object.
-
-    The APIVersions object is used to store the API versions to use when interacting
-    with the federation-registry API.
-    """
-    return APIVersions()
+#     The CRUD object is used to interact with the federation-registry API.
+#     """
+#     read_header, write_header = get_read_write_headers(token=random_lower_string())
+#     return CRUD(
+#         url=random_url(),
+#         read_headers=read_header,
+#         write_headers=write_header,
+#         logger=logging.getLogger(),
+#     )
 
 
-@pytest.fixture
-def settings(api_ver: APIVersions) -> Settings:
-    """Fixture with a Settings object.
+# @pytest.fixture
+# def api_ver() -> APIVersions:
+#     """Fixture with an APIVersions object.
 
-    The Settings object stores the project settings.
-    """
-    return Settings(api_ver=api_ver)
+#     The APIVersions object is used to store the API versions to use when interacting
+#     with the federation-registry API.
+#     """
+#     return APIVersions()
 
 
-@pytest.fixture
-def service_endpoints() -> URLs:
-    """Fixture with a URLs object.
+# @pytest.fixture
+# def settings(api_ver: APIVersions) -> Settings:
+#     """Fixture with a Settings object.
 
-    The URLs object stores the federation-registry service endpoints.
-    """
-    base_url = random_url()
-    return URLs(**{k: os.path.join(base_url, k) for k in URLs.__fields__.keys()})
+#     The Settings object stores the project settings.
+#     """
+#     return Settings(api_ver=api_ver)
+
+
+# @pytest.fixture
+# def service_endpoints() -> URLs:
+#     """Fixture with a URLs object.
+
+#     The URLs object stores the federation-registry service endpoints.
+#     """
+#     base_url = random_url()
+#     return URLs(**{k: os.path.join(base_url, k) for k in URLs.__fields__.keys()})
 
 
 # # Identity Providers configurations
@@ -265,24 +257,24 @@ def service_endpoints() -> URLs:
 # Federation-Registry Creation Items
 
 
-@pytest.fixture
-def provider_create() -> ProviderCreateExtended:
-    """Fixture with a ProviderCreateExtended."""
-    return ProviderCreateExtended(
-        name=random_lower_string(), type=random_provider_type()
-    )
+# @pytest.fixture
+# def provider_create() -> ProviderCreateExtended:
+#     """Fixture with a ProviderCreateExtended."""
+#     return ProviderCreateExtended(
+#         name=random_lower_string(), type=random_provider_type()
+#     )
 
 
-@pytest.fixture
-def provider_read(provider_create: ProviderCreateExtended) -> ProviderRead:
-    return ProviderRead(uid=uuid4(), **provider_create.dict())
+# @pytest.fixture
+# def provider_read(provider_create: ProviderCreateExtended) -> ProviderRead:
+#     return ProviderRead(uid=uuid4(), **provider_create.dict())
 
 
-@pytest.fixture
-def provider_read_extended(
-    provider_create: ProviderCreateExtended,
-) -> ProviderReadExtended:
-    return ProviderReadExtended(uid=uuid4(), **provider_create.dict())
+# @pytest.fixture
+# def provider_read_extended(
+#     provider_create: ProviderCreateExtended,
+# ) -> ProviderReadExtended:
+#     return ProviderReadExtended(uid=uuid4(), **provider_create.dict())
 
 
 @pytest.fixture

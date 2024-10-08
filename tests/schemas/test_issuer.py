@@ -2,7 +2,7 @@ import os
 from unittest.mock import Mock, patch
 
 import pytest
-from liboidcagent.liboidcagent import OidcAgentConnectError
+from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
 from pytest_cases import parametrize_with_cases
 
 from src.models.identity_provider import SLA, Issuer, UserGroup, retrieve_token
@@ -120,7 +120,7 @@ def test_env_oidc_sock_not_set():
 def test_oidc_agent_not_running():
     """Variable is set but the agent is not running."""
     os.environ.setdefault("OIDC_SOCK", random_lower_string())
-    with pytest.raises(OidcAgentConnectError):
+    with pytest.raises(OidcAgentError):
         retrieve_token(random_lower_string())
 
 
