@@ -1,42 +1,42 @@
-from typing import Any, Dict, List, Literal, Tuple
+from typing import Any, Literal
 
 import pytest
-from fed_reg.provider.enum import ProviderType
 from pytest_cases import parametrize_with_cases
 
 from src.models.provider import AuthMethod, Openstack, Project, Region
-from tests.schemas.utils import random_lower_string, random_url
+from tests.schemas.utils import (
+    auth_method_dict,
+    openstack_dict,
+    project_dict,
+    random_lower_string,
+    region_dict,
+)
+
+# TODO: Add BlockStorageVolMap case
 
 
 class CaseValidAttr:
-    def case_regions(self, region: Region) -> Tuple[Literal["regions"], List[Region]]:
-        return "regions", [region]
+    def case_regions(self) -> tuple[Literal["regions"], list[Region]]:
+        return "regions", [Region(**region_dict())]
 
-    # TODO: Add BlockStorageVolMap case
+    def case_image_tags(self) -> tuple[Literal["image_tags"], list[str]]:
+        return "image_tags", [random_lower_string()]
+
+    def case_network_tags(self) -> tuple[Literal["network_tags"], list[str]]:
+        return "network_tags", [random_lower_string()]
 
 
 class CaseInvalidAttr:
-    def case_type(self) -> Tuple[Literal["type"], Literal[ProviderType.OS]]:
-        return "type", ProviderType.K8S
-
-
-def openstack_dict() -> Dict[str, Any]:
-    """Dict with openstack provider minimal attributes."""
-    return {
-        "name": random_lower_string(),
-        "type": ProviderType.OS,
-        "auth_url": random_url(),
-    }
+    def case_type(self) -> tuple[Literal["type"], str]:
+        return "type", random_lower_string()
 
 
 @parametrize_with_cases("key, value", cases=CaseValidAttr)
-def test_openstack_schema(
-    auth_method: AuthMethod, project: Project, key: str, value: Any
-) -> None:
+def test_openstack_schema(key: str, value: list[Region] | list[str]) -> None:
     """Valid Openstack provider schema."""
     d = openstack_dict()
-    d["identity_providers"] = [auth_method]
-    d["projects"] = [project]
+    d["identity_providers"] = [AuthMethod(**auth_method_dict())]
+    d["projects"] = [Project(**project_dict())]
     d[key] = value
     item = Openstack(**d)
     assert item.name == d.get("name")
@@ -51,19 +51,23 @@ def test_openstack_schema(
     regions = d.get("regions", [Region(name="RegionOne")])
     assert len(item.regions) == len(regions)
     assert item.regions == regions
+    image_tags = d.get("image_tags", [])
+    assert len(item.image_tags) == len(image_tags)
+    assert item.image_tags == image_tags
+    network_tags = d.get("network_tags", [])
+    assert len(item.network_tags) == len(network_tags)
+    assert item.network_tags == network_tags
 
 
 @parametrize_with_cases("key, value", cases=CaseInvalidAttr)
-def test_openstack_invalid_schema(
-    auth_method: AuthMethod, project: Project, key: str, value: Any
-) -> None:
+def test_openstack_invalid_schema(key: str, value: Any) -> None:
     """Invalid Openstack provider schema.
 
     Invalid type.
     """
     d = openstack_dict()
-    d["identity_providers"] = [auth_method]
-    d["projects"] = [project]
+    d["identity_providers"] = [AuthMethod(**auth_method_dict())]
+    d["projects"] = [Project(**project_dict())]
     d[key] = value
     with pytest.raises(ValueError):
         Openstack(**d)

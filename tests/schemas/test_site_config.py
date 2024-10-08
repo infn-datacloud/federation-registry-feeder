@@ -1,66 +1,136 @@
-from typing import Any, List, Literal, Tuple
+from typing import Any
 
 import pytest
 from fed_reg.provider.enum import ProviderType
-from pytest_cases import parametrize, parametrize_with_cases
+from pytest_cases import parametrize_with_cases
 
 from src.models.config import SiteConfig
-from src.models.identity_provider import Issuer
-from src.models.provider import Kubernetes, Openstack
+from src.models.identity_provider import SLA, Issuer, UserGroup
+from src.models.provider import AuthMethod, Kubernetes, Openstack, Project
+from tests.schemas.utils import (
+    auth_method_dict,
+    issuer_dict,
+    project_dict,
+    random_lower_string,
+    random_url,
+    sla_dict,
+    user_group_dict,
+)
 
 
 class CaseProviderType:
-    def case_openstack(
-        self, openstack_provider: Openstack
-    ) -> Tuple[str, List[Openstack]]:
-        return ProviderType.OS.value, [openstack_provider]
+    def case_openstack(self) -> tuple[str, list[Openstack]]:
+        return ProviderType.OS.value, [
+            Openstack(
+                name=random_lower_string(),
+                auth_url=random_url(),
+                identity_providers=[AuthMethod(**auth_method_dict())],
+                projects=[Project(**project_dict())],
+            )
+        ]
 
-    def case_kubernetes(
-        self, kubernetes_provider: Kubernetes
-    ) -> Tuple[str, List[Kubernetes]]:
-        return ProviderType.K8S.value, [kubernetes_provider]
+    def case_kubernetes(self) -> tuple[str, list[Kubernetes]]:
+        return ProviderType.K8S.value, [
+            Kubernetes(
+                name=random_lower_string(),
+                auth_url=random_url(),
+                identity_providers=[AuthMethod(**auth_method_dict())],
+                projects=[Project(**project_dict())],
+            )
+        ]
 
 
-class CaseInvalidAttr:
-    @parametrize(attr=["trusted_idps", "openstack", "kubernetes"])
-    def case_none(self, attr: str) -> Tuple[str, None]:
-        return attr, None
+class CaseInvalidIssuers:
+    def case_none(self) -> None:
+        return None
 
-    def case_single_issuer(
-        self, issuer: Issuer
-    ) -> Tuple[Literal["trusted_idps"], Issuer]:
-        return "trusted_idps", issuer
+    def case_empty_list(self) -> list:
+        return []
 
-    def case_single_openstack(
-        self, openstack: Openstack
-    ) -> Tuple[Literal["openstack"], Openstack]:
-        return "openstack", openstack
+    def case_single_instance(self) -> Issuer:
+        return Issuer(
+            **issuer_dict(),
+            token=random_lower_string(),
+            user_groups=[UserGroup(**user_group_dict(), slas=[SLA(**sla_dict())])],
+        )
 
-    def case_single_kubernetes(
-        self, kubernetes: Kubernetes
-    ) -> Tuple[Literal["kubernetes"], Kubernetes]:
-        return "kubernetes", kubernetes
+    def case_duplicated_endpoints(self) -> list[Issuer]:
+        item1 = Issuer(
+            **issuer_dict(),
+            token=random_lower_string(),
+            user_groups=[UserGroup(**user_group_dict(), slas=[SLA(**sla_dict())])],
+        )
+        item2 = Issuer(
+            **{**issuer_dict(), "issuer": item1.endpoint},
+            token=random_lower_string(),
+            user_groups=[UserGroup(**user_group_dict(), slas=[SLA(**sla_dict())])],
+        )
+        return [item1, item2]
 
-    @parametrize(diff_attr=["endpoint", "idp_name"])
-    def case_duplicated_issuers(
-        self, diff_attr: str, issuer: Issuer
-    ) -> Tuple[Literal["trusted_idps"], Issuer]:
-        return "trusted_idps", [issuer, issuer]
 
-    @parametrize(diff_attr=["id", "sla"])
-    def case_duplicated_openstack(
-        self, diff_attr: str, openstack: Openstack
-    ) -> Tuple[Literal["openstack"], Openstack]:
-        return "openstack", [openstack, openstack]
+class CaseInvalidOpenstack:
+    def case_none(self) -> None:
+        return None
 
-    def case_duplicated_kubernetes(
-        self, kubernetes: Kubernetes
-    ) -> Tuple[Literal["kubernetes"], Kubernetes]:
-        return "kubernetes", [kubernetes, kubernetes]
+    def case_single_instance(self) -> Openstack:
+        return Openstack(
+            name=random_lower_string(),
+            auth_url=random_url(),
+            identity_providers=[AuthMethod(**auth_method_dict())],
+            projects=[Project(**project_dict())],
+        )
+
+    def case_duplicated_instance(self) -> list[Openstack]:
+        item1 = Openstack(
+            name=random_lower_string(),
+            auth_url=random_url(),
+            identity_providers=[AuthMethod(**auth_method_dict())],
+            projects=[Project(**project_dict())],
+        )
+        item2 = Openstack(
+            name=item1.name,
+            auth_url=random_url(),
+            identity_providers=[AuthMethod(**auth_method_dict())],
+            projects=[Project(**project_dict())],
+        )
+        return [item1, item2]
+
+
+class CaseInvalidkubernetes:
+    def case_none(self) -> None:
+        return None
+
+    def case_single_instance(self) -> Kubernetes:
+        return Kubernetes(
+            name=random_lower_string(),
+            auth_url=random_url(),
+            identity_providers=[AuthMethod(**auth_method_dict())],
+            projects=[Project(**project_dict())],
+        )
+
+    def case_duplicated_instance(self) -> list[Kubernetes]:
+        item1 = Kubernetes(
+            name=random_lower_string(),
+            auth_url=random_url(),
+            identity_providers=[AuthMethod(**auth_method_dict())],
+            projects=[Project(**project_dict())],
+        )
+        item2 = Kubernetes(
+            name=item1.name,
+            auth_url=random_url(),
+            identity_providers=[AuthMethod(**auth_method_dict())],
+            projects=[Project(**project_dict())],
+        )
+        return [item1, item2]
 
 
 @parametrize_with_cases("key, value", cases=CaseProviderType)
-def test_site_config_schema(issuer: Issuer, key: str, value: Any) -> None:
+def test_site_config_schema(key: str, value: Any) -> None:
+    issuer = Issuer(
+        **issuer_dict(),
+        token=random_lower_string(),
+        user_groups=[UserGroup(**user_group_dict(), slas=[SLA(**sla_dict())])],
+    )
     d = {"trusted_idps": [issuer]}
     d[key] = value
     item = SiteConfig(**d)
@@ -69,9 +139,32 @@ def test_site_config_schema(issuer: Issuer, key: str, value: Any) -> None:
     assert item.kubernetes == d.get("kubernetes", [])
 
 
-@parametrize_with_cases("key, value", cases=CaseInvalidAttr)
-def test_site_config_invalid_schema(issuer: Issuer, key: str, value: Any) -> None:
-    d = {"trusted_idps": [issuer]}
-    d[key] = value
+@parametrize_with_cases("value", cases=CaseInvalidIssuers)
+def test_site_config_invalid_issuers(value: Any) -> None:
+    d = {"trusted_idps": value}
+    with pytest.raises(ValueError):
+        SiteConfig(**d)
+
+
+@parametrize_with_cases("value", cases=CaseInvalidOpenstack)
+def test_site_config_invalid_openstacks(value: Any) -> None:
+    issuer = Issuer(
+        **issuer_dict(),
+        token=random_lower_string(),
+        user_groups=[UserGroup(**user_group_dict(), slas=[SLA(**sla_dict())])],
+    )
+    d = {"trusted_idps": [issuer], "openstack": value}
+    with pytest.raises(ValueError):
+        SiteConfig(**d)
+
+
+@parametrize_with_cases("value", cases=CaseInvalidOpenstack)
+def test_site_config_invalid_kubernetes(value: Any) -> None:
+    issuer = Issuer(
+        **issuer_dict(),
+        token=random_lower_string(),
+        user_groups=[UserGroup(**user_group_dict(), slas=[SLA(**sla_dict())])],
+    )
+    d = {"trusted_idps": [issuer], "kubernetes": value}
     with pytest.raises(ValueError):
         SiteConfig(**d)

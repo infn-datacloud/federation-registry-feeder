@@ -1,11 +1,10 @@
-from typing import Any, Dict
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.identity_provider import SLA
-from tests.schemas.utils import random_start_end_dates
+from tests.schemas.utils import sla_dict
 
 
 class CaseWithProjects:
@@ -14,10 +13,13 @@ class CaseWithProjects:
         return with_projects
 
 
-def sla_dict() -> Dict[str, Any]:
-    """Dict with SLA minimal attributes."""
-    start_date, end_date = random_start_end_dates()
-    return {"doc_uuid": uuid4(), "start_date": start_date, "end_date": end_date}
+class CaseInvalidProject:
+    def case_none(self) -> None:
+        return None
+
+    def case_duplicated_project(self) -> list[UUID]:
+        v = uuid4()
+        return [v, v]
 
 
 @parametrize_with_cases("with_projects", cases=".")
@@ -36,16 +38,15 @@ def test_sla_schema(with_projects: bool) -> None:
     assert item.projects == [i.hex for i in d.get("projects", [])]
 
 
-@parametrize_with_cases("with_projects", cases=".")
-def test_sla_invalid_schema(with_projects: bool) -> None:
+@parametrize_with_cases("projects", cases=CaseInvalidProject)
+def test_sla_invalid_schema(projects: list[UUID] | None) -> None:
     """Invalid SLA schema.
 
     The projects list contains duplicated values or it received a None value.
     None value: if the projects key is omitted as in the previous test, by default it
     is an empty list.
     """
-    proj = uuid4()
     d = sla_dict()
-    d["projects"] = [proj, proj] if with_projects else None
+    d["projects"] = projects
     with pytest.raises(ValueError):
         SLA(**d)

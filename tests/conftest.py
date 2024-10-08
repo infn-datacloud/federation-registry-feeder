@@ -1,11 +1,10 @@
 import logging
 import os
 from random import getrandbits, randint
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Union
 from uuid import uuid4
 
 import pytest
-from fed_reg.location.schemas import LocationBase
 from fed_reg.provider.schemas_extended import (
     AuthMethodCreate,
     BlockStorageServiceCreateExtended,
@@ -21,11 +20,6 @@ from fed_reg.provider.schemas_extended import (
     SLACreateExtended,
     UserGroupCreateExtended,
 )
-from fed_reg.quota.schemas import (
-    BlockStorageQuotaBase,
-    ComputeQuotaBase,
-    NetworkQuotaBase,
-)
 from openstack.block_storage.v3.quota_set import (
     QuotaSet as OpenstackBlockStorageQuotaSet,
 )
@@ -38,33 +32,19 @@ from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.config import APIVersions, Settings, URLs
 from src.crud import CRUD
-from src.models.config import SiteConfig
-from src.models.identity_provider import SLA, Issuer, UserGroup
-from src.models.provider import (
-    AuthMethod,
-    Kubernetes,
-    Limits,
-    Openstack,
-    PerRegionProps,
-    PrivateNetProxy,
-    Project,
-    Region,
-)
 from src.utils import get_read_write_headers
 from tests.providers.openstack.utils import random_image_status, random_network_status
 from tests.schemas.utils import (
     random_block_storage_service_name,
     random_compute_service_name,
-    random_country,
     random_float,
     random_identity_service_name,
     random_image_os_type,
-    random_ip,
     random_lower_string,
     random_network_service_name,
     random_provider_type,
-    random_start_end_dates,
     random_url,
+    sla_dict,
 )
 
 
@@ -118,168 +98,168 @@ def service_endpoints() -> URLs:
     return URLs(**{k: os.path.join(base_url, k) for k in URLs.__fields__.keys()})
 
 
-# Identity Providers configurations
+# # Identity Providers configurations
 
 
-@pytest.fixture
-def sla() -> SLA:
-    """Fixture with an SLA without projects."""
-    start_date, end_date = random_start_end_dates()
-    return SLA(doc_uuid=uuid4(), start_date=start_date, end_date=end_date)
+# @pytest.fixture
+# def sla() -> SLA:
+#     """Fixture with an SLA without projects."""
+#     start_date, end_date = random_start_end_dates()
+#     return SLA(doc_uuid=uuid4(), start_date=start_date, end_date=end_date)
 
 
-@pytest.fixture
-def user_group(sla: SLA) -> UserGroup:
-    """Fixture with a UserGroup with one SLA."""
-    return UserGroup(name=random_lower_string(), slas=[sla])
+# @pytest.fixture
+# def user_group(sla: SLA) -> UserGroup:
+#     """Fixture with a UserGroup with one SLA."""
+#     return UserGroup(name=random_lower_string(), slas=[sla])
 
 
-@pytest.fixture
-def issuer(user_group: UserGroup) -> Issuer:
-    """Fixture with an Issuer with one UserGroup."""
-    return Issuer(
-        issuer=random_url(),
-        group_claim=random_lower_string(),
-        token=random_lower_string(),
-        user_groups=[user_group],
-    )
+# @pytest.fixture
+# def issuer(user_group: UserGroup) -> Issuer:
+#     """Fixture with an Issuer with one UserGroup."""
+#     return Issuer(
+#         issuer=random_url(),
+#         group_claim=random_lower_string(),
+#         token=random_lower_string(),
+#         user_groups=[user_group],
+#     )
 
 
-# Providers configurations
+# # Providers configurations
 
 
-@pytest.fixture
-def auth_method() -> AuthMethod:
-    """Fixture with an AuthMethod."""
-    return AuthMethod(
-        name=random_lower_string(),
-        protocol=random_lower_string(),
-        endpoint=random_url(),
-    )
+# @pytest.fixture
+# def auth_method() -> AuthMethod:
+#     """Fixture with an AuthMethod."""
+#     return AuthMethod(
+#         name=random_lower_string(),
+#         protocol=random_lower_string(),
+#         endpoint=random_url(),
+#     )
 
 
-@pytest.fixture
-def limits() -> Limits:
-    """Fixture with an empty Limits object."""
-    return Limits()
+# @pytest.fixture
+# def limits() -> Limits:
+#     """Fixture with an empty Limits object."""
+#     return Limits()
 
 
-@pytest.fixture
-def net_proxy() -> PrivateNetProxy:
-    """Fixture with an PrivateNetProxy."""
-    return PrivateNetProxy(host=random_ip(), user=random_lower_string())
+# @pytest.fixture
+# def net_proxy() -> PrivateNetProxy:
+#     """Fixture with an PrivateNetProxy."""
+#     return PrivateNetProxy(host=random_ip(), user=random_lower_string())
 
 
-@pytest.fixture
-def per_region_props() -> PerRegionProps:
-    """Fixture with a minimal PerRegionProps object."""
-    return PerRegionProps(region_name=random_lower_string())
+# @pytest.fixture
+# def per_region_props() -> PerRegionProps:
+#     """Fixture with a minimal PerRegionProps object."""
+#     return PerRegionProps(region_name=random_lower_string())
 
 
-@pytest.fixture
-def project() -> Project:
-    """Fixture with a Project with an SLA."""
-    return Project(id=uuid4(), sla=uuid4())
+# @pytest.fixture
+# def project() -> Project:
+#     """Fixture with a Project with an SLA."""
+#     return Project(id=uuid4(), sla=uuid4())
 
 
-@pytest.fixture
-def region() -> Region:
-    """Fixture with a Region."""
-    return Region(name=random_lower_string())
+# @pytest.fixture
+# def region() -> Region:
+#     """Fixture with a Region."""
+#     return Region(name=random_lower_string())
 
 
-@pytest.fixture
-def openstack_provider(auth_method: AuthMethod, project: Project) -> Openstack:
-    """Fixture with an Openstack provider.
+# @pytest.fixture
+# def openstack_provider(auth_method: AuthMethod, project: Project) -> Openstack:
+#     """Fixture with an Openstack provider.
 
-    It has an authentication method and a project.
-    """
-    return Openstack(
-        name=random_lower_string(),
-        auth_url=random_url(),
-        identity_providers=[auth_method],
-        projects=[project],
-    )
-
-
-@pytest.fixture
-def kubernetes_provider(auth_method: AuthMethod, project: Project) -> Kubernetes:
-    """Fixture with a Kubernetes provider.
-
-    It has an authentication method and a project.
-    """
-    return Kubernetes(
-        name=random_lower_string(),
-        auth_url=random_url(),
-        identity_providers=[auth_method],
-        projects=[project],
-    )
+#     It has an authentication method and a project.
+#     """
+#     return Openstack(
+#         name=random_lower_string(),
+#         auth_url=random_url(),
+#         identity_providers=[auth_method],
+#         projects=[project],
+#     )
 
 
-@pytest.fixture
-def site_config(issuer: Issuer) -> SiteConfig:
-    """Fixture with a SiteConfig with an Issuer and no providers."""
-    return SiteConfig(trusted_idps=[issuer])
+# @pytest.fixture
+# def kubernetes_provider(auth_method: AuthMethod, project: Project) -> Kubernetes:
+#     """Fixture with a Kubernetes provider.
+
+#     It has an authentication method and a project.
+#     """
+#     return Kubernetes(
+#         name=random_lower_string(),
+#         auth_url=random_url(),
+#         identity_providers=[auth_method],
+#         projects=[project],
+#     )
 
 
-@pytest.fixture
-def configurations(
-    identity_provider_create: IdentityProviderCreateExtended,
-    openstack_provider: Openstack,
-    project: Project,
-) -> Tuple[IdentityProviderCreateExtended, Openstack, Project]:
-    project.sla = identity_provider_create.user_groups[0].sla.doc_uuid
-    openstack_provider.identity_providers[
-        0
-    ].endpoint = identity_provider_create.endpoint
-    openstack_provider.identity_providers[
-        0
-    ].idp_name = identity_provider_create.relationship.idp_name
-    openstack_provider.identity_providers[
-        0
-    ].protocol = identity_provider_create.relationship.protocol
-    return identity_provider_create, openstack_provider, project
+# @pytest.fixture
+# def site_config(issuer: Issuer) -> SiteConfig:
+#     """Fixture with a SiteConfig with an Issuer and no providers."""
+#     return SiteConfig(trusted_idps=[issuer])
 
 
-# Federation-Registry Base Items
+# @pytest.fixture
+# def configurations(
+#     identity_provider_create: IdentityProviderCreateExtended,
+#     openstack_provider: Openstack,
+#     project: Project,
+# ) -> Tuple[IdentityProviderCreateExtended, Openstack, Project]:
+#     project.sla = identity_provider_create.user_groups[0].sla.doc_uuid
+#     openstack_provider.identity_providers[
+#         0
+#     ].endpoint = identity_provider_create.endpoint
+#     openstack_provider.identity_providers[
+#         0
+#     ].idp_name = identity_provider_create.relationship.idp_name
+#     openstack_provider.identity_providers[
+#         0
+#     ].protocol = identity_provider_create.relationship.protocol
+#     return identity_provider_create, openstack_provider, project
 
 
-@pytest.fixture
-def location() -> LocationBase:
-    """Fixture with an LocationBase without projects."""
-    return LocationBase(site=random_lower_string(), country=random_country())
+# # Federation-Registry Base Items
 
 
-@pytest.fixture
-def block_storage_quota() -> BlockStorageQuotaBase:
-    """Fixture with a BlockStorageQuotaBase."""
-    return BlockStorageQuotaBase(
-        gigabytes=randint(0, 100),
-        per_volume_gigabytes=randint(0, 100),
-        volumes=randint(1, 100),
-    )
+# @pytest.fixture
+# def location() -> LocationBase:
+#     """Fixture with an LocationBase without projects."""
+#     return LocationBase(site=random_lower_string(), country=random_country())
 
 
-@pytest.fixture
-def compute_quota() -> ComputeQuotaBase:
-    """Fixture with a ComputeQuotaBase."""
-    return ComputeQuotaBase(
-        cores=randint(0, 100),
-        instances=randint(0, 100),
-        ram=randint(1, 100),
-    )
+# @pytest.fixture
+# def block_storage_quota() -> BlockStorageQuotaBase:
+#     """Fixture with a BlockStorageQuotaBase."""
+#     return BlockStorageQuotaBase(
+#         gigabytes=randint(0, 100),
+#         per_volume_gigabytes=randint(0, 100),
+#         volumes=randint(1, 100),
+#     )
 
 
-@pytest.fixture
-def network_quota() -> NetworkQuotaBase:
-    """Fixture with a NetworkQuotaBase."""
-    return NetworkQuotaBase(
-        public_ips=randint(0, 100),
-        networks=randint(0, 100),
-        ports=randint(1, 100),
-        security_groups=randint(1, 100),
-        security_group_rules=randint(1, 100),
-    )
+# @pytest.fixture
+# def compute_quota() -> ComputeQuotaBase:
+#     """Fixture with a ComputeQuotaBase."""
+#     return ComputeQuotaBase(
+#         cores=randint(0, 100),
+#         instances=randint(0, 100),
+#         ram=randint(1, 100),
+#     )
+
+
+# @pytest.fixture
+# def network_quota() -> NetworkQuotaBase:
+#     """Fixture with a NetworkQuotaBase."""
+#     return NetworkQuotaBase(
+#         public_ips=randint(0, 100),
+#         networks=randint(0, 100),
+#         ports=randint(1, 100),
+#         security_groups=randint(1, 100),
+#         security_group_rules=randint(1, 100),
+#     )
 
 
 # Federation-Registry Creation Items
@@ -374,9 +354,9 @@ def service_create(
 
 
 @pytest.fixture
-def sla_create(sla: SLA, project: Project) -> SLACreateExtended:
+def sla_create() -> SLACreateExtended:
     """Fixture with an SLACreateExtended."""
-    return SLACreateExtended(**sla.dict(), project=project.id)
+    return SLACreateExtended(**sla_dict(), project=uuid4())
 
 
 @pytest.fixture

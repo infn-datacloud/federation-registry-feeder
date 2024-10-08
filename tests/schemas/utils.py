@@ -3,7 +3,8 @@ import string
 import time
 from datetime import date
 from random import choice, choices, randint, random
-from typing import List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
+from uuid import UUID, uuid4
 
 from fed_reg.image.enum import ImageOS
 from fed_reg.provider.enum import ProviderType
@@ -98,3 +99,78 @@ def random_start_end_dates() -> Tuple[date, date]:
 def random_url() -> AnyHttpUrl:
     """Return a random URL."""
     return "https://" + random_lower_string() + ".com"
+
+
+def auth_method_dict() -> dict[str, Any]:
+    """Dict with AuthMethod minimal attributes."""
+    return {
+        "name": random_lower_string(),
+        "protocol": random_lower_string(),
+        "endpoint": random_url(),
+    }
+
+
+def issuer_dict() -> dict[str, Any]:
+    """Dict with Issuer minimal attributes."""
+    return {"issuer": random_url(), "group_claim": random_lower_string()}
+
+
+def kubernetes_dict() -> dict[str, Any]:
+    """Dict with kubernetes provider minimal attributes."""
+    return {
+        "name": random_lower_string(),
+        "type": ProviderType.K8S,
+        "auth_url": random_url(),
+    }
+
+
+def location_dict() -> dict[str, Any]:
+    return {"site": random_lower_string(), "country": random_country()}
+
+
+def openstack_dict() -> dict[str, Any]:
+    """Dict with openstack provider minimal attributes."""
+    return {
+        "name": random_lower_string(),
+        "type": ProviderType.OS,
+        "auth_url": random_url(),
+    }
+
+
+def per_region_props_dict() -> dict[str, str]:
+    return {"region_name": random_lower_string()}
+
+
+def private_net_proxy_dict() -> dict[str, Any]:
+    """Dict with PrivateNetProxy minimal attributes."""
+    return {"host": random_ip(), "user": random_lower_string()}
+
+
+def project_dict() -> dict[str, UUID]:
+    """Dict with Project minimal attributes."""
+    return {"id": uuid4(), "sla": uuid4()}
+
+
+def provider_dict() -> dict[str, Any]:
+    """Dict with Provider minimal attributes."""
+    return {
+        "name": random_lower_string(),
+        "type": random_provider_type(),
+        "auth_url": random_url(),
+    }
+
+
+def region_dict() -> dict[str, Any]:
+    """Dict with Region minimal attributes."""
+    return {"name": random_lower_string()}
+
+
+def sla_dict() -> dict[str, Any]:
+    """Dict with SLA minimal attributes."""
+    start_date, end_date = random_start_end_dates()
+    return {"doc_uuid": uuid4(), "start_date": start_date, "end_date": end_date}
+
+
+def user_group_dict() -> dict[str, Any]:
+    """Dict with UserGroup minimal attributes."""
+    return {"name": random_lower_string()}
