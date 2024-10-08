@@ -12,7 +12,7 @@ from fed_reg.provider.schemas_extended import (
 )
 from pydantic import AnyHttpUrl
 
-from src.config import get_settings
+from src.config import Settings
 
 
 class CRUD:
@@ -28,15 +28,15 @@ class CRUD:
         read_headers: dict[str, str],
         write_headers: dict[str, str],
         logger: Logger,
+        settings: Settings,
     ) -> None:
-        settings = get_settings()
         self.multi_url = url
         self.single_url = os.path.join(self.multi_url, "{uid}")
         self.read_headers = read_headers
         self.write_headers = write_headers
         self.logger = logger
-        self.error = False
         self.timeout = settings.FED_REG_TIMEOUT
+        self.error = False
 
     def read(self) -> List[ProviderRead]:
         """Retrieve all providers from the Federation-Registry."""
@@ -51,6 +51,7 @@ class CRUD:
             self.logger.debug(resp.json())
             return [ProviderRead(**i) for i in resp.json()]
 
+        self.error = True
         self.logger.debug("Status code: %s", resp.status_code)
         self.logger.debug("Message: %s", resp.text)
         resp.raise_for_status()
@@ -77,6 +78,7 @@ class CRUD:
             self.error = True
             return None
 
+        self.error = True
         self.logger.debug("Status code: %s", resp.status_code)
         self.logger.debug("Message: %s", resp.text)
         resp.raise_for_status()
@@ -95,6 +97,7 @@ class CRUD:
             self.logger.info("Provider=%s removed", item.name)
             return None
 
+        self.error = True
         self.logger.debug("Status code: %s", resp.status_code)
         self.logger.debug("Message: %s", resp.text)
         resp.raise_for_status()
@@ -128,6 +131,7 @@ class CRUD:
             self.error = True
             return None
 
+        self.error = True
         self.logger.debug("Status code: %s", resp.status_code)
         self.logger.debug("Message: %s", resp.text)
         resp.raise_for_status()
