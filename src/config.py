@@ -1,6 +1,5 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Optional
 
 from pydantic import AnyHttpUrl, BaseModel, BaseSettings, Field, validator
 
@@ -18,6 +17,7 @@ class URLs(BaseModel):
     )
     compute_quotas: AnyHttpUrl = Field(description="Compute Quotas endpoint")
     network_quotas: AnyHttpUrl = Field(description="Network Quotas endpoint")
+    object_store_quotas: AnyHttpUrl = Field(description="ObjectStore Quotas endpoint")
     regions: AnyHttpUrl = Field(description="Regions endpoint")
     block_storage_services: AnyHttpUrl = Field(
         description="Block Storage Services endpoint"
@@ -47,6 +47,9 @@ class APIVersions(BaseSettings):
     )
     NETWORK_QUOTAS: str = Field(
         default="v1", description="Network Quotas API version to use"
+    )
+    OBJECT_STORE_QUOTAS: str = Field(
+        default="v1", description="Object Store Quotas API version to use"
     )
     REGIONS: str = Field(default="v1", description="Regions API version to use")
     BLOCK_STORAGE_SERVICES: str = Field(
@@ -78,7 +81,7 @@ class Settings(BaseSettings):
         default=30,
         description="Timeout [s] for the HTTP requests made to the Federation-Registry",
     )
-    BLOCK_STORAGE_VOL_LABELS: List[str] = Field(
+    BLOCK_STORAGE_VOL_LABELS: list[str] = Field(
         default_factory=list, description="List of accepted volume type labels."
     )
     PROVIDERS_CONF_DIR: Path = Field(
@@ -86,13 +89,11 @@ class Settings(BaseSettings):
         description="Path to the directory containing the federated provider \
             yaml configurations.",
     )
-    OIDC_AGENT_CONTAINER_NAME: Optional[str] = Field(
+    OIDC_AGENT_CONTAINER_NAME: str | None = Field(
         default=None,
         description="Name of the container with the oidc-agent service instance.",
     )
-    KAFKA_SERVER_URL: str | None = Field(
-        default=None, description="Kafka server url"
-    )
+    KAFKA_SERVER_URL: str | None = Field(default=None, description="Kafka server url")
     KAFKA_TOPIC: str | None = Field(
         default=None, description="Kafka topic to upload data"
     )
