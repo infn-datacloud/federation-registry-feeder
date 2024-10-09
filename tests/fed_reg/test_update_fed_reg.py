@@ -6,10 +6,22 @@ import pytest
 from fed_reg.provider.schemas_extended import ProviderCreateExtended, ProviderRead
 from requests import HTTPError
 
-from src.fed_reg_conn import update_database
+from src.fed_reg_conn import get_read_write_headers, update_database
 from src.models.config import APIVersions, Settings, URLs
 from tests.fed_reg.utils import provider_dict, service_endpoints_dict
 from tests.schemas.utils import random_lower_string
+
+
+def test_headers_creation() -> None:
+    token = "test"
+    (read, write) = get_read_write_headers(token=token)
+    assert read
+    assert write
+    assert "authorization" in read.keys()
+    assert read["authorization"] == f"Bearer {token}"
+    assert "authorization" in write.keys()
+    assert write["authorization"] == f"Bearer {token}"
+    assert write["content-type"] == "application/json"
 
 
 @patch("src.fed_reg_conn.CRUD.remove")
