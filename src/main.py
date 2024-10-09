@@ -28,7 +28,7 @@ def main(log_level: str) -> None:
 
     # Create kafka producer if needed
     kafka_prod = get_kafka_prod(
-        url=settings.KAFKA_SERVER_URL, topic=settings.KAFKA_TOPIC, logger=logger
+        hostname=settings.KAFKA_HOSTNAME, topic=settings.KAFKA_TOPIC, logger=logger
     )
 
     # Read all yaml files containing providers configurations.

@@ -93,7 +93,9 @@ class Settings(BaseSettings):
         default=None,
         description="Name of the container with the oidc-agent service instance.",
     )
-    KAFKA_SERVER_URL: str | None = Field(default=None, description="Kafka server url")
+    KAFKA_HOSTNAME: str | None = Field(
+        default=None, description="Kafka server hostname. DNS name and port"
+    )
     KAFKA_TOPIC: str | None = Field(
         default=None, description="Kafka topic to upload data"
     )
