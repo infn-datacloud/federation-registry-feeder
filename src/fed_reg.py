@@ -11,7 +11,7 @@ from fed_reg.provider.schemas_extended import (
 )
 from pydantic import AnyHttpUrl
 
-from src.models.config import Settings
+from src.models.config import Settings, URLs
 
 
 class CRUD:
@@ -134,3 +134,66 @@ class CRUD:
         self.logger.debug("Status code: %s", resp.status_code)
         self.logger.debug("Message: %s", resp.text)
         resp.raise_for_status()
+
+
+def get_read_write_headers(*, token: str) -> tuple[dict[str, str], dict[str, str]]:
+    """From an access token, create the read and write headers."""
+    read_header = {"authorization": f"Bearer {token}"}
+    write_header = {
+        **read_header,
+        "accept": "application/json",
+        "content-type": "application/json",
+    }
+    return (read_header, write_header)
+
+
+def update_database(
+    *,
+    service_api_url: URLs,
+    items: list[ProviderCreateExtended],
+    token: str,
+    logger: Logger,
+    settings: Settings,
+) -> bool:
+    """Update the Federation-Registry data.
+
+    Create the read and write headers to use in requests.
+    Retrieve current providers.
+    For each current federated provider, if a provider with the same name and type
+    already exists, update it, otherwise create a new provider entry with the given
+    data. Once all the current federated providers have been added or updated, remove
+    the remaining providers retrieved from the Federation-Registry, they are no more
+    tracked.
+
+    Return True if no errors happened otherwise False.
+    """
+    if token == "":
+        logger.warning("No token found. Skipping communication with Fed-Reg.")
+        return True
+
+    read_header, write_header = get_read_write_headers(token=token)
+    crud = CRUD(
+        url=service_api_url.providers,
+        read_headers=read_header,
+        write_headers=write_header,
+        logger=logger,
+        settings=settings,
+    )
+
+    logger.info("Retrieving data from Federation-Registry")
+    try:
+        db_items = {db_item.name: db_item for db_item in crud.read()}
+        for item in items:
+            db_item = db_items.pop(item.name, None)
+            if db_item is None or db_item.type != item.type:
+                crud.create(data=item)
+            else:
+                crud.update(new_data=item, old_data=db_item)
+        for db_item in db_items.values():
+            crud.remove(item=db_item)
+    except ConnectionError as e:
+        logger.error("Can't connect to Federation Registry.")
+        logger.error(e)
+        return True
+
+    return crud.error

@@ -15,7 +15,7 @@ from fed_reg.provider.schemas_extended import (
 from pytest_cases import case, parametrize, parametrize_with_cases
 from requests.exceptions import ConnectionError, ReadTimeout
 
-from src.crud import CRUD
+from src.fed_reg import CRUD
 from tests.fed_reg.utils import crud_dict, execute_operation, provider_dict
 from tests.schemas.utils import random_lower_string
 
@@ -106,7 +106,7 @@ def test_invalid_crud_class(missing_attr: str) -> None:
         CRUD(**d)
 
 
-@patch("src.crud.requests.get")
+@patch("src.fed_reg.requests.get")
 @parametrize_with_cases("providers", cases=CaseReadProviders)
 def test_read(mock_get: Mock, providers: list[ProviderRead]) -> None:
     crud = CRUD(**crud_dict())
@@ -121,7 +121,7 @@ def test_read(mock_get: Mock, providers: list[ProviderRead]) -> None:
     assert not crud.error
 
 
-@patch("src.crud.requests.post")
+@patch("src.fed_reg.requests.post")
 def test_create(mock_post: Mock) -> None:
     crud = CRUD(**crud_dict())
     provider_create = ProviderCreateExtended(**provider_dict())
@@ -136,7 +136,7 @@ def test_create(mock_post: Mock) -> None:
 
 
 @patch(
-    "src.crud.requests.delete",
+    "src.fed_reg.requests.delete",
     return_value=Mock(status_code=status.HTTP_204_NO_CONTENT),
 )
 def test_remove(mock_delete: Mock) -> None:
@@ -149,7 +149,7 @@ def test_remove(mock_delete: Mock) -> None:
     assert not crud.error
 
 
-@patch("src.crud.requests.put")
+@patch("src.fed_reg.requests.put")
 def test_update(mock_put: Mock) -> None:
     crud = CRUD(**crud_dict())
     provider_create = ProviderCreateExtended(**provider_dict())
@@ -168,7 +168,8 @@ def test_update(mock_put: Mock) -> None:
 
 
 @patch(
-    "src.crud.requests.put", return_value=Mock(status_code=status.HTTP_304_NOT_MODIFIED)
+    "src.fed_reg.requests.put",
+    return_value=Mock(status_code=status.HTTP_304_NOT_MODIFIED),
 )
 def test_update_no_changes(mock_put: Mock) -> None:
     crud = CRUD(**crud_dict())
@@ -189,7 +190,7 @@ def test_generic_http_error(error_code: int, operation: str) -> None:
     provider_create = ProviderCreateExtended(**provider_dict())
     provider_read = ProviderRead(uid=uuid4(), **provider_create.dict())
 
-    with patch(f"src.crud.requests.{operation}") as mock_req:
+    with patch(f"src.fed_reg.requests.{operation}") as mock_req:
         mock_req.return_value.status_code = error_code
         execute_operation(
             crud=crud,
@@ -209,7 +210,7 @@ def test_managed_http_error(error_code: int, operation: str) -> None:
     provider_create = ProviderCreateExtended(**provider_dict())
     provider_read = ProviderRead(uid=uuid4(), **provider_create.dict())
 
-    with patch(f"src.crud.requests.{operation}") as mock_req:
+    with patch(f"src.fed_reg.requests.{operation}") as mock_req:
         mock_req.return_value.status_code = error_code
         if operation == "post":
             resp = crud.create(data=provider_create)
@@ -236,7 +237,7 @@ def test_read_no_connection(
     provider_create = ProviderCreateExtended(**provider_dict())
     provider_read = ProviderRead(uid=uuid4(), **provider_create.dict())
 
-    with patch(f"src.crud.requests.{operation}") as mock_req:
+    with patch(f"src.fed_reg.requests.{operation}") as mock_req:
         mock_req.side_effect = exception()
         with pytest.raises(exception):
             execute_operation(

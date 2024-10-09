@@ -4,7 +4,7 @@ from typing import Any
 
 from fed_reg.provider.schemas_extended import ProviderCreateExtended, ProviderRead
 
-from src.crud import CRUD
+from src.fed_reg import CRUD
 from src.models.config import APIVersions, Settings, URLs
 from tests.schemas.utils import random_lower_string, random_provider_type, random_url
 
