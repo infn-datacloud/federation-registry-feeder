@@ -11,7 +11,7 @@ from fed_reg.provider.schemas_extended import (
 )
 from pydantic import AnyHttpUrl
 
-from src.config import Settings
+from src.models.config import Settings
 
 
 class CRUD:

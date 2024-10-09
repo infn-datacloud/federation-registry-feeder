@@ -7,9 +7,9 @@ from fed_reg.provider.schemas_extended import ProviderCreateExtended
 from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
 from requests.exceptions import ConnectionError
 
-from src.config import Settings, URLs
 from src.crud import CRUD
 from src.logger import create_logger
+from src.models.config import Settings, URLs
 from src.models.site_config import SiteConfig
 
 

@@ -6,7 +6,7 @@ import pytest
 from fed_reg.provider.schemas_extended import ProviderCreateExtended, ProviderRead
 from requests import HTTPError
 
-from src.config import APIVersions, Settings, URLs
+from src.models.config import APIVersions, Settings, URLs
 from src.utils import update_database
 from tests.fed_reg.utils import provider_dict, service_endpoints_dict
 from tests.schemas.utils import random_lower_string

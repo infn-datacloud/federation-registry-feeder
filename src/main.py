@@ -2,9 +2,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 from fed_reg.provider.schemas_extended import ProviderCreateExtended
 
-from src.config import get_settings
 from src.kafka_conn import get_kafka_prod
 from src.logger import create_logger
+from src.models.config import get_settings
 from src.parser import parser
 from src.providers.core import ProviderThread
 from src.utils import (

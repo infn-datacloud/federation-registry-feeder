@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 from pytest_cases import parametrize, parametrize_with_cases
 
-from src.config import URLs
+from src.models.config import URLs
 from tests.schemas.utils import urls_dict
 
 

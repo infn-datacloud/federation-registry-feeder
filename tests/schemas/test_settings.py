@@ -5,7 +5,7 @@ import pytest
 from pydantic import AnyHttpUrl, ValidationError
 from pytest_cases import parametrize, parametrize_with_cases
 
-from src.config import APIVersions, Settings
+from src.models.config import APIVersions, Settings
 from tests.schemas.utils import random_url
 
 

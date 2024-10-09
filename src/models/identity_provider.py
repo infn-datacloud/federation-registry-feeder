@@ -6,7 +6,7 @@ from fed_reg.user_group.schemas import UserGroupBase
 from liboidcagent import get_access_token_by_issuer_url
 from pydantic import AnyHttpUrl, Field, validator
 
-from src.config import get_settings
+from src.models.config import get_settings
 
 
 def retrieve_token(endpoint: str):

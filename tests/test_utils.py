@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 from pytest_cases import case, parametrize, parametrize_with_cases
 
-from src.config import Settings
+from src.models.config import Settings
 from src.models.site_config import SiteConfig
 from src.utils import (
     get_conf_files,
