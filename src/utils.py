@@ -10,7 +10,7 @@ from requests.exceptions import ConnectionError
 from src.config import Settings, URLs
 from src.crud import CRUD
 from src.logger import create_logger
-from src.models.config import SiteConfig
+from src.models.site_config import SiteConfig
 
 
 def infer_service_endpoints(*, settings: Settings, logger: Logger) -> URLs:

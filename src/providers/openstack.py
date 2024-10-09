@@ -37,8 +37,8 @@ from openstack.image.v2.image import Image
 from openstack.network.v2.network import Network
 from requests import Response
 
-from src.models.config import Openstack
 from src.models.provider import PrivateNetProxy, Project
+from src.models.site_config import Openstack
 from src.providers.exceptions import ProviderException
 
 TIMEOUT = 2  # s

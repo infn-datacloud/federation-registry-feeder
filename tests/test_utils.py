@@ -1,14 +1,13 @@
 import logging
 import os
 from pathlib import Path
-from typing import List
 from unittest.mock import Mock, patch
 
 import pytest
 from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.config import Settings
-from src.models.config import SiteConfig
+from src.models.site_config import SiteConfig
 from src.utils import (
     get_conf_files,
     get_read_write_headers,
@@ -22,7 +21,7 @@ from tests.schemas.utils import random_lower_string
 class CaseYamlFiles:
     @case(tags=["num-items"])
     @parametrize(num_items=[0, 1])
-    def case_yaml_files(self, num_items: int) -> List[str]:
+    def case_yaml_files(self, num_items: int) -> list[str]:
         return [str(i) for i in range(num_items)]
 
     @case(tags=["fname"])
@@ -93,7 +92,7 @@ def test_load_config_yaml_invalid_yaml(tmp_path: Path) -> None:
 
 @patch("src.utils.load_config")
 @parametrize_with_cases("yaml_files", cases=CaseYamlFiles, has_tag="num-items")
-def test_no_site_configs(mock_load_conf: Mock, yaml_files: List[str]) -> None:
+def test_no_site_configs(mock_load_conf: Mock, yaml_files: list[str]) -> None:
     mock_load_conf.return_value = None
     site_configs = get_site_configs(yaml_files=yaml_files)
     assert len(site_configs) == 0

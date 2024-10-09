@@ -5,8 +5,8 @@ from pytest_cases import parametrize_with_cases
 
 from src.config import URLs
 from src.main import main
-from src.models.config import SiteConfig
 from src.models.provider import Kubernetes, Openstack
+from src.models.site_config import SiteConfig
 
 
 class CaseSiteConfigs:

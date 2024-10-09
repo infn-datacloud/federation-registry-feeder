@@ -4,9 +4,9 @@ import pytest
 from fed_reg.provider.enum import ProviderType
 from pytest_cases import parametrize_with_cases
 
-from src.models.config import SiteConfig
 from src.models.identity_provider import SLA, Issuer, UserGroup
 from src.models.provider import AuthMethod, Kubernetes, Openstack, Project
+from src.models.site_config import SiteConfig
 from tests.schemas.utils import (
     auth_method_dict,
     issuer_dict,
