@@ -6,16 +6,16 @@ import pytest
 from fed_reg.provider.schemas_extended import ProviderCreateExtended, ProviderRead
 from requests import HTTPError
 
-from src.fed_reg import update_database
+from src.fed_reg_conn import update_database
 from src.models.config import APIVersions, Settings, URLs
 from tests.fed_reg.utils import provider_dict, service_endpoints_dict
 from tests.schemas.utils import random_lower_string
 
 
-@patch("src.fed_reg.CRUD.remove")
-@patch("src.fed_reg.CRUD.update")
-@patch("src.fed_reg.CRUD.create")
-@patch("src.fed_reg.CRUD.read")
+@patch("src.fed_reg_conn.CRUD.remove")
+@patch("src.fed_reg_conn.CRUD.update")
+@patch("src.fed_reg_conn.CRUD.create")
+@patch("src.fed_reg_conn.CRUD.read")
 def test_do_nothing_to_db(
     mock_crud_read: Mock,
     mock_crud_create: Mock,
@@ -39,10 +39,10 @@ def test_do_nothing_to_db(
     mock_crud_remove.assert_not_called()
 
 
-@patch("src.fed_reg.CRUD.remove")
-@patch("src.fed_reg.CRUD.update")
-@patch("src.fed_reg.CRUD.create")
-@patch("src.fed_reg.CRUD.read")
+@patch("src.fed_reg_conn.CRUD.remove")
+@patch("src.fed_reg_conn.CRUD.update")
+@patch("src.fed_reg_conn.CRUD.create")
+@patch("src.fed_reg_conn.CRUD.read")
 def test_add_provider_to_db(
     mock_crud_read: Mock,
     mock_crud_create: Mock,
@@ -67,10 +67,10 @@ def test_add_provider_to_db(
     mock_crud_remove.assert_not_called()
 
 
-@patch("src.fed_reg.CRUD.remove")
-@patch("src.fed_reg.CRUD.update")
-@patch("src.fed_reg.CRUD.create")
-@patch("src.fed_reg.CRUD.read")
+@patch("src.fed_reg_conn.CRUD.remove")
+@patch("src.fed_reg_conn.CRUD.update")
+@patch("src.fed_reg_conn.CRUD.create")
+@patch("src.fed_reg_conn.CRUD.read")
 def test_delete_provider_from_db(
     mock_crud_read: Mock,
     mock_crud_create: Mock,
@@ -95,10 +95,10 @@ def test_delete_provider_from_db(
     mock_crud_remove.assert_called_once()
 
 
-@patch("src.fed_reg.CRUD.remove")
-@patch("src.fed_reg.CRUD.update")
-@patch("src.fed_reg.CRUD.create")
-@patch("src.fed_reg.CRUD.read")
+@patch("src.fed_reg_conn.CRUD.remove")
+@patch("src.fed_reg_conn.CRUD.update")
+@patch("src.fed_reg_conn.CRUD.create")
+@patch("src.fed_reg_conn.CRUD.read")
 def test_update_provider_in_db(
     mock_crud_read: Mock,
     mock_crud_create: Mock,
@@ -123,10 +123,10 @@ def test_update_provider_in_db(
     mock_crud_remove.assert_not_called()
 
 
-@patch("src.fed_reg.CRUD.remove")
-@patch("src.fed_reg.CRUD.update")
-@patch("src.fed_reg.CRUD.create")
-@patch("src.fed_reg.CRUD.read")
+@patch("src.fed_reg_conn.CRUD.remove")
+@patch("src.fed_reg_conn.CRUD.update")
+@patch("src.fed_reg_conn.CRUD.create")
+@patch("src.fed_reg_conn.CRUD.read")
 def test_read_error(
     mock_crud_read: Mock,
     mock_crud_create: Mock,
@@ -151,10 +151,10 @@ def test_read_error(
     mock_crud_remove.assert_not_called()
 
 
-@patch("src.fed_reg.CRUD.remove")
-@patch("src.fed_reg.CRUD.update")
-@patch("src.fed_reg.CRUD.create")
-@patch("src.fed_reg.CRUD.read")
+@patch("src.fed_reg_conn.CRUD.remove")
+@patch("src.fed_reg_conn.CRUD.update")
+@patch("src.fed_reg_conn.CRUD.create")
+@patch("src.fed_reg_conn.CRUD.read")
 def test_create_error(
     mock_crud_read: Mock,
     mock_crud_create: Mock,
@@ -180,10 +180,10 @@ def test_create_error(
     mock_crud_remove.assert_not_called()
 
 
-@patch("src.fed_reg.CRUD.remove")
-@patch("src.fed_reg.CRUD.update")
-@patch("src.fed_reg.CRUD.create")
-@patch("src.fed_reg.CRUD.read")
+@patch("src.fed_reg_conn.CRUD.remove")
+@patch("src.fed_reg_conn.CRUD.update")
+@patch("src.fed_reg_conn.CRUD.create")
+@patch("src.fed_reg_conn.CRUD.read")
 def test_delete_error(
     mock_crud_read: Mock,
     mock_crud_create: Mock,
@@ -209,10 +209,10 @@ def test_delete_error(
     mock_crud_remove.assert_called_once()
 
 
-@patch("src.fed_reg.CRUD.remove")
-@patch("src.fed_reg.CRUD.update")
-@patch("src.fed_reg.CRUD.create")
-@patch("src.fed_reg.CRUD.read")
+@patch("src.fed_reg_conn.CRUD.remove")
+@patch("src.fed_reg_conn.CRUD.update")
+@patch("src.fed_reg_conn.CRUD.create")
+@patch("src.fed_reg_conn.CRUD.read")
 def test_update_error(
     mock_crud_read: Mock,
     mock_crud_create: Mock,
@@ -239,10 +239,10 @@ def test_update_error(
     mock_crud_remove.assert_not_called()
 
 
-@patch("src.fed_reg.CRUD.remove")
-@patch("src.fed_reg.CRUD.update")
-@patch("src.fed_reg.CRUD.create")
-@patch("src.fed_reg.CRUD.read")
+@patch("src.fed_reg_conn.CRUD.remove")
+@patch("src.fed_reg_conn.CRUD.update")
+@patch("src.fed_reg_conn.CRUD.create")
+@patch("src.fed_reg_conn.CRUD.read")
 def test_no_token(
     mock_crud_read: Mock,
     mock_crud_create: Mock,

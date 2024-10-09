@@ -2,17 +2,13 @@ from concurrent.futures import ThreadPoolExecutor
 
 from fed_reg.provider.schemas_extended import ProviderCreateExtended
 
+from src.fed_reg_conn import update_database
 from src.kafka_conn import get_kafka_prod
 from src.logger import create_logger
 from src.models.config import get_settings
 from src.parser import parser
 from src.providers.core import ProviderThread
-from src.utils import (
-    get_conf_files,
-    get_site_configs,
-    infer_service_endpoints,
-    update_database,
-)
+from src.utils import get_conf_files, get_site_configs, infer_service_endpoints
 
 
 def main(log_level: str) -> None:
