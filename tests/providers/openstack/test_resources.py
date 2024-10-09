@@ -1,4 +1,3 @@
-from typing import Tuple, Union
 from unittest.mock import Mock, patch
 
 from fed_reg.provider.schemas_extended import (
@@ -77,13 +76,13 @@ def test_connection_error(
     mock_block_storage_service: Mock,
     mock_compute_service: Mock,
     mock_network_service: Mock,
-    configurations: Tuple[IdentityProviderCreateExtended, Openstack, Project],
+    configurations: tuple[IdentityProviderCreateExtended, Openstack, Project],
     project_create: ProjectCreate,
     block_storage_service_create: BlockStorageServiceCreateExtended,
     compute_service_create: ComputeServiceCreateExtended,
     network_service_create: NetworkServiceCreateExtended,
     fail_point: str,
-    exception: Union[ConnectFailure, Unauthorized, NoMatchingPlugin, NotFound],
+    exception: ConnectFailure | Unauthorized | NoMatchingPlugin | NotFound,
 ) -> None:
     """Test no initial connection or connection loss during procedure"""
     block_storage_service_create.name = BlockStorageServiceName.OPENSTACK_CINDER
@@ -147,7 +146,7 @@ def test_retrieve_resources(
     mock_block_storage_service: Mock,
     mock_compute_service: Mock,
     mock_network_service: Mock,
-    configurations: Tuple[IdentityProviderCreateExtended, Openstack, Project],
+    configurations: tuple[IdentityProviderCreateExtended, Openstack, Project],
     project_create: ProjectCreate,
     block_storage_service_create: BlockStorageServiceCreateExtended,
     compute_service_create: ComputeServiceCreateExtended,

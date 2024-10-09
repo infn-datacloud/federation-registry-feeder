@@ -1,5 +1,4 @@
 import logging
-from typing import List
 from unittest.mock import Mock, patch
 
 from pytest_cases import parametrize_with_cases
@@ -11,7 +10,7 @@ from src.models.provider import Kubernetes, Openstack
 
 
 class CaseSiteConfigs:
-    def case_no_config(self) -> List[SiteConfig]:
+    def case_no_config(self) -> list[SiteConfig]:
         return []
 
     def case_one_config(
@@ -19,7 +18,7 @@ class CaseSiteConfigs:
         site_config: SiteConfig,
         openstack_provider: Openstack,
         kubernetes_provider: Kubernetes,
-    ) -> List[SiteConfig]:
+    ) -> list[SiteConfig]:
         site_config.openstack = [openstack_provider]
         site_config.kubernetes = [kubernetes_provider]
         return [site_config]
@@ -34,7 +33,7 @@ def test_main(
     mock_load_conf: Mock,
     mock_edit_db: Mock,
     service_endpoints: URLs,
-    site_configs: List[SiteConfig],
+    site_configs: list[SiteConfig],
 ) -> None:
     """text the execution of the main function.
 

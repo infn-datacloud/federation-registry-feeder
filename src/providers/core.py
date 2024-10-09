@@ -1,5 +1,4 @@
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Optional, Tuple
 
 from fed_reg.provider.enum import ProviderStatus, ProviderType
 from fed_reg.provider.schemas_extended import (
@@ -34,7 +33,7 @@ class ConnectionThread:
         provider_conf: Provider,
         region_conf: Region,
         project_conf: Project,
-        issuers: List[Issuer],
+        issuers: list[Issuer],
         log_level: str | int | None = None,
     ) -> None:
         self.provider_conf = provider_conf
@@ -50,7 +49,7 @@ class ConnectionThread:
 
         self.error = False
 
-    def get_provider_siblings(self) -> Optional[ProviderSiblings]:
+    def get_provider_siblings(self) -> ProviderSiblings | None:
         """Retrieve the provider region, project and identity provider.
 
         From the current configuration, connect to the correct provider and retrieve the
@@ -126,7 +125,7 @@ class ConnectionThread:
 
     def get_idp_matching_project(
         self, project: Project
-    ) -> Tuple[IdentityProviderCreateExtended, str]:
+    ) -> tuple[IdentityProviderCreateExtended, str]:
         """Find the identity provider with an SLA matching the target project's one.
 
         For each sla of each user group of each issuer listed in the yaml file, find the
@@ -180,7 +179,7 @@ class ProviderThread:
         self,
         *,
         provider_conf: Provider,
-        issuers: List[Issuer],
+        issuers: list[Issuer],
         kafka_prod: Producer | None = None,
         log_level: str | int | None = None,
     ) -> None:
@@ -301,9 +300,9 @@ class ProviderThread:
     def update_region_block_storage_services(
         self,
         *,
-        current_services: List[BlockStorageServiceCreateExtended],
-        new_services: List[BlockStorageServiceCreateExtended],
-    ) -> List[BlockStorageServiceCreateExtended]:
+        current_services: list[BlockStorageServiceCreateExtended],
+        new_services: list[BlockStorageServiceCreateExtended],
+    ) -> list[BlockStorageServiceCreateExtended]:
         """Update Block Storage services.
 
         If the service does not exist, add it; otherwise, add new quotas.
@@ -320,9 +319,9 @@ class ProviderThread:
     def update_region_compute_services(
         self,
         *,
-        current_services: List[ComputeServiceCreateExtended],
-        new_services: List[ComputeServiceCreateExtended],
-    ) -> List[ComputeServiceCreateExtended]:
+        current_services: list[ComputeServiceCreateExtended],
+        new_services: list[ComputeServiceCreateExtended],
+    ) -> list[ComputeServiceCreateExtended]:
         """Update Compute services.
 
         If the service does not exist, add it; otherwise, add new quotas, flavors and
@@ -354,9 +353,9 @@ class ProviderThread:
     def update_region_identity_services(
         self,
         *,
-        current_services: List[IdentityServiceCreate],
-        new_services: List[IdentityServiceCreate],
-    ) -> List[IdentityServiceCreate]:
+        current_services: list[IdentityServiceCreate],
+        new_services: list[IdentityServiceCreate],
+    ) -> list[IdentityServiceCreate]:
         """Update Identity services.
 
         If the service does not exist, add it.
@@ -372,9 +371,9 @@ class ProviderThread:
     def update_region_network_services(
         self,
         *,
-        current_services: List[NetworkServiceCreateExtended],
-        new_services: List[NetworkServiceCreateExtended],
-    ) -> List[NetworkServiceCreateExtended]:
+        current_services: list[NetworkServiceCreateExtended],
+        new_services: list[NetworkServiceCreateExtended],
+    ) -> list[NetworkServiceCreateExtended]:
         """Update Network services.
 
         If the service does not exist, add it; otherwise, add new quotas and networks.
@@ -398,9 +397,9 @@ class ProviderThread:
     def update_region_object_store_services(
         self,
         *,
-        current_services: List[ObjectStoreServiceCreateExtended],
-        new_services: List[ObjectStoreServiceCreateExtended],
-    ) -> List[ObjectStoreServiceCreateExtended]:
+        current_services: list[ObjectStoreServiceCreateExtended],
+        new_services: list[ObjectStoreServiceCreateExtended],
+    ) -> list[ObjectStoreServiceCreateExtended]:
         """Update Object store services.
 
         If the service does not exist, add it; otherwise, add new quotas and networks.
@@ -415,8 +414,8 @@ class ProviderThread:
         return current_services
 
     def filter_projects_on_compute_service(
-        self, *, service: ComputeServiceCreateExtended, include_projects: List[str]
-    ) -> tuple[List[FlavorCreateExtended], List[ImageCreateExtended]]:
+        self, *, service: ComputeServiceCreateExtended, include_projects: list[str]
+    ) -> tuple[list[FlavorCreateExtended], list[ImageCreateExtended]]:
         """Remove from compute resources projects not imported in the Fed-Reg.
 
         Apply the filtering only on private flavors and images.

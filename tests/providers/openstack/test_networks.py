@@ -1,4 +1,3 @@
-from typing import List, Optional
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
@@ -11,15 +10,15 @@ from src.providers.openstack import get_networks
 
 class CaseTagList:
     @case(tags=["empty"])
-    def case_empty_tag_list(self) -> Optional[List]:
+    def case_empty_tag_list(self) -> list:
         return []
 
     @case(tags=["empty"])
-    def case_no_list(self) -> Optional[List]:
+    def case_no_list(self) -> None:
         return None
 
     @case(tags=["full"])
-    def case_list(self) -> Optional[List]:
+    def case_list(self) -> list[str]:
         return ["one"]
 
 
@@ -29,7 +28,7 @@ class CaseDefaultNet:
         return default_net
 
 
-def filter_networks(network: Network, tags: Optional[List[str]]) -> bool:
+def filter_networks(network: Network, tags: list[str] | None) -> bool:
     valid_tag = tags is None or len(tags) == 0
     if not valid_tag:
         valid_tag = len(set(network.tags).intersection(set(tags))) > 0
@@ -43,7 +42,7 @@ def test_retrieve_networks(
     mock_conn: Mock,
     mock_network: Mock,
     openstack_network: Network,
-    tags: Optional[List[str]],
+    tags: list[str] | None,
 ) -> None:
     """Successful retrieval of a Network.
 

@@ -1,5 +1,4 @@
 import copy
-from typing import Tuple
 from uuid import uuid4
 
 from fed_reg.provider.schemas_extended import IdentityProviderCreateExtended
@@ -12,7 +11,7 @@ from tests.schemas.utils import random_lower_string, random_url
 class CaseEquals:
     @parametrize(endpoint=[True, False])
     @parametrize(name=[True, False])
-    def case_endpoint(self, endpoint: bool, name: bool) -> Tuple[bool, bool]:
+    def case_endpoint(self, endpoint: bool, name: bool) -> tuple[bool, bool]:
         return endpoint, name
 
 

@@ -1,6 +1,5 @@
 import copy
 from random import randint
-from typing import Tuple
 from uuid import uuid4
 
 from fed_reg.provider.schemas_extended import (
@@ -91,7 +90,7 @@ class CaseWithQuotas:
 
 class CaseEqualResources:
     @parametrize(equal=[True, False])
-    def case_net_rel(self, equal: bool) -> Tuple[str, bool]:
+    def case_net_rel(self, equal: bool) -> tuple[str, bool]:
         return equal
 
 

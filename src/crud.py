@@ -1,6 +1,5 @@
 import os
 from logging import Logger
-from typing import List, Optional
 
 import requests
 from fastapi import status
@@ -38,7 +37,7 @@ class CRUD:
         self.timeout = settings.FED_REG_TIMEOUT
         self.error = False
 
-    def read(self) -> List[ProviderRead]:
+    def read(self) -> list[ProviderRead]:
         """Retrieve all providers from the Federation-Registry."""
         self.logger.info("Looking for all Providers")
         self.logger.debug("Url=%s", self.multi_url)
@@ -104,7 +103,7 @@ class CRUD:
 
     def update(
         self, *, new_data: ProviderCreateExtended, old_data: ProviderRead
-    ) -> Optional[ProviderReadExtended]:
+    ) -> ProviderReadExtended | None:
         """Update existing instance."""
         self.logger.info("Updating Provider=%s.", new_data.name)
         self.logger.debug("Url=%s", self.single_url.format(uid=old_data.uid))

@@ -1,6 +1,6 @@
 import os
 from logging import Logger
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fed_reg.provider.schemas_extended import (
     BlockStorageQuotaCreateExtended,
@@ -228,7 +228,7 @@ class OpenstackData:
             description="placeholder", project=self.conn.current_project_id, usage=True
         )
 
-    def get_flavor_extra_specs(self, extra_specs: Dict[str, Any]) -> Dict[str, Any]:
+    def get_flavor_extra_specs(self, extra_specs: dict[str, Any]) -> dict[str, Any]:
         """Format flavor extra specs into a dictionary."""
         data = {}
         data["gpus"] = int(extra_specs.get("gpu_number", 0))
@@ -240,7 +240,7 @@ class OpenstackData:
         data["infiniband"] = extra_specs.get("infiniband", False)
         return data
 
-    def get_flavor_projects(self, flavor: Flavor) -> List[str]:
+    def get_flavor_projects(self, flavor: Flavor) -> list[str]:
         """Retrieve project ids having access to target flavor."""
         projects = set()
         try:
@@ -251,7 +251,7 @@ class OpenstackData:
             self.error = True
         return list(projects)
 
-    def get_flavors(self) -> List[FlavorCreateExtended]:
+    def get_flavors(self) -> list[FlavorCreateExtended]:
         """Map Openstack flavor instance into FlavorCreateExtended instance."""
         self.logger.info("Retrieve current project accessible flavors")
         flavors = []
@@ -273,7 +273,7 @@ class OpenstackData:
             flavors.append(FlavorCreateExtended(**data, projects=list(projects)))
         return flavors
 
-    def get_image_projects(self, *, image: Image, projects: List[str]) -> List[str]:
+    def get_image_projects(self, *, image: Image, projects: list[str]) -> list[str]:
         """Retrieve project ids having access to target image."""
         projects = set(projects)
         members = list(self.conn.image.members(image))
@@ -282,9 +282,7 @@ class OpenstackData:
                 projects.add(member.id)
         return list(projects)
 
-    def get_images(
-        self, *, tags: Optional[List[str]] = None
-    ) -> List[ImageCreateExtended]:
+    def get_images(self, *, tags: list[str] | None = None) -> list[ImageCreateExtended]:
         """Map Openstack image istance into ImageCreateExtended instance."""
         if tags is None:
             tags = []
@@ -319,8 +317,8 @@ class OpenstackData:
         self,
         *,
         network: Network,
-        default_private_net: Optional[str] = None,
-        default_public_net: Optional[str] = None,
+        default_private_net: str | None = None,
+        default_public_net: str | None = None,
     ) -> bool:
         """Detect if this network is the default one."""
         return bool(
@@ -332,11 +330,11 @@ class OpenstackData:
     def get_networks(
         self,
         *,
-        default_private_net: Optional[str] = None,
-        default_public_net: Optional[str] = None,
-        proxy: Optional[PrivateNetProxy] = None,
-        tags: Optional[List[str]] = None,
-    ) -> List[NetworkCreateExtended]:
+        default_private_net: str | None = None,
+        default_public_net: str | None = None,
+        proxy: PrivateNetProxy | None = None,
+        tags: list[str] | None = None,
+    ) -> list[NetworkCreateExtended]:
         """Map Openstack network instance in NetworkCreateExtended instance."""
         if tags is None:
             tags = []
@@ -380,7 +378,7 @@ class OpenstackData:
         self.logger.debug("Project manipulated data=%s", data)
         return ProjectCreate(**data)
 
-    def get_block_storage_service(self) -> Optional[BlockStorageServiceCreateExtended]:
+    def get_block_storage_service(self) -> BlockStorageServiceCreateExtended | None:
         """Retrieve project's block storage service.
 
         Remove last part which corresponds to the project ID.
@@ -412,7 +410,7 @@ class OpenstackData:
             )
         return block_storage_service
 
-    def get_compute_service(self) -> Optional[ComputeServiceCreateExtended]:
+    def get_compute_service(self) -> ComputeServiceCreateExtended | None:
         """Create region's compute service.
 
         Retrieve flavors, images and current project corresponding quotas.
@@ -442,7 +440,7 @@ class OpenstackData:
             )
         return compute_service
 
-    def get_network_service(self) -> Optional[NetworkServiceCreateExtended]:
+    def get_network_service(self) -> NetworkServiceCreateExtended | None:
         """Retrieve region's network service."""
         try:
             endpoint = self.conn.network.get_endpoint()
@@ -472,7 +470,7 @@ class OpenstackData:
             )
         return network_service
 
-    def get_object_store_service(self) -> Optional[ObjectStoreServiceCreateExtended]:
+    def get_object_store_service(self) -> ObjectStoreServiceCreateExtended | None:
         """Retrieve project's object store service.
 
         Remove last part which corresponds to the project ID.

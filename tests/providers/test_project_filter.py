@@ -1,4 +1,3 @@
-from typing import Union
 from uuid import uuid4
 
 from fed_reg.provider.schemas_extended import (
@@ -21,7 +20,7 @@ class CaseResource:
         type: str,
         projects: str,
         project_create: ProjectCreate,
-    ) -> Union[FlavorCreateExtended, ImageCreateExtended]:
+    ) -> FlavorCreateExtended | ImageCreateExtended:
         """Resource value description.
 
         Resource can be public (no projects).
@@ -49,7 +48,7 @@ class CaseResource:
 def test_filter_projects(
     compute_service_create: ComputeServiceCreateExtended,
     project_create: ProjectCreate,
-    resource: Union[FlavorCreateExtended, ImageCreateExtended],
+    resource: FlavorCreateExtended | ImageCreateExtended,
 ) -> None:
     """
     None matching projects case can't exist since when retrieving resources we

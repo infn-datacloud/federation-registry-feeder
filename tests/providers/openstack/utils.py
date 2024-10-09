@@ -1,8 +1,7 @@
 from random import choice
-from typing import List, Optional
 
 
-def random_image_status(*, exclude: Optional[List[str]] = None) -> str:
+def random_image_status(*, exclude: list[str] | None = None) -> str:
     """Return one of the possible image status types."""
     if exclude is None:
         exclude = []
@@ -22,7 +21,7 @@ def random_image_status(*, exclude: Optional[List[str]] = None) -> str:
     return choice(list(choices))
 
 
-def random_image_visibility(*, exclude: Optional[List[str]] = None) -> str:
+def random_image_visibility(*, exclude: list[str] | None = None) -> str:
     """Return one of the possible image visibility types."""
     if exclude is None:
         exclude = []
@@ -30,7 +29,7 @@ def random_image_visibility(*, exclude: Optional[List[str]] = None) -> str:
     return choice(list(choices))
 
 
-def random_network_status(*, exclude: Optional[List[str]] = None) -> str:
+def random_network_status(*, exclude: list[str] | None = None) -> str:
     """Return one of the possible network status types."""
     if exclude is None:
         exclude = []

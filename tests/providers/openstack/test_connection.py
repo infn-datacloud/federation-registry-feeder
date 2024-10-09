@@ -1,5 +1,3 @@
-from typing import Tuple
-
 from fed_reg.provider.schemas_extended import IdentityProviderCreateExtended
 
 from src.models.provider import Openstack, Project
@@ -8,7 +6,7 @@ from tests.schemas.utils import random_lower_string
 
 
 def test_connection(
-    configurations: Tuple[IdentityProviderCreateExtended, Openstack, Project],
+    configurations: tuple[IdentityProviderCreateExtended, Openstack, Project],
 ) -> None:
     """Connection creation always succeeds, it is its usage that may fail."""
     (idp, provider_conf, project) = configurations

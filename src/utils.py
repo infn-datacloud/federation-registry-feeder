@@ -1,7 +1,6 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
 from logging import Logger
-from typing import Dict, List, Optional, Tuple
 
 import yaml
 from fed_reg.provider.schemas_extended import ProviderCreateExtended
@@ -27,7 +26,7 @@ def infer_service_endpoints(*, settings: Settings, logger: Logger) -> URLs:
     return endpoints
 
 
-def get_conf_files(*, settings: Settings, logger: Logger) -> List[str]:
+def get_conf_files(*, settings: Settings, logger: Logger) -> list[str]:
     """Get the list of the yaml files with the provider configurations."""
     logger.info("Detecting yaml files with provider configurations.")
     file_extension = ".config.yaml"
@@ -40,9 +39,7 @@ def get_conf_files(*, settings: Settings, logger: Logger) -> List[str]:
     return yaml_files
 
 
-def load_config(
-    *, fname: str, log_level: str | int | None = None
-) -> Optional[SiteConfig]:
+def load_config(*, fname: str, log_level: str | int | None = None) -> SiteConfig | None:
     """Load provider configuration from yaml file."""
     logger = create_logger(f"Yaml file {fname}", level=log_level)
     logger.info("Loading provider configuration from file")
@@ -64,8 +61,8 @@ def load_config(
 
 
 def get_site_configs(
-    *, yaml_files: List[str], log_level: str | int | None = None
-) -> tuple[List[SiteConfig], bool]:
+    *, yaml_files: list[str], log_level: str | int | None = None
+) -> tuple[list[SiteConfig], bool]:
     """Create a list of SiteConfig from a list of yaml files."""
     with ThreadPoolExecutor() as executor:
         site_configs = executor.map(
@@ -76,7 +73,7 @@ def get_site_configs(
     )
 
 
-def get_read_write_headers(*, token: str) -> Tuple[Dict[str, str], Dict[str, str]]:
+def get_read_write_headers(*, token: str) -> tuple[dict[str, str], dict[str, str]]:
     """From an access token, create the read and write headers."""
     read_header = {"authorization": f"Bearer {token}"}
     write_header = {
@@ -90,7 +87,7 @@ def get_read_write_headers(*, token: str) -> Tuple[Dict[str, str], Dict[str, str
 def update_database(
     *,
     service_api_url: URLs,
-    items: List[ProviderCreateExtended],
+    items: list[ProviderCreateExtended],
     token: str,
     logger: Logger,
     settings: Settings,

@@ -1,4 +1,3 @@
-from typing import List, Optional
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
@@ -10,28 +9,28 @@ from src.providers.openstack import get_images
 
 
 class CaseTags:
-    def case_single_valid_tag(self) -> List[str]:
+    def case_single_valid_tag(self) -> list[str]:
         return ["one"]
 
     @parametrize(case=[0, 1])
-    def case_single_invalid_tag(self, case: int) -> List[str]:
+    def case_single_invalid_tag(self, case: int) -> list[str]:
         return ["two"] if case else ["one-two"]
 
-    def case_at_least_one_valid_tag(self) -> List[str]:
+    def case_at_least_one_valid_tag(self) -> list[str]:
         return ["one", "two"]
 
 
-class CaseTagList:
+class CaseTaglist:
     @case(tags=["empty"])
-    def case_empty_tag_list(self) -> Optional[List]:
+    def case_empty_tag_list(self) -> list:
         return []
 
     @case(tags=["empty"])
-    def case_no_list(self) -> Optional[List]:
+    def case_no_list(self) -> None:
         return None
 
     @case(tags=["full"])
-    def case_list(self) -> Optional[List]:
+    def case_list(self) -> list[str]:
         return ["one"]
 
 
@@ -41,7 +40,7 @@ class CaseAcceptStatus:
         return acceptance_status
 
 
-def filter_images(image: Image, tags: Optional[List[str]]) -> bool:
+def filter_images(image: Image, tags: list[str] | None) -> bool:
     valid_tag = tags is None or len(tags) == 0
     if not valid_tag:
         valid_tag = len(set(image.tags).intersection(set(tags))) > 0
@@ -50,9 +49,9 @@ def filter_images(image: Image, tags: Optional[List[str]]) -> bool:
 
 @patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
-@parametrize_with_cases("tags", cases=CaseTagList)
+@parametrize_with_cases("tags", cases=CaseTaglist)
 def test_retrieve_public_images(
-    mock_conn: Mock, mock_image: Mock, openstack_image: Image, tags: Optional[List[str]]
+    mock_conn: Mock, mock_image: Mock, openstack_image: Image, tags: list[str] | None
 ) -> None:
     """Successful retrieval of an Image.
 
@@ -100,7 +99,7 @@ def test_retrieve_private_images(
     correct.
     """
 
-    def get_allowed_members(*args, **kwargs) -> List[Member]:
+    def get_allowed_members(*args, **kwargs) -> list[Member]:
         return [
             Member(status="accepted", id=openstack_image_private.owner_id),
             Member(status=acceptance_status, id=uuid4().hex),
@@ -141,7 +140,7 @@ def test_no_matching_project_id_when_retrieving_private_images(
     correct.
     """
 
-    def get_allowed_members(*args, **kwargs) -> List[Member]:
+    def get_allowed_members(*args, **kwargs) -> list[Member]:
         return [
             Member(status="accepted", id=openstack_image_private.owner_id),
             Member(status=acceptance_status, id=uuid4().hex),

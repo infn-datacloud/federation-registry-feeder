@@ -3,7 +3,7 @@ import string
 import time
 from datetime import date
 from random import choice, choices, randint, random
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any
 from uuid import UUID, uuid4
 
 from fed_reg.image.enum import ImageOS
@@ -56,7 +56,7 @@ def random_image_os_type() -> str:
 
 def random_ip(
     version: str = "v4",
-) -> Union[ipaddress.IPv4Address, ipaddress.IPv6Address]:
+) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
     if version == "v4":
         return ipaddress.IPv4Address(randint(0, 2**32 - 1))
     elif version == "v6":
@@ -73,7 +73,7 @@ def random_network_service_name() -> str:
     return choice([i.value for i in NetworkServiceName])
 
 
-def random_provider_type(*, exclude: Optional[List[str]] = None) -> str:
+def random_provider_type(*, exclude: list[str] | None = None) -> str:
     """Return one of the possible provider types."""
     if exclude is None:
         exclude = []
@@ -81,7 +81,7 @@ def random_provider_type(*, exclude: Optional[List[str]] = None) -> str:
     return choice(list(choices))
 
 
-def random_start_end_dates() -> Tuple[date, date]:
+def random_start_end_dates() -> tuple[date, date]:
     """Return a random couples of valid start and end dates (in order)."""
     d1 = random_date()
     d2 = random_date()

@@ -1,6 +1,6 @@
 import os
 from random import getrandbits, randint
-from typing import Any, Dict, List, Union
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -199,7 +199,7 @@ def clear_os_environment() -> None:
 #     identity_provider_create: IdentityProviderCreateExtended,
 #     openstack_provider: Openstack,
 #     project: Project,
-# ) -> Tuple[IdentityProviderCreateExtended, Openstack, Project]:
+# ) -> tuple[IdentityProviderCreateExtended, Openstack, Project]:
 #     project.sla = identity_provider_create.user_groups[0].sla.doc_uuid
 #     openstack_provider.identity_providers[
 #         0
@@ -325,18 +325,16 @@ def network_service_create() -> NetworkServiceCreateExtended:
     ]
 )
 def service_create(
-    s: Union[
-        BlockStorageServiceCreateExtended,
-        ComputeServiceCreateExtended,
-        IdentityServiceCreate,
-        NetworkServiceCreateExtended,
-    ],
-) -> Union[
-    BlockStorageServiceCreateExtended,
-    ComputeServiceCreateExtended,
-    IdentityServiceCreate,
-    NetworkServiceCreateExtended,
-]:
+    s: BlockStorageServiceCreateExtended
+    | ComputeServiceCreateExtended
+    | IdentityServiceCreate
+    | NetworkServiceCreateExtended,
+) -> (
+    BlockStorageServiceCreateExtended
+    | ComputeServiceCreateExtended
+    | IdentityServiceCreate
+    | NetworkServiceCreateExtended
+):
     """Parametrized fixture with all possible services.
 
     BlockStorageServiceCreateExtended, ComputeServiceCreateExtended,
@@ -404,19 +402,19 @@ class CaseDefaultAttr:
 
 
 class CaseTags:
-    def case_single_valid_tag(self) -> List[str]:
+    def case_single_valid_tag(self) -> list[str]:
         return ["one"]
 
     @parametrize(case=[0, 1])
-    def case_single_invalid_tag(self, case: int) -> List[str]:
+    def case_single_invalid_tag(self, case: int) -> list[str]:
         return ["two"] if case else ["one-two"]
 
-    def case_at_least_one_valid_tag(self) -> List[str]:
+    def case_at_least_one_valid_tag(self) -> list[str]:
         return ["one", "two"]
 
 
-def openstack_network_dict() -> Dict[str, Any]:
-    """Dict with network minimal data."""
+def openstack_network_dict() -> dict[str, Any]:
+    """dict with network minimal data."""
     return {
         "id": uuid4().hex,
         "name": random_lower_string(),
@@ -460,7 +458,7 @@ def openstack_network_shared() -> OpenstackNetwork:
 
 @pytest.fixture
 @parametrize_with_cases("tags", cases=CaseTags)
-def openstack_network_with_tags(tags: List[str]) -> OpenstackNetwork:
+def openstack_network_with_tags(tags: list[str]) -> OpenstackNetwork:
     """Fixture with network with specified tags."""
     d = openstack_network_dict()
     d["tags"] = tags
@@ -511,8 +509,8 @@ class CaseVisibility:
         return visibility
 
 
-def openstack_image_dict() -> Dict[str, Any]:
-    """Dict with image minimal data."""
+def openstack_image_dict() -> dict[str, Any]:
+    """dict with image minimal data."""
     return {
         "id": uuid4().hex,
         "name": random_lower_string(),
@@ -546,7 +544,7 @@ def openstack_image_public(visibility: str) -> OpenstackImage:
 
 @pytest.fixture
 @parametrize_with_cases("tags", cases=CaseTags)
-def openstack_image_with_tags(tags: List[str]) -> OpenstackImage:
+def openstack_image_with_tags(tags: list[str]) -> OpenstackImage:
     """Fixture with image with specified tags."""
     d = openstack_image_dict()
     d["tags"] = tags
@@ -573,18 +571,18 @@ def openstack_image(i: OpenstackImage) -> OpenstackImage:
 
 class CaseExtraSpecs:
     @parametrize(second_attr=["gpu_model", "gpu_vendor"])
-    def case_gpu(self, second_attr: str) -> Dict[str, Any]:
+    def case_gpu(self, second_attr: str) -> dict[str, Any]:
         return {"gpu_number": randint(1, 100), second_attr: random_lower_string()}
 
-    def case_infiniband(self) -> Dict[str, Any]:
+    def case_infiniband(self) -> dict[str, Any]:
         return {"infiniband": getrandbits(1)}
 
-    def case_local_storage(self) -> Dict[str, Any]:
+    def case_local_storage(self) -> dict[str, Any]:
         return {"aggregate_instance_extra_specs:local_storage": random_lower_string()}
 
 
-def openstack_flavor_dict() -> Dict[str, Any]:
-    """Dict with flavor minimal data."""
+def openstack_flavor_dict() -> dict[str, Any]:
+    """dict with flavor minimal data."""
     return {
         "name": random_lower_string(),
         "disk": randint(0, 100),
@@ -631,7 +629,7 @@ def openstack_flavor_private() -> OpenstackFlavor:
 
 @pytest.fixture
 @parametrize_with_cases("extra_specs", cases=CaseExtraSpecs)
-def openstack_flavor_with_extra_specs(extra_specs: Dict[str, Any]) -> OpenstackFlavor:
+def openstack_flavor_with_extra_specs(extra_specs: dict[str, Any]) -> OpenstackFlavor:
     """Fixture with a flavor with extra specs."""
     d = openstack_flavor_dict()
     d["extra_specs"] = extra_specs
@@ -653,8 +651,8 @@ def openstack_flavor(f: OpenstackFlavor) -> OpenstackFlavor:
     return f
 
 
-def openstack_block_storage_quotas_dict() -> Dict[str, int]:
-    """Dict with the block storage quotas attributes."""
+def openstack_block_storage_quotas_dict() -> dict[str, int]:
+    """dict with the block storage quotas attributes."""
     return {
         "backup_gigabytes": randint(0, 100),
         "backups": randint(0, 100),
@@ -666,8 +664,8 @@ def openstack_block_storage_quotas_dict() -> Dict[str, int]:
     }
 
 
-def openstack_compute_quotas_dict() -> Dict[str, int]:
-    """Dict with the compute quotas attributes."""
+def openstack_compute_quotas_dict() -> dict[str, int]:
+    """dict with the compute quotas attributes."""
     return {
         "cores": randint(0, 100),
         "fixed_ips": randint(0, 100),
@@ -688,8 +686,8 @@ def openstack_compute_quotas_dict() -> Dict[str, int]:
     }
 
 
-def openstack_network_quotas_dict() -> Dict[str, int]:
-    """Dict with the network quotas attributes."""
+def openstack_network_quotas_dict() -> dict[str, int]:
+    """dict with the network quotas attributes."""
     return {
         # "check_limit": False,
         "floating_ips": randint(0, 100),

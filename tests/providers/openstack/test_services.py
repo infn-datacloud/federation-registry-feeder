@@ -1,5 +1,4 @@
 import os
-from typing import List, Optional
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
@@ -53,7 +52,7 @@ class CaseUserQuota:
     @parametrize(presence=[True, False])
     def case_block_storage_quota(
         self, presence: bool, block_storage_quota: BlockStorageQuotaBase
-    ) -> Optional[BlockStorageQuotaBase]:
+    ) -> BlockStorageQuotaBase | None:
         if presence:
             block_storage_quota.per_user = True
             return block_storage_quota
@@ -63,7 +62,7 @@ class CaseUserQuota:
     @parametrize(presence=[True, False])
     def case_compute_quota(
         self, presence: bool, compute_quota: ComputeQuotaBase
-    ) -> Optional[ComputeQuotaBase]:
+    ) -> ComputeQuotaBase | None:
         if presence:
             compute_quota.per_user = True
             return compute_quota
@@ -73,7 +72,7 @@ class CaseUserQuota:
     @parametrize(presence=[True, False])
     def case_network_quota(
         self, presence: bool, network_quota: NetworkQuotaBase
-    ) -> Optional[NetworkQuotaBase]:
+    ) -> NetworkQuotaBase | None:
         if presence:
             network_quota.per_user = True
             return network_quota
@@ -82,15 +81,15 @@ class CaseUserQuota:
 
 class CaseTagList:
     @case(tags=["empty"])
-    def case_empty_tag_list(self) -> Optional[List]:
+    def case_empty_tag_list(self) -> list:
         return []
 
     @case(tags=["empty"])
-    def case_no_list(self) -> Optional[List]:
+    def case_no_list(self) -> None:
         return None
 
     @case(tags=["full"])
-    def case_list(self) -> Optional[List]:
+    def case_list(self) -> list[str]:
         return ["one"]
 
 
@@ -98,7 +97,7 @@ class CaseTagList:
 @parametrize_with_cases("resp", cases=CaseEndpointResp)
 @parametrize_with_cases("service", cases=CaseServiceType)
 def test_no_block_storage_service(
-    mock_conn: Mock, resp: Optional[EndpointNotFound], service: str
+    mock_conn: Mock, resp: EndpointNotFound | None, service: str
 ) -> None:
     """If the endpoint is not found or the service response is None, return None."""
     with patch(f"src.providers.openstack.Connection.{service}") as mock_srv:
@@ -130,7 +129,7 @@ def test_retrieve_block_storage_service(
     mock_conn: Mock,
     mock_block_storage: Mock,
     openstack_block_storage_quotas: BlockStorageQuotaSet,
-    user_quota: Optional[BlockStorageQuotaBase],
+    user_quota: BlockStorageQuotaBase | None,
 ) -> None:
     """Check quotas in the returned service."""
     endpoint = random_url()
@@ -157,7 +156,7 @@ def test_retrieve_compute_service(
     mock_conn: Mock,
     mock_compute: Mock,
     openstack_compute_quotas: ComputeQuotaSet,
-    user_quota: Optional[ComputeQuotaBase],
+    user_quota: ComputeQuotaBase | None,
 ) -> None:
     """Check quotas in the returned service."""
     endpoint = random_url()
@@ -184,7 +183,7 @@ def test_retrieve_network_service(
     mock_conn: Mock,
     mock_network: Mock,
     openstack_network_quotas: NetworkQuota,
-    user_quota: Optional[NetworkQuotaBase],
+    user_quota: NetworkQuotaBase | None,
 ) -> None:
     """Check quotas in the returned service."""
     endpoint = random_url()
@@ -242,7 +241,7 @@ def test_retrieve_compute_service_with_images(
     mock_compute: Mock,
     mock_image: Mock,
     openstack_image_with_tags: Image,
-    tags: Optional[List[str]],
+    tags: list[str] | None,
 ) -> None:
     """Check images in the returned service.
 
@@ -268,7 +267,7 @@ def test_retrieve_network_service_with_networks(
     mock_conn: Mock,
     mock_network: Mock,
     openstack_network_with_tags: Network,
-    tags: Optional[List[str]],
+    tags: list[str] | None,
 ) -> None:
     """Check networks in the returned service.
 

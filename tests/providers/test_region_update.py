@@ -1,4 +1,3 @@
-from typing import Tuple, Union
 from uuid import uuid4
 
 from fed_reg.provider.schemas_extended import (
@@ -26,7 +25,7 @@ class CaseTotRegions:
 class CaseResources:
     def case_single_project(
         self, project_create: ProjectCreate
-    ) -> Tuple[FlavorCreateExtended, ImageCreateExtended]:
+    ) -> tuple[FlavorCreateExtended, ImageCreateExtended]:
         return (
             FlavorCreateExtended(
                 name=random_lower_string(),
@@ -44,7 +43,7 @@ class CaseResources:
 
     def case_multiple_projects(
         self, project_create: ProjectCreate
-    ) -> Tuple[FlavorCreateExtended, ImageCreateExtended]:
+    ) -> tuple[FlavorCreateExtended, ImageCreateExtended]:
         return (
             FlavorCreateExtended(
                 name=random_lower_string(),
@@ -63,12 +62,10 @@ class CaseResources:
 
 @parametrize_with_cases("tot_regions", cases=CaseTotRegions)
 def test_update_region(
-    service_create: Union[
-        BlockStorageServiceCreateExtended,
-        ComputeServiceCreateExtended,
-        IdentityServiceCreate,
-        NetworkServiceCreateExtended,
-    ],
+    service_create: BlockStorageServiceCreateExtended
+    | ComputeServiceCreateExtended
+    | IdentityServiceCreate
+    | NetworkServiceCreateExtended,
     tot_regions: int,
 ) -> None:
     """Test how the regions are updated.
@@ -111,7 +108,7 @@ def test_update_region(
 def test_update_region_forward_include_projects(
     compute_service_create: ComputeServiceCreateExtended,
     project_create: ProjectCreate,
-    resources: Tuple[FlavorCreateExtended, ImageCreateExtended],
+    resources: tuple[FlavorCreateExtended, ImageCreateExtended],
 ) -> None:
     """Test how the regions are updated.
 
