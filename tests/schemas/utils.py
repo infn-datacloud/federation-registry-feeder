@@ -174,3 +174,27 @@ def sla_dict() -> dict[str, Any]:
 def user_group_dict() -> dict[str, Any]:
     """Dict with UserGroup minimal attributes."""
     return {"name": random_lower_string()}
+
+
+def urls_dict() -> dict[str, Any]:
+    """Return dict for the URLs object."""
+    return {
+        "flavors": random_url(),
+        "identity_providers": random_url(),
+        "images": random_url(),
+        "locations": random_url(),
+        "networks": random_url(),
+        "projects": random_url(),
+        "providers": random_url(),
+        "block_storage_quotas": random_url(),
+        "compute_quotas": random_url(),
+        "network_quotas": random_url(),
+        "object_store_quotas": random_url(),
+        "regions": random_url(),
+        "block_storage_services": random_url(),
+        "compute_services": random_url(),
+        "identity_services": random_url(),
+        "network_services": random_url(),
+        "slas": random_url(),
+        "user_groups": random_url(),
+    }
