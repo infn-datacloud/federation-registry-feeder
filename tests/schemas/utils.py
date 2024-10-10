@@ -117,11 +117,7 @@ def issuer_dict() -> dict[str, Any]:
 
 def kubernetes_dict() -> dict[str, Any]:
     """Dict with kubernetes provider minimal attributes."""
-    return {
-        "name": random_lower_string(),
-        "type": ProviderType.K8S,
-        "auth_url": random_url(),
-    }
+    return {"name": random_lower_string(), "auth_url": random_url()}
 
 
 def location_dict() -> dict[str, Any]:
@@ -130,11 +126,7 @@ def location_dict() -> dict[str, Any]:
 
 def openstack_dict() -> dict[str, Any]:
     """Dict with openstack provider minimal attributes."""
-    return {
-        "name": random_lower_string(),
-        "type": ProviderType.OS,
-        "auth_url": random_url(),
-    }
+    return {"name": random_lower_string(), "auth_url": random_url()}
 
 
 def per_region_props_dict() -> dict[str, str]:

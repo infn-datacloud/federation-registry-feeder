@@ -1,6 +1,7 @@
 from typing import Any, Literal
 
 import pytest
+from fed_reg.provider.enum import ProviderType
 from pytest_cases import parametrize_with_cases
 
 from src.models.provider import AuthMethod, Openstack, Project, Region
@@ -40,7 +41,7 @@ def test_openstack_schema(key: str, value: list[Region] | list[str]) -> None:
     d[key] = value
     item = Openstack(**d)
     assert item.name == d.get("name")
-    assert item.type == d.get("type").value
+    assert item.type == ProviderType.OS
     assert item.auth_url == d.get("auth_url")
     projects = d.get("projects", [])
     assert len(item.projects) == len(projects)
