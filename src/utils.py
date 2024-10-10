@@ -4,6 +4,7 @@ from logging import Logger
 
 import yaml
 from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
+from pydantic import ValidationError
 
 from src.logger import create_logger
 from src.models.config import Settings, URLs
@@ -27,12 +28,17 @@ def get_conf_files(*, settings: Settings, logger: Logger) -> list[str]:
     """Get the list of the yaml files with the provider configurations."""
     logger.info("Detecting yaml files with provider configurations.")
     file_extension = ".config.yaml"
-    yaml_files = filter(
-        lambda x: x.endswith(file_extension), os.listdir(settings.PROVIDERS_CONF_DIR)
-    )
-    yaml_files = [os.path.join(settings.PROVIDERS_CONF_DIR, i) for i in yaml_files]
-    logger.info("Files retrieved")
-    logger.debug(yaml_files)
+    try:
+        yaml_files = filter(
+            lambda x: x.endswith(file_extension),
+            os.listdir(settings.PROVIDERS_CONF_DIR),
+        )
+        yaml_files = [os.path.join(settings.PROVIDERS_CONF_DIR, i) for i in yaml_files]
+        logger.info("Files retrieved")
+        logger.debug(yaml_files)
+    except FileNotFoundError as e:
+        logger.error(e)
+        yaml_files = []
     return yaml_files
 
 
@@ -40,8 +46,13 @@ def load_config(*, fname: str, log_level: str | int | None = None) -> SiteConfig
     """Load provider configuration from yaml file."""
     logger = create_logger(f"Yaml file {fname}", level=log_level)
     logger.info("Loading provider configuration from file")
-    with open(fname) as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
+
+    try:
+        with open(fname) as f:
+            config = yaml.load(f, Loader=yaml.FullLoader)
+    except FileNotFoundError as e:
+        logger.error(e)
+        return None
 
     if config:
         try:
@@ -49,12 +60,12 @@ def load_config(*, fname: str, log_level: str | int | None = None) -> SiteConfig
             logger.info("Configuration loaded")
             logger.debug("%r", config)
             return config
-        except (ValueError, OidcAgentConnectError, OidcAgentError) as e:
+        except (ValidationError, OidcAgentConnectError, OidcAgentError) as e:
             logger.error(e)
             return None
     else:
         logger.error("Empty configuration")
-        return None
+        return config
 
 
 def get_site_configs(
@@ -65,6 +76,7 @@ def get_site_configs(
         site_configs = executor.map(
             lambda x: load_config(fname=x, log_level=log_level), yaml_files
         )
-    return list(filter(lambda x: x is not None, site_configs)), any(
-        [x is None for x in site_configs]
-    )
+    site_configs = list(site_configs)
+    error = any([x is None for x in site_configs])
+    items = list(filter(lambda x: x is not None, site_configs))
+    return items, error
