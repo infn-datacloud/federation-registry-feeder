@@ -96,7 +96,7 @@ class CaseInvalidOpenstack:
         return [item1, item2]
 
 
-class CaseInvalidkubernetes:
+class CaseInvalidKubernetes:
     def case_none(self) -> None:
         return None
 
@@ -158,7 +158,7 @@ def test_site_config_invalid_openstacks(value: Any) -> None:
         SiteConfig(**d)
 
 
-@parametrize_with_cases("value", cases=CaseInvalidOpenstack)
+@parametrize_with_cases("value", cases=CaseInvalidKubernetes)
 def test_site_config_invalid_kubernetes(value: Any) -> None:
     issuer = Issuer(
         **issuer_dict(),

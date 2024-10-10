@@ -50,6 +50,7 @@ def main(log_level: str) -> None:
     providers = []
     with ThreadPoolExecutor() as executor:
         providers = executor.map(lambda x: x.get_provider(), pthreads)
+    providers = list(providers)
     providers: list[ProviderCreateExtended] = list(filter(lambda x: x, providers))
     error |= any([x.error for x in pthreads])
 

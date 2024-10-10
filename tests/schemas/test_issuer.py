@@ -5,7 +5,7 @@ import pytest
 from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
 from pytest_cases import parametrize_with_cases
 
-from src.models.identity_provider import SLA, Issuer, UserGroup, retrieve_token
+from src.models.identity_provider import Issuer, UserGroup, retrieve_token
 from tests.schemas.utils import (
     issuer_dict,
     random_lower_string,
@@ -23,9 +23,9 @@ class CaseInvalidUserGroups:
         return []
 
     def case_duplicated_user_groups(self) -> list[UserGroup]:
-        item1 = UserGroup(**user_group_dict(), slas=[SLA(**sla_dict())])
+        item1 = UserGroup(**user_group_dict(), slas=[sla_dict()])
         item2 = UserGroup(
-            **{**user_group_dict(), "name": item1.name}, slas=[SLA(**sla_dict())]
+            **{**user_group_dict(), "name": item1.name}, slas=[sla_dict()]
         )
         return [item1, item2]
 
@@ -39,7 +39,7 @@ def test_identity_provider_schema(mock_token: Mock) -> None:
     Patch call to subprocess.run to return a mock token string.
     """
     d = issuer_dict()
-    d["user_groups"] = [UserGroup(**user_group_dict(), slas=[SLA(**sla_dict())])]
+    d["user_groups"] = [UserGroup(**user_group_dict(), slas=[sla_dict()])]
     item = Issuer(**d)
     mock_token.assert_called_once()
     assert item.endpoint == d.get("issuer")
@@ -77,7 +77,7 @@ def test_identity_provider_no_token(mock_token: Mock) -> None:
 
     Patch call to subprocess.run to return a failed execution."""
     d = issuer_dict()
-    d["user_groups"] = [UserGroup(**user_group_dict(), slas=[SLA(**sla_dict())])]
+    d["user_groups"] = [UserGroup(**user_group_dict(), slas=[sla_dict()])]
     with pytest.raises(ValueError):
         Issuer(**d)
     mock_token.assert_called_once()
