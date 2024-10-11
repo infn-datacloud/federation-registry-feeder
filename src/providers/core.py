@@ -507,7 +507,7 @@ class ProviderThread:
                     }
                     for data in value.values():
                         msg_data = {**msg_data, **data}
-                    self.kafka_prod.send(data)
+                    self.kafka_prod.send(msg_data)
 
     def find_issuer_and_user_group(
         self, identity_providers: list[IdentityProviderCreateExtended], project: str
