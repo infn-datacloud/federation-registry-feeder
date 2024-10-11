@@ -10,6 +10,7 @@ from fed_reg.provider.schemas_extended import (
     ProviderReadExtended,
 )
 from pydantic import AnyHttpUrl
+from requests.exceptions import ConnectionError, HTTPError
 
 from src.models.config import Settings, URLs
 
@@ -191,7 +192,7 @@ def update_database(
                 crud.update(new_data=item, old_data=db_item)
         for db_item in db_items.values():
             crud.remove(item=db_item)
-    except ConnectionError as e:
+    except (ConnectionError, HTTPError) as e:
         logger.error("Can't connect to Federation Registry.")
         logger.error(e)
         return True
