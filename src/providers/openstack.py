@@ -64,9 +64,14 @@ class OpenstackData:
         self.logger = logger
         self.error = False
 
-        # Connection can stay outside the try because it is only defined, not yet opened
-        self.conn = self.connect_to_provider(token=token)
+        # Connection is only defined, not yet opened
+        self.conn = self.create_connection(token=token)
 
+        # Retrieve information
+        self.retrieve_info()
+
+    def retrieve_info(self) -> None:
+        """Connect to the provider e retrieve information"""
         try:
             self.identity_service = IdentityServiceCreate(
                 endpoint=self.provider_conf.auth_url,
@@ -102,7 +107,7 @@ class OpenstackData:
             self.conn.close()
             self.logger.info("Connection closed")
 
-    def connect_to_provider(self, *, token: str) -> Connection:
+    def create_connection(self, *, token: str) -> Connection:
         """Connect to Openstack provider"""
         self.logger.info(
             "Connecting through IDP '%s' to openstack '%s' and region '%s'",
