@@ -1,30 +1,5 @@
-void pushImage(String srcImage, String targetImageName, String registryUrl, String registryCredentials) {
-    // Login to target registry, retrieve docker image and push it to the registry
-    sh "docker tag ${srcImage} ${targetImageName}"
-    docker.withRegistry("${registryUrl}", "${registryCredentials}") {
-        if ("${BRANCH_NAME}" == 'main') {
-            docker.image("${targetImageName}").push('main')
-            docker.image("${imageName}").push('latest')
-        }
-        docker.image("${targetImageName}").push("${BRANCH_NAME}")
-        docker.image("${targetImageName}").push("${COMMIT_SHA}")
-    }
-}
-
-void updateReadMe(String provider, String imageName, String registryUser, String registryPassword, String registryHost) {
-    // Login to target registry, retrieve docker image and push it to the registry
-    sh """docker run --rm \
-        -v ${WORKSPACE}:/myvol \
-        -e DOCKER_USER=${registryUser} \
-        -e DOCKER_PASS=${registryPassword} \
-        chko/docker-pushrm:1 \
-        --provider ${provider} \
-        --file /myvol/README.md \
-        --debug \
-        ${registryHost}/${imageName}
-        """
-}
-
+#!groovy
+@Library('jenkins-libraries') _
 
 pipeline {
     agent {
@@ -33,75 +8,92 @@ pipeline {
 
     environment {
         PROJECT_NAME = 'federation-registry-feeder'
+        DOCKERFILE = './Dockerfile'
 
         DOCKER_HUB_CREDENTIALS_NAME = 'docker-hub-credentials'
         DOCKER_HUB_CREDENTIALS = credentials("${DOCKER_HUB_CREDENTIALS_NAME}")
         DOCKER_HUB_ORGANIZATION = 'indigopaas'
         DOCKER_HUB_URL = 'https://index.docker.io/v1/'
+        DOCKER_HUB_HOST = 'docker.io'
 
         HARBOR_CREDENTIALS_NAME = 'harbor-paas-credentials'
         HARBOR_CREDENTIALS = credentials("${HARBOR_CREDENTIALS_NAME}")
         HARBOR_ORGANIZATION = 'datacloud-middleware'
         HARBOR_URL = 'https://harbor.cloud.infn.it'
-
-        BRANCH_NAME = "${env.BRANCH_NAME != null ? env.BRANCH_NAME : 'jenkins'}"
-        COMMIT_SHA = sh(returnStdout: true, script: 'git rev-parse --short=10 HEAD').trim()
+        HARBOR_HOST = 'harbor.cloud.infn.it'
     }
 
     stages {
-        stage('Build docker image') {
-            steps {
-                script {
-                    docker.build("${PROJECT_NAME}", '-f ./Dockerfile .')
-                }
-            }
-        }
-        stage('Push to registries') {
+        stage('Create and push images') {
             parallel {
-                stage('Harbor') {
+                stage('Image with python 3.10 published on Harbor') {
                     steps {
                         script {
-                            pushImage(
-                                "${PROJECT_NAME}",
+                            dockerRepository.buildAndPushImage(
                                 "${HARBOR_ORGANIZATION}/${PROJECT_NAME}",
+                                "${DOCKERFILE1}",
                                 "${HARBOR_URL}",
                                 "${HARBOR_CREDENTIALS_NAME}",
-                            )
-                            updateReadMe(
-                                'harbor2',
-                                "${HARBOR_ORGANIZATION}/${PROJECT_NAME}",
                                 '${HARBOR_CREDENTIALS_USR}',
                                 '${HARBOR_CREDENTIALS_PSW}',
-                                'harbor.cloud.infn.it',
+                                "${HARBOR_HOST}",
+                                'harbor2',
+                                '3.10'
                             )
                         }
                     }
                 }
-                stage('DockerHub') {
+                stage('Image with python 3.11 published on Harbor') {
                     steps {
                         script {
-                            pushImage(
-                                "${PROJECT_NAME}",
-                                "${DOCKER_HUB_ORGANIZATION}/${PROJECT_NAME}",
-                                "${DOCKER_HUB_URL}",
-                                "${DOCKER_HUB_CREDENTIALS_NAME}",
-                            )
-                            updateReadMe(
-                                'dockerhub',
-                                "${DOCKER_HUB_ORGANIZATION}/${PROJECT_NAME}",
-                                '${DOCKER_HUB_CREDENTIALS_USR}',
-                                '${DOCKER_HUB_CREDENTIALS_PSW}',
-                                'docker.io',
+                            dockerRepository.buildAndPushImage(
+                                "${HARBOR_ORGANIZATION}/${PROJECT_NAME}",
+                                "${DOCKERFILE1}",
+                                "${HARBOR_URL}",
+                                "${HARBOR_CREDENTIALS_NAME}",
+                                '${HARBOR_CREDENTIALS_USR}',
+                                '${HARBOR_CREDENTIALS_PSW}',
+                                "${HARBOR_HOST}",
+                                'harbor2',
+                                '3.11'
                             )
                         }
                     }
                 }
-            }
-        }
-
-        stage('Remove docker images') {
-            steps {
-                sh "docker rmi ${PROJECT_NAME}"
+                stage('Image with python 3.10 published on DockerHub') {
+                    steps {
+                        script {
+                            dockerRepository.buildAndPushImage(
+                                "${DOCKER_HUB_ORGANIZATION}/${PROJECT_NAME}",
+                                "${DOCKERFILE1}",
+                                "${DOCKER_HUB_URL}",
+                                "${DOCKER_HUB_CREDENTIALS_NAME}",
+                                '${DOCKER_HUB_CREDENTIALS_USR}',
+                                '${DOCKER_HUB_CREDENTIALS_PSW}',
+                                "${DOCKER_HUB_HOST}",
+                                'dockerhub',
+                                '3.10'
+                            )
+                        }
+                    }
+                }
+                stage('Image with python 3.11 published on DockerHub') {
+                    steps {
+                        script {
+                            dockerRepository.buildAndPushImage(
+                                "${DOCKER_HUB_ORGANIZATION}/${PROJECT_NAME}",
+                                "${DOCKERFILE1}",
+                                "${DOCKER_HUB_URL}",
+                                "${DOCKER_HUB_CREDENTIALS_NAME}",
+                                '${DOCKER_HUB_CREDENTIALS_USR}',
+                                '${DOCKER_HUB_CREDENTIALS_PSW}',
+                                "${DOCKER_HUB_HOST}",
+                                'dockerhub',
+                                '3.11'
+                            )
+                        }
+                    }
+                }
             }
         }
     }
