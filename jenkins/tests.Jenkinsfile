@@ -22,8 +22,8 @@ pipeline {
                                 '3.10',
                                 '',
                                 '.coveragerc',
-                                "${COVERAGE_DIR}"
-                                false,
+                                "${COVERAGE_DIR}",
+                                false
                                 )
                         }
                     }
