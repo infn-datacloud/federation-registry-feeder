@@ -31,7 +31,7 @@ pipeline {
                         script {
                             dockerRepository.buildAndPushImage(
                                 "${HARBOR_ORGANIZATION}/${PROJECT_NAME}",
-                                "${DOCKERFILE1}",
+                                "${DOCKERFILE}",
                                 "${HARBOR_URL}",
                                 "${HARBOR_CREDENTIALS_NAME}",
                                 '${HARBOR_CREDENTIALS_USR}',
@@ -48,7 +48,7 @@ pipeline {
                         script {
                             dockerRepository.buildAndPushImage(
                                 "${HARBOR_ORGANIZATION}/${PROJECT_NAME}",
-                                "${DOCKERFILE1}",
+                                "${DOCKERFILE}",
                                 "${HARBOR_URL}",
                                 "${HARBOR_CREDENTIALS_NAME}",
                                 '${HARBOR_CREDENTIALS_USR}',
@@ -65,7 +65,7 @@ pipeline {
                         script {
                             dockerRepository.buildAndPushImage(
                                 "${DOCKER_HUB_ORGANIZATION}/${PROJECT_NAME}",
-                                "${DOCKERFILE1}",
+                                "${DOCKERFILE}",
                                 "${DOCKER_HUB_URL}",
                                 "${DOCKER_HUB_CREDENTIALS_NAME}",
                                 '${DOCKER_HUB_CREDENTIALS_USR}',
@@ -82,7 +82,7 @@ pipeline {
                         script {
                             dockerRepository.buildAndPushImage(
                                 "${DOCKER_HUB_ORGANIZATION}/${PROJECT_NAME}",
-                                "${DOCKERFILE1}",
+                                "${DOCKERFILE}",
                                 "${DOCKER_HUB_URL}",
                                 "${DOCKER_HUB_CREDENTIALS_NAME}",
                                 '${DOCKER_HUB_CREDENTIALS_USR}',
