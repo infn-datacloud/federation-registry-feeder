@@ -9,14 +9,14 @@ pipeline {
                 stage('Python 3.10') {
                     steps {
                         script {
-                            pythonProject.formatCode('3.10', 'src')
+                            pythonProject.formatCode('3.10', 'src', false)
                         }
                     }
                 }
                 stage('Python 3.11') {
                     steps {
                         script {
-                            pythonProject.formatCode('3.11', 'src')
+                            pythonProject.formatCode('3.11', 'src', false)
                         }
                     }
                 }

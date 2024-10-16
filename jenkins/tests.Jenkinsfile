@@ -15,7 +15,7 @@ pipeline {
     stages {
         stage('Run tests on multiple python versions') {
             parallel {
-                stage('Run on tests on python3.10') {
+                stage('Run tests on python3.10') {
                     steps {
                         script {
                             pythonProject.testCode(
@@ -23,18 +23,20 @@ pipeline {
                                 '',
                                 '.coveragerc',
                                 "${COVERAGE_DIR}"
+                                false,
                                 )
                         }
                     }
                 }
-                stage('Run on tests on python3.11') {
+                stage('Run tests on python3.11') {
                     steps {
                         script {
                             pythonProject.testCode(
                                 '3.11',
                                 '',
                                 '.coveragerc',
-                                "${COVERAGE_DIR}"
+                                "${COVERAGE_DIR}",
+                                false
                                 )
                         }
                     }
