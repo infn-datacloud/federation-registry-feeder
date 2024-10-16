@@ -19,11 +19,10 @@ pipeline {
                     steps {
                         script {
                             pythonProject.testCode(
-                                '3.10',
-                                '',
-                                '.coveragerc',
-                                "${COVERAGE_DIR}",
-                                false
+                                pythonVersion: '3.10',
+                                coveragercId: '.coveragerc',
+                                coverageDir: "${COVERAGE_DIR}",
+                                imageIsSlim: false
                                 )
                         }
                     }
@@ -32,11 +31,10 @@ pipeline {
                     steps {
                         script {
                             pythonProject.testCode(
-                                '3.11',
-                                '',
-                                '.coveragerc',
-                                "${COVERAGE_DIR}",
-                                false
+                                pythonVersion: '3.11',
+                                coveragercId: '.coveragerc',
+                                coverageDir: "${COVERAGE_DIR}",
+                                imageIsSlim: false
                                 )
                         }
                     }
@@ -48,14 +46,14 @@ pipeline {
         always {
             script {
                 sonar.analysis(
-                    "${SONAR_TOKEN}",
-                    "${SONAR_PROJECT}",
-                    "${SONAR_ORGANIZATION}",
-                    "${SONAR_HOST}",
-                    "${COVERAGE_DIR}",
-                    'src',
-                    'tests',
-                    '3.10, 3.11'
+                    sonarToken: '${SONAR_TOKEN}',
+                    sonarProject: "${SONAR_PROJECT}",
+                    sonarOrganization: "${SONAR_ORGANIZATION}",
+                    sonarHost: "${SONAR_HOST}",
+                    coverageDir: "${COVERAGE_DIR}",
+                    srcDir: 'src',
+                    testsDir: 'tests',
+                    pythonVersions: '3.10, 3.11'
                 )
             }
         }
