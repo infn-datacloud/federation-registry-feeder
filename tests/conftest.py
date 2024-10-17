@@ -20,17 +20,15 @@ from openstack.block_storage.v3.quota_set import (
     QuotaSet as OpenstackBlockStorageQuotaSet,
 )
 from openstack.compute.v2.quota_set import QuotaSet as OpenstackComputeQuotaSet
-from openstack.image.v2.image import Image as OpenstackImage
 from openstack.network.v2.network import Network as OpenstackNetwork
 from openstack.network.v2.quota import QuotaDetails as OpenstackNetworkQuota
-from pytest_cases import case, parametrize, parametrize_with_cases
+from pytest_cases import parametrize, parametrize_with_cases
 
-from tests.providers.openstack.utils import random_image_status, random_network_status
+from tests.providers.openstack.utils import random_network_status
 from tests.schemas.utils import (
     random_block_storage_service_name,
     random_compute_service_name,
     random_identity_service_name,
-    random_image_os_type,
     random_lower_string,
     random_network_service_name,
     random_url,
@@ -495,88 +493,88 @@ def openstack_default_network(
     return n
 
 
-class CaseVisibility:
-    @case(tags=["private"])
-    @parametrize(visibility=["shared", "private"])
-    def case_priv_visibility(self, visibility: str) -> str:
-        return visibility
+# class CaseVisibility:
+#     @case(tags=["private"])
+#     @parametrize(visibility=["shared", "private"])
+#     def case_priv_visibility(self, visibility: str) -> str:
+#         return visibility
 
-    @case(tags=["public"])
-    @parametrize(visibility=["public", "community"])
-    def case_pub_visibility(self, visibility: str) -> str:
-        return visibility
-
-
-def openstack_image_dict() -> dict[str, Any]:
-    """dict with image minimal data."""
-    return {
-        "id": uuid4().hex,
-        "name": random_lower_string(),
-        "status": "active",
-        "owner_id": uuid4().hex,
-        "os_type": random_image_os_type(),
-        "os_distro": random_lower_string(),
-        "os_version": random_lower_string(),
-        "architecture": random_lower_string(),
-        "kernel_id": random_lower_string(),
-        "visibility": "public",
-    }
+#     @case(tags=["public"])
+#     @parametrize(visibility=["public", "community"])
+#     def case_pub_visibility(self, visibility: str) -> str:
+#         return visibility
 
 
-@pytest.fixture
-def openstack_image_disabled() -> OpenstackImage:
-    """Fixture with disabled image."""
-    d = openstack_image_dict()
-    d["status"] = random_image_status(exclude=["active"])
-    return OpenstackImage(**d)
+# def openstack_image_dict() -> dict[str, Any]:
+#     """dict with image minimal data."""
+#     return {
+#         "id": uuid4().hex,
+#         "name": random_lower_string(),
+#         "status": "active",
+#         "owner_id": uuid4().hex,
+#         "os_type": random_image_os_type(),
+#         "os_distro": random_lower_string(),
+#         "os_version": random_lower_string(),
+#         "architecture": random_lower_string(),
+#         "kernel_id": random_lower_string(),
+#         "visibility": "public",
+#     }
 
 
-@pytest.fixture
-@parametrize_with_cases("visibility", cases=CaseVisibility, has_tag="public")
-def openstack_image_public(visibility: str) -> OpenstackImage:
-    """Fixture with image with specified visibility."""
-    d = openstack_image_dict()
-    d["visibility"] = visibility
-    return OpenstackImage(**d)
+# @pytest.fixture
+# def openstack_image_disabled() -> OpenstackImage:
+#     """Fixture with disabled image."""
+#     d = openstack_image_dict()
+#     d["status"] = random_image_status(exclude=["active"])
+#     return OpenstackImage(**d)
 
 
-@pytest.fixture
-@parametrize_with_cases("tags", cases=CaseTags)
-def openstack_image_with_tags(tags: list[str]) -> OpenstackImage:
-    """Fixture with image with specified tags."""
-    d = openstack_image_dict()
-    d["tags"] = tags
-    return OpenstackImage(**d)
+# @pytest.fixture
+# @parametrize_with_cases("visibility", cases=CaseVisibility, has_tag="public")
+# def openstack_image_public(visibility: str) -> OpenstackImage:
+#     """Fixture with image with specified visibility."""
+#     d = openstack_image_dict()
+#     d["visibility"] = visibility
+#     return OpenstackImage(**d)
 
 
-@pytest.fixture
-@parametrize_with_cases("visibility", cases=CaseVisibility, has_tag="private")
-def openstack_image_private(visibility: str) -> OpenstackImage:
-    """Fixture with private image."""
-    d = openstack_image_dict()
-    d["visibility"] = visibility
-    return OpenstackImage(**d)
+# @pytest.fixture
+# @parametrize_with_cases("tags", cases=CaseTags)
+# def openstack_image_with_tags(tags: list[str]) -> OpenstackImage:
+#     """Fixture with image with specified tags."""
+#     d = openstack_image_dict()
+#     d["tags"] = tags
+#     return OpenstackImage(**d)
 
 
-@pytest.fixture
-@parametrize(
-    i=[openstack_image_disabled, openstack_image_public, openstack_image_with_tags]
-)
-def openstack_image(i: OpenstackImage) -> OpenstackImage:
-    """Fixtures union."""
-    return i
+# @pytest.fixture
+# @parametrize_with_cases("visibility", cases=CaseVisibility, has_tag="private")
+# def openstack_image_private(visibility: str) -> OpenstackImage:
+#     """Fixture with private image."""
+#     d = openstack_image_dict()
+#     d["visibility"] = visibility
+#     return OpenstackImage(**d)
 
 
-class CaseExtraSpecs:
-    @parametrize(second_attr=["gpu_model", "gpu_vendor"])
-    def case_gpu(self, second_attr: str) -> dict[str, Any]:
-        return {"gpu_number": randint(1, 100), second_attr: random_lower_string()}
+# @pytest.fixture
+# @parametrize(
+#     i=[openstack_image_disabled, openstack_image_public, openstack_image_with_tags]
+# )
+# def openstack_image(i: OpenstackImage) -> OpenstackImage:
+#     """Fixtures union."""
+#     return i
 
-    def case_infiniband(self) -> dict[str, Any]:
-        return {"infiniband": getrandbits(1)}
 
-    def case_local_storage(self) -> dict[str, Any]:
-        return {"aggregate_instance_extra_specs:local_storage": random_lower_string()}
+# class CaseExtraSpecs:
+#     @parametrize(second_attr=["gpu_model", "gpu_vendor"])
+#     def case_gpu(self, second_attr: str) -> dict[str, Any]:
+#         return {"gpu_number": randint(1, 100), second_attr: random_lower_string()}
+
+#     def case_infiniband(self) -> dict[str, Any]:
+#         return {"infiniband": getrandbits(1)}
+
+#     def case_local_storage(self) -> dict[str, Any]:
+#         return {"aggregate_instance_extra_specs:local_storage": random_lower_string()}
 
 
 # def openstack_flavor_dict() -> dict[str, Any]:

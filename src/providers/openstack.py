@@ -278,9 +278,12 @@ class OpenstackData:
             flavors.append(FlavorCreateExtended(**data, projects=list(projects)))
         return flavors
 
-    def get_image_projects(self, *, image: Image, projects: list[str]) -> list[str]:
-        """Retrieve project ids having access to target image."""
-        projects = set(projects)
+    def get_image_projects(self, image: Image) -> list[str]:
+        """Retrieve project ids having access to target image.
+
+        Called only by shared images.
+        """
+        projects = set([image.owner_id])
         members = list(self.conn.image.members(image))
         for member in members:
             if member.status == "accepted":
@@ -298,24 +301,22 @@ class OpenstackData:
         ):
             self.logger.debug("Image received data=%r", image)
             is_public = True
+            # At least one project is present since the image is visible from the
+            # current project.
             projects = []
             if image.visibility == "private":
-                if self.conn.current_project_id != image.owner_id:
-                    continue
+                is_public = False
                 projects = [image.owner_id]
-                is_public = False
             elif image.visibility == "shared":
-                projects = self.get_image_projects(image=image, projects=projects)
-                if self.conn.current_project_id not in projects:
-                    continue
                 is_public = False
+                projects = self.get_image_projects(image)
             data = image.to_dict()
             data["uuid"] = data.pop("id")
             # Openstack image object does not have `description` field
             data["description"] = ""
             data["is_public"] = is_public
             self.logger.debug("Image manipulated data=%s", data)
-            images.append(ImageCreateExtended(**data, projects=list(projects)))
+            images.append(ImageCreateExtended(**data, projects=projects))
         return images
 
     def is_default_network(

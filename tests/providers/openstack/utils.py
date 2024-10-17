@@ -1,7 +1,10 @@
 from random import choice, getrandbits, randint
 from typing import Any
+from uuid import uuid4
 
-from tests.schemas.utils import random_float, random_lower_string
+from openstack.image.v2.image import Image
+
+from tests.schemas.utils import random_float, random_image_os_type, random_lower_string
 
 
 def random_image_status(*, exclude: list[str] | None = None) -> str:
@@ -38,6 +41,8 @@ def random_network_status(*, exclude: list[str] | None = None) -> str:
         exclude = []
     choices = set(["active", "build", "down", "error"]) - set(exclude)
     return choice(list(choices))
+
+
 def openstack_flavor_dict() -> dict[str, Any]:
     """dict with flavor minimal data."""
     return {
@@ -52,3 +57,27 @@ def openstack_flavor_dict() -> dict[str, Any]:
         "rxtx_factor": random_float(0, 100),
         "extra_specs": {},
     }
+
+
+def openstack_image_dict() -> dict[str, Any]:
+    """dict with image minimal data."""
+    return {
+        "id": uuid4().hex,
+        "name": random_lower_string(),
+        "status": "active",
+        "owner_id": uuid4().hex,
+        "os_type": random_image_os_type(),
+        "os_distro": random_lower_string(),
+        "os_version": random_lower_string(),
+        "architecture": random_lower_string(),
+        "kernel_id": random_lower_string(),
+        "visibility": "public",
+    }
+
+
+def filter_images(image: Image, tags: list[str] | None) -> bool:
+    """Return true if the image is active and contains any of given tags."""
+    valid_tag = tags is None or len(tags) == 0
+    if not valid_tag:
+        valid_tag = len(set(image.tags).intersection(set(tags))) > 0
+    return image.status == "active" and valid_tag

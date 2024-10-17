@@ -1,37 +1,47 @@
+from logging import getLogger
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
+from fed_reg.provider.schemas_extended import (
+    IdentityProviderCreateExtended,
+    ImageCreateExtended,
+)
 from openstack.image.v2.image import Image
 from openstack.image.v2.member import Member
 from pytest_cases import case, parametrize, parametrize_with_cases
+from pytest_cases import filters as ft
 
-from src.providers.openstack import get_images
-
-
-class CaseTags:
-    def case_single_valid_tag(self) -> list[str]:
-        return ["one"]
-
-    @parametrize(case=[0, 1])
-    def case_single_invalid_tag(self, case: int) -> list[str]:
-        return ["two"] if case else ["one-two"]
-
-    def case_at_least_one_valid_tag(self) -> list[str]:
-        return ["one", "two"]
+from src.models.provider import Openstack, Project
+from src.providers.openstack import OpenstackData
+from tests.providers.openstack.utils import (
+    filter_images,
+    openstack_image_dict,
+    random_image_status,
+)
+from tests.schemas.utils import (
+    auth_method_dict,
+    openstack_dict,
+    project_dict,
+    random_lower_string,
+)
 
 
 class CaseTaglist:
-    @case(tags=["empty"])
+    @case(tags="empty")
     def case_empty_tag_list(self) -> list:
         return []
 
-    @case(tags=["empty"])
+    @case(tags="empty")
     def case_no_list(self) -> None:
         return None
 
-    @case(tags=["full"])
-    def case_list(self) -> list[str]:
+    @case(tags="not-empty")
+    def case_one_item(self) -> list[str]:
         return ["one"]
+
+    @case(tags="not-empty")
+    def case_two_items(self) -> list[str]:
+        return ["one", "two"]
 
 
 class CaseAcceptStatus:
@@ -40,18 +50,57 @@ class CaseAcceptStatus:
         return acceptance_status
 
 
-def filter_images(image: Image, tags: list[str] | None) -> bool:
-    valid_tag = tags is None or len(tags) == 0
-    if not valid_tag:
-        valid_tag = len(set(image.tags).intersection(set(tags))) > 0
-    return image.status == "active" and valid_tag
+class CaseOpenstackImage:
+    @case(tags="public")
+    def case_image_disabled(self) -> Image:
+        """Fixture with disabled image."""
+        d = openstack_image_dict()
+        d["status"] = random_image_status(exclude=["active"])
+        return Image(**d)
+
+    @case(tags="public")
+    @parametrize(tags=(["one"], ["two"], ["one-two"], ["one", "two"]))
+    def case_image_with_tags(self, tags: list[str]) -> Image:
+        """Fixture with image with specified tags."""
+        d = openstack_image_dict()
+        d["tags"] = tags
+        return Image(**d)
+
+    @case(tags="public")
+    @parametrize(visibility=("public", "community"))
+    def case_image_public(self, visibility: str) -> Image:
+        """Fixture with image with specified visibility."""
+        d = openstack_image_dict()
+        d["visibility"] = visibility
+        return Image(**d)
+
+    @case(tags="private")
+    def case_image_private(self) -> Image:
+        """Fixture with private image."""
+        d = openstack_image_dict()
+        d["visibility"] = "private"
+        return Image(**d)
+
+    @case(tags="shared")
+    def case_image_shared(self) -> Image:
+        """Fixture with private image."""
+        d = openstack_image_dict()
+        d["visibility"] = "shared"
+        return Image(**d)
 
 
 @patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
-@parametrize_with_cases("tags", cases=CaseTaglist)
+@patch("src.providers.openstack.OpenstackData.retrieve_info")
+@parametrize_with_cases("openstack_image", cases=CaseOpenstackImage, has_tag="public")
+@parametrize_with_cases("tags", cases=CaseTaglist, has_tag="empty")
 def test_retrieve_public_images(
-    mock_conn: Mock, mock_image: Mock, openstack_image: Image, tags: list[str] | None
+    mock_retrieve_info: Mock,
+    mock_conn: Mock,
+    mock_image: Mock,
+    openstack_image: Image,
+    identity_provider_create: IdentityProviderCreateExtended,
+    tags: list[str] | None,
 ) -> None:
     """Successful retrieval of an Image.
 
@@ -61,14 +110,35 @@ def test_retrieve_public_images(
     Images retrieval fail is not tested here. It is tested where the exception is
     caught: get_data_from_openstack function.
     """
-    images = list(filter(lambda x: filter_images(x, tags), [openstack_image]))
+    project_conf = Project(**project_dict())
+    provider_conf = Openstack(
+        **openstack_dict(),
+        identity_providers=[auth_method_dict()],
+        projects=[project_conf],
+    )
+    region_name = random_lower_string()
+    logger = getLogger("test")
+    token = random_lower_string()
+    item = OpenstackData(
+        provider_conf=provider_conf,
+        project_conf=project_conf,
+        identity_provider=identity_provider_create,
+        region_name=region_name,
+        token=token,
+        logger=logger,
+    )
+
+    images = [openstack_image]
     mock_image.images.return_value = images
     mock_conn.image = mock_image
-    data = get_images(mock_conn, tags=tags)
+    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
+    item.conn = mock_conn
 
+    data = item.get_images(tags=tags)
     assert len(data) == len(images)
     if len(data) > 0:
         item = data[0]
+        assert isinstance(item, ImageCreateExtended)
         assert item.description == ""
         assert item.uuid == openstack_image.id
         assert item.name == openstack_image.name
@@ -86,70 +156,162 @@ def test_retrieve_public_images(
 
 @patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
-@parametrize_with_cases("acceptance_status", cases=CaseAcceptStatus)
-def test_retrieve_private_images(
+@patch("src.providers.openstack.OpenstackData.retrieve_info")
+@parametrize_with_cases("tags", cases=CaseTaglist, has_tag="not-empty")
+def test_tags_filter(
+    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_image: Mock,
-    openstack_image_private: Image,
-    acceptance_status: str,
+    identity_provider_create: IdentityProviderCreateExtended,
+    tags: list[str] | None,
 ) -> None:
-    """Successful retrieval of an Image with a specified visibility.
+    """Successful retrieval of an Image.
 
-    Check that the is_public flag is correctly set to False and projects list is
-    correct.
+    Retrieve only active images and with the tags contained in the target tags list.
+    If the target tags list is empty or None, all active images are valid ones.
+
+    Images retrieval fail is not tested here. It is tested where the exception is
+    caught: get_data_from_openstack function.
     """
-
-    def get_allowed_members(*args, **kwargs) -> list[Member]:
-        return [
-            Member(status="accepted", id=openstack_image_private.owner_id),
-            Member(status=acceptance_status, id=uuid4().hex),
-        ]
-
-    images = [openstack_image_private]
-    mock_image.images.return_value = images
-    mock_image.members.side_effect = get_allowed_members
-    mock_conn.image = mock_image
-    type(mock_conn).current_project_id = PropertyMock(
-        return_value=openstack_image_private.owner_id
+    project_conf = Project(**project_dict())
+    provider_conf = Openstack(
+        **openstack_dict(),
+        identity_providers=[auth_method_dict()],
+        projects=[project_conf],
     )
-    data = get_images(mock_conn)
+    region_name = random_lower_string()
+    logger = getLogger("test")
+    token = random_lower_string()
+    item = OpenstackData(
+        provider_conf=provider_conf,
+        project_conf=project_conf,
+        identity_provider=identity_provider_create,
+        region_name=region_name,
+        token=token,
+        logger=logger,
+    )
+    openstack_image1 = Image(**openstack_image_dict())
+    openstack_image1.tags = ["one", "two"]
+    openstack_image2 = Image(**openstack_image_dict())
+    openstack_image2.tags = ["one-two"]
 
-    assert len(data) == len(images)
-    assert not data[0].is_public
-    if openstack_image_private.visibility == "private":
-        allowed_project_ids = [openstack_image_private.owner_id]
-    elif openstack_image_private.visibility == "shared":
-        allowed_project_ids = list(
-            filter(lambda x: x.status == "accepted", get_allowed_members())
-        )
-    assert len(data[0].projects) == len(allowed_project_ids)
+    images = list(
+        filter(lambda x: filter_images(x, tags), [openstack_image1, openstack_image2])
+    )
+    mock_image.images.return_value = images
+    mock_conn.image = mock_image
+    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
+    item.conn = mock_conn
+
+    data = item.get_images(tags=tags)
+    assert len(data) == 1
+    item = data[0]
+    assert len(set(tags).intersection(set(item.tags)))
 
 
+@patch("src.providers.openstack.Connection.image.members")
 @patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
+@patch("src.providers.openstack.OpenstackData.retrieve_info")
+@parametrize_with_cases("openstack_image", cases=CaseOpenstackImage, has_tag="shared")
 @parametrize_with_cases("acceptance_status", cases=CaseAcceptStatus)
-def test_no_matching_project_id_when_retrieving_private_images(
+def test_retrieve_shared_image_projects(
+    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_image: Mock,
-    openstack_image_private: Image,
+    mock_members: Mock,
+    openstack_image: Image,
+    identity_provider_create: IdentityProviderCreateExtended,
     acceptance_status: str,
+) -> None:
+    """ """
+    project_conf = Project(**project_dict())
+    provider_conf = Openstack(
+        **openstack_dict(),
+        identity_providers=[auth_method_dict()],
+        projects=[project_conf],
+    )
+    region_name = random_lower_string()
+    logger = getLogger("test")
+    token = random_lower_string()
+    item = OpenstackData(
+        provider_conf=provider_conf,
+        project_conf=project_conf,
+        identity_provider=identity_provider_create,
+        region_name=region_name,
+        token=token,
+        logger=logger,
+    )
+
+    project_id = uuid4().hex
+    members = [Member(status=acceptance_status, id=project_id)]
+    mock_members.return_value = members
+    mock_image.members = mock_members
+    mock_conn.image = mock_image
+    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
+    item.conn = mock_conn
+
+    data = item.get_image_projects(openstack_image)
+    if acceptance_status == "accepted":
+        assert len(data) == 2
+        assert openstack_image.owner_id in data
+        assert project_id in data
+    else:
+        assert len(data) == 1
+        assert data[0] == openstack_image.owner_id
+
+
+@patch("src.providers.openstack.OpenstackData.get_image_projects")
+@patch("src.providers.openstack.Connection.image")
+@patch("src.providers.openstack.Connection")
+@patch("src.providers.openstack.OpenstackData.retrieve_info")
+@parametrize_with_cases(
+    "openstack_image",
+    cases=CaseOpenstackImage,
+    filter=ft.has_tag("shared") | ft.has_tag("private"),
+)
+def test_retrieve_private_images(
+    mock_retrieve_info: Mock,
+    mock_conn: Mock,
+    mock_image: Mock,
+    mock_image_projects: Mock,
+    openstack_image: Image,
+    identity_provider_create: IdentityProviderCreateExtended,
 ) -> None:
     """Successful retrieval of an Image with a specified visibility.
 
     Check that the is_public flag is correctly set to False and projects list is
     correct.
     """
+    project_conf = Project(**project_dict())
+    provider_conf = Openstack(
+        **openstack_dict(),
+        identity_providers=[auth_method_dict()],
+        projects=[project_conf],
+    )
+    region_name = random_lower_string()
+    logger = getLogger("test")
+    token = random_lower_string()
+    item = OpenstackData(
+        provider_conf=provider_conf,
+        project_conf=project_conf,
+        identity_provider=identity_provider_create,
+        region_name=region_name,
+        token=token,
+        logger=logger,
+    )
 
-    def get_allowed_members(*args, **kwargs) -> list[Member]:
-        return [
-            Member(status="accepted", id=openstack_image_private.owner_id),
-            Member(status=acceptance_status, id=uuid4().hex),
-        ]
-
-    images = [openstack_image_private]
+    openstack_image.owner_id = project_conf.id
+    images = [openstack_image]
+    mock_image_projects.return_value = [project_conf.id]
     mock_image.images.return_value = images
-    mock_image.members.side_effect = get_allowed_members
     mock_conn.image = mock_image
-    type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
-    data = get_images(mock_conn)
-    assert len(data) == 0
+    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
+    item.conn = mock_conn
+
+    data = item.get_images()
+    assert len(data) == len(images)
+    item = data[0]
+    assert isinstance(item, ImageCreateExtended)
+    assert not item.is_public
+    assert item.projects[0] == project_conf.id
