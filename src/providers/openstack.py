@@ -265,8 +265,6 @@ class OpenstackData:
             projects = []
             if not flavor.is_public:
                 projects = self.get_flavor_projects(flavor)
-                if self.conn.current_project_id not in projects:
-                    continue
             data = flavor.to_dict()
             data["uuid"] = data.pop("id")
             if data.get("description") is None:
