@@ -514,27 +514,27 @@ class OpenstackData:
         """
         s3_services = []
         for service in filter(
-            lambda x: x.get("type") == "s3", self.conn.service_catalog
+            lambda x: x.get("type") == "s3" and x.get("name") == "swift_s3",
+            self.conn.service_catalog,
         ):
             for endpoint in filter(
                 lambda x: x.get("interface") == "public"
                 and x.get("region") == self.region_name,
                 service.get("endpoints"),
             ):
-                if service.get("name") == "swift_s3":
-                    s3_service = ObjectStoreServiceCreateExtended(
-                        endpoint=endpoint.get("url"),
-                        name=ObjectStoreServiceName.OPENSTACK_SWIFT_S3,
-                    )
-                    s3_service.quotas = [*self.get_s3_quotas()]
-                    if self.project_conf.per_user_limits.object_store:
-                        s3_service.quotas.append(
-                            ObjectStoreQuotaCreateExtended(
-                                **self.project_conf.per_user_limits.object_store.dict(
-                                    exclude_none=True
-                                ),
-                                project=self.conn.current_project_id,
-                            )
+                s3_service = ObjectStoreServiceCreateExtended(
+                    endpoint=endpoint.get("url"),
+                    name=ObjectStoreServiceName.OPENSTACK_SWIFT_S3,
+                )
+                s3_service.quotas = [*self.get_s3_quotas()]
+                if self.project_conf.per_user_limits.object_store:
+                    s3_service.quotas.append(
+                        ObjectStoreQuotaCreateExtended(
+                            **self.project_conf.per_user_limits.object_store.dict(
+                                exclude_none=True
+                            ),
+                            project=self.conn.current_project_id,
                         )
-                    s3_services.append(s3_service)
+                    )
+                s3_services.append(s3_service)
         return s3_services
