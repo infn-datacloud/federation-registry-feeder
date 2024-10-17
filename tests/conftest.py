@@ -19,7 +19,6 @@ from fed_reg.provider.schemas_extended import (
 from openstack.block_storage.v3.quota_set import (
     QuotaSet as OpenstackBlockStorageQuotaSet,
 )
-from openstack.compute.v2.flavor import Flavor as OpenstackFlavor
 from openstack.compute.v2.quota_set import QuotaSet as OpenstackComputeQuotaSet
 from openstack.image.v2.image import Image as OpenstackImage
 from openstack.network.v2.network import Network as OpenstackNetwork
@@ -30,7 +29,6 @@ from tests.providers.openstack.utils import random_image_status, random_network_
 from tests.schemas.utils import (
     random_block_storage_service_name,
     random_compute_service_name,
-    random_float,
     random_identity_service_name,
     random_image_os_type,
     random_lower_string,
@@ -581,74 +579,74 @@ class CaseExtraSpecs:
         return {"aggregate_instance_extra_specs:local_storage": random_lower_string()}
 
 
-def openstack_flavor_dict() -> dict[str, Any]:
-    """dict with flavor minimal data."""
-    return {
-        "name": random_lower_string(),
-        "disk": randint(0, 100),
-        "is_public": getrandbits(1),
-        "ram": randint(0, 100),
-        "vcpus": randint(0, 100),
-        "swap": randint(0, 100),
-        "ephemeral": randint(0, 100),
-        "is_disabled": False,
-        "rxtx_factor": random_float(0, 100),
-        "extra_specs": {},
-    }
+# def openstack_flavor_dict() -> dict[str, Any]:
+#     """dict with flavor minimal data."""
+#     return {
+#         "name": random_lower_string(),
+#         "disk": randint(0, 100),
+#         "is_public": getrandbits(1),
+#         "ram": randint(0, 100),
+#         "vcpus": randint(0, 100),
+#         "swap": randint(0, 100),
+#         "ephemeral": randint(0, 100),
+#         "is_disabled": False,
+#         "rxtx_factor": random_float(0, 100),
+#         "extra_specs": {},
+#     }
 
 
-@pytest.fixture
-def openstack_flavor_base() -> OpenstackFlavor:
-    """Fixture with disabled flavor."""
-    return OpenstackFlavor(**openstack_flavor_dict())
+# @pytest.fixture
+# def openstack_flavor_base() -> OpenstackFlavor:
+#     """Fixture with disabled flavor."""
+#     return OpenstackFlavor(**openstack_flavor_dict())
 
 
-@pytest.fixture
-def openstack_flavor_disabled() -> OpenstackFlavor:
-    """Fixture with disabled flavor."""
-    d = openstack_flavor_dict()
-    d["is_disabled"] = True
-    return OpenstackFlavor(**d)
+# @pytest.fixture
+# def openstack_flavor_disabled() -> OpenstackFlavor:
+#     """Fixture with disabled flavor."""
+#     d = openstack_flavor_dict()
+#     d["is_disabled"] = True
+#     return OpenstackFlavor(**d)
 
 
-@pytest.fixture
-def openstack_flavor_with_desc() -> OpenstackFlavor:
-    """Fixture with a flavor with description."""
-    d = openstack_flavor_dict()
-    d["description"] = random_lower_string()
-    return OpenstackFlavor(**d)
+# @pytest.fixture
+# def openstack_flavor_with_desc() -> OpenstackFlavor:
+#     """Fixture with a flavor with description."""
+#     d = openstack_flavor_dict()
+#     d["description"] = random_lower_string()
+#     return OpenstackFlavor(**d)
 
 
-@pytest.fixture
-def openstack_flavor_private() -> OpenstackFlavor:
-    """Fixture with private flavor."""
-    d = openstack_flavor_dict()
-    d["is_public"] = False
-    return OpenstackFlavor(**d)
+# @pytest.fixture
+# def openstack_flavor_private() -> OpenstackFlavor:
+#     """Fixture with private flavor."""
+#     d = openstack_flavor_dict()
+#     d["is_public"] = False
+#     return OpenstackFlavor(**d)
 
 
-@pytest.fixture
-@parametrize_with_cases("extra_specs", cases=CaseExtraSpecs)
-def openstack_flavor_with_extra_specs(extra_specs: dict[str, Any]) -> OpenstackFlavor:
-    """Fixture with a flavor with extra specs."""
-    d = openstack_flavor_dict()
-    d["extra_specs"] = extra_specs
-    return OpenstackFlavor(**d)
+# @pytest.fixture
+# @parametrize_with_cases("extra_specs", cases=CaseExtraSpecs)
+# def openstack_flavor_with_extra_specs(extra_specs: dict[str, Any]) -> OpenstackFlavor:
+#     """Fixture with a flavor with extra specs."""
+#     d = openstack_flavor_dict()
+#     d["extra_specs"] = extra_specs
+#     return OpenstackFlavor(**d)
 
 
-@pytest.fixture
-@parametrize(
-    f=[
-        openstack_flavor_base,
-        openstack_flavor_disabled,
-        openstack_flavor_with_extra_specs,
-        openstack_flavor_private,
-        openstack_flavor_with_desc,
-    ]
-)
-def openstack_flavor(f: OpenstackFlavor) -> OpenstackFlavor:
-    """Fixtures union."""
-    return f
+# @pytest.fixture
+# @parametrize(
+#     f=[
+#         openstack_flavor_base,
+#         openstack_flavor_disabled,
+#         openstack_flavor_with_extra_specs,
+#         openstack_flavor_private,
+#         openstack_flavor_with_desc,
+#     ]
+# )
+# def openstack_flavor(f: OpenstackFlavor) -> OpenstackFlavor:
+#     """Fixtures union."""
+#     return f
 
 
 def openstack_block_storage_quotas_dict() -> dict[str, int]:
