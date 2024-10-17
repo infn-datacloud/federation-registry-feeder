@@ -351,6 +351,7 @@ class OpenstackData:
         ):
             self.logger.debug("Network received data=%r", network)
             project = None
+            # A project can find not owned networks. Discard them.
             if not network.is_shared:
                 if self.conn.current_project_id != network.project_id:
                     continue

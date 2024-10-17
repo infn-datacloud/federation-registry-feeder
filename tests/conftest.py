@@ -1,6 +1,5 @@
 import os
-from random import getrandbits, randint
-from typing import Any
+from random import randint
 from uuid import uuid4
 
 import pytest
@@ -20,11 +19,9 @@ from openstack.block_storage.v3.quota_set import (
     QuotaSet as OpenstackBlockStorageQuotaSet,
 )
 from openstack.compute.v2.quota_set import QuotaSet as OpenstackComputeQuotaSet
-from openstack.network.v2.network import Network as OpenstackNetwork
 from openstack.network.v2.quota import QuotaDetails as OpenstackNetworkQuota
-from pytest_cases import parametrize, parametrize_with_cases
+from pytest_cases import parametrize
 
-from tests.providers.openstack.utils import random_network_status
 from tests.schemas.utils import (
     random_block_storage_service_name,
     random_compute_service_name,
@@ -391,106 +388,93 @@ def region_create(
 # Openstack specific
 
 
-class CaseDefaultAttr:
-    @parametrize(value=[True, False])
-    def case_is_default(self, value: bool) -> bool:
-        return value
+# class CaseDefaultAttr:
+#     @parametrize(value=[True, False])
+#     def case_is_default(self, value: bool) -> bool:
+#         return value
 
 
-class CaseTags:
-    def case_single_valid_tag(self) -> list[str]:
-        return ["one"]
+# class CaseTags:
+#     def case_single_valid_tag(self) -> list[str]:
+#         return ["one"]
 
-    @parametrize(case=[0, 1])
-    def case_single_invalid_tag(self, case: int) -> list[str]:
-        return ["two"] if case else ["one-two"]
+#     @parametrize(case=[0, 1])
+#     def case_single_invalid_tag(self, case: int) -> list[str]:
+#         return ["two"] if case else ["one-two"]
 
-    def case_at_least_one_valid_tag(self) -> list[str]:
-        return ["one", "two"]
-
-
-def openstack_network_dict() -> dict[str, Any]:
-    """dict with network minimal data."""
-    return {
-        "id": uuid4().hex,
-        "name": random_lower_string(),
-        "status": "active",
-        "project_id": uuid4().hex,
-        "is_router_external": getrandbits(1),
-        "is_shared": False,
-        "mtu": randint(1, 100),
-    }
+#     def case_at_least_one_valid_tag(self) -> list[str]:
+#         return ["one", "two"]
 
 
-@pytest.fixture
-def openstack_network_base() -> OpenstackNetwork:
-    """Fixture with network."""
-    return OpenstackNetwork(**openstack_network_dict())
+# @pytest.fixture
+# def openstack_network_base() -> OpenstackNetwork:
+#     """Fixture with network."""
+#     return OpenstackNetwork(**openstack_network_dict())
 
 
-@pytest.fixture
-def openstack_network_disabled() -> OpenstackNetwork:
-    """Fixture with disabled network."""
-    d = openstack_network_dict()
-    d["status"] = random_network_status(exclude=["active"])
-    return OpenstackNetwork(**d)
+# @pytest.fixture
+# def openstack_network_disabled() -> OpenstackNetwork:
+#     """Fixture with disabled network."""
+#     d = openstack_network_dict()
+#     d["status"] = random_network_status(exclude=["active"])
+#     return OpenstackNetwork(**d)
 
 
-@pytest.fixture
-def openstack_network_with_desc() -> OpenstackNetwork:
-    """Fixture with network with specified description."""
-    d = openstack_network_dict()
-    d["description"] = random_lower_string()
-    return OpenstackNetwork(**d)
+# @pytest.fixture
+# def openstack_network_with_desc() -> OpenstackNetwork:
+#     """Fixture with network with specified description."""
+#     d = openstack_network_dict()
+#     d["description"] = random_lower_string()
+#     return OpenstackNetwork(**d)
 
 
-@pytest.fixture
-def openstack_network_shared() -> OpenstackNetwork:
-    """Fixture with shared network."""
-    d = openstack_network_dict()
-    d["is_shared"] = True
-    return OpenstackNetwork(**d)
+# @pytest.fixture
+# def openstack_network_shared() -> OpenstackNetwork:
+#     """Fixture with shared network."""
+#     d = openstack_network_dict()
+#     d["is_shared"] = True
+#     return OpenstackNetwork(**d)
 
 
-@pytest.fixture
-@parametrize_with_cases("tags", cases=CaseTags)
-def openstack_network_with_tags(tags: list[str]) -> OpenstackNetwork:
-    """Fixture with network with specified tags."""
-    d = openstack_network_dict()
-    d["tags"] = tags
-    return OpenstackNetwork(**d)
+# @pytest.fixture
+# @parametrize_with_cases("tags", cases=CaseTags)
+# def openstack_network_with_tags(tags: list[str]) -> OpenstackNetwork:
+#     """Fixture with network with specified tags."""
+#     d = openstack_network_dict()
+#     d["tags"] = tags
+#     return OpenstackNetwork(**d)
 
 
-@pytest.fixture
-@parametrize(i=[openstack_network_base, openstack_network_shared])
-def openstack_priv_pub_network(i: OpenstackNetwork) -> OpenstackNetwork:
-    """Fixtures union."""
-    return i
+# @pytest.fixture
+# @parametrize(i=[openstack_network_base, openstack_network_shared])
+# def openstack_priv_pub_network(i: OpenstackNetwork) -> OpenstackNetwork:
+#     """Fixtures union."""
+#     return i
 
 
-@pytest.fixture
-@parametrize(
-    i=[
-        openstack_priv_pub_network,
-        openstack_network_disabled,
-        openstack_network_with_desc,
-        openstack_network_with_tags,
-    ]
-)
-def openstack_network(i: OpenstackNetwork) -> OpenstackNetwork:
-    """Fixtures union."""
-    return i
+# @pytest.fixture
+# @parametrize(
+#     i=[
+#         openstack_priv_pub_network,
+#         openstack_network_disabled,
+#         openstack_network_with_desc,
+#         openstack_network_with_tags,
+#     ]
+# )
+# def openstack_network(i: OpenstackNetwork) -> OpenstackNetwork:
+#     """Fixtures union."""
+#     return i
 
 
-@pytest.fixture
-@parametrize(n=[openstack_network_base, openstack_network_shared])
-@parametrize_with_cases("is_default", cases=CaseDefaultAttr)
-def openstack_default_network(
-    n: OpenstackNetwork, is_default: bool
-) -> OpenstackNetwork:
-    """Shared and not shared networks with/without is_default."""
-    n.is_default = is_default
-    return n
+# @pytest.fixture
+# @parametrize(n=[openstack_network_base, openstack_network_shared])
+# @parametrize_with_cases("is_default", cases=CaseDefaultAttr)
+# def openstack_default_network(
+#     n: OpenstackNetwork, is_default: bool
+# ) -> OpenstackNetwork:
+#     """Shared and not shared networks with/without is_default."""
+#     n.is_default = is_default
+#     return n
 
 
 # class CaseVisibility:

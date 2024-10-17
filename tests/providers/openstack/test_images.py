@@ -14,7 +14,7 @@ from pytest_cases import filters as ft
 from src.models.provider import Openstack, Project
 from src.providers.openstack import OpenstackData
 from tests.providers.openstack.utils import (
-    filter_images,
+    filter_item_by_tags,
     openstack_image_dict,
     random_image_status,
 )
@@ -163,7 +163,7 @@ def test_tags_filter(
     mock_conn: Mock,
     mock_image: Mock,
     identity_provider_create: IdentityProviderCreateExtended,
-    tags: list[str] | None,
+    tags: list[str],
 ) -> None:
     """Successful retrieval of an Image.
 
@@ -196,7 +196,10 @@ def test_tags_filter(
     openstack_image2.tags = ["one-two"]
 
     images = list(
-        filter(lambda x: filter_images(x, tags), [openstack_image1, openstack_image2])
+        filter(
+            lambda x: filter_item_by_tags(x, tags) and x.status == "active",
+            [openstack_image1, openstack_image2],
+        )
     )
     mock_image.images.return_value = images
     mock_conn.image = mock_image
