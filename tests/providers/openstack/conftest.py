@@ -26,7 +26,7 @@ def openstack_item(identity_provider_create: IdentityProviderCreateExtended):
     token = random_lower_string()
     logger = getLogger("test")
     with patch("src.providers.openstack.OpenstackData.retrieve_info"):
-        return OpenstackData(
+        item = OpenstackData(
             provider_conf=provider_conf,
             project_conf=project_conf,
             identity_provider=identity_provider_create,
@@ -34,3 +34,4 @@ def openstack_item(identity_provider_create: IdentityProviderCreateExtended):
             token=token,
             logger=logger,
         )
+    return item

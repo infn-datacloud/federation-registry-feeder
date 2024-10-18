@@ -64,6 +64,12 @@ class OpenstackData:
         self.logger = logger
         self.error = False
 
+        self.project = None
+        self.block_storage_service = None
+        self.compute_service = None
+        self.network_service = None
+        self.object_store_services = []
+
         # Connection is only defined, not yet opened
         self.conn = self.create_connection(token=token)
 
@@ -102,10 +108,10 @@ class OpenstackData:
             HttpException,
         ) as e:
             self.logger.error(e)
+            self.logger.error("Connection aborted")
             raise ProviderException from e
-        finally:
-            self.conn.close()
-            self.logger.info("Connection closed")
+        self.conn.close()
+        self.logger.info("Connection closed")
 
     def create_connection(self, *, token: str) -> Connection:
         """Connect to Openstack provider"""
