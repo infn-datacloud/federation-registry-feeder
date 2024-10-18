@@ -250,6 +250,7 @@ def test_project_connection_error(
     mock_openstack_data.get_object_store_service.assert_not_called()
     mock_openstack_data.get_s3_services.assert_not_called()
 
+    assert openstack_item.error
     assert openstack_item.project is None
     assert openstack_item.block_storage_service is None
     assert openstack_item.compute_service is None
@@ -303,6 +304,7 @@ def test_block_storage_connection_error(
     mock_openstack_data.get_object_store_service.assert_not_called()
     mock_openstack_data.get_s3_services.assert_not_called()
 
+    assert openstack_item.error
     assert openstack_item.project == project_create
     assert openstack_item.block_storage_service is None
     assert openstack_item.compute_service is None
@@ -358,6 +360,7 @@ def test_compute_connection_error(
     mock_openstack_data.get_object_store_service.assert_not_called()
     mock_openstack_data.get_s3_services.assert_not_called()
 
+    assert openstack_item.error
     assert openstack_item.project == project_create
     assert openstack_item.block_storage_service == block_storage_service_create
     assert openstack_item.compute_service is None
@@ -413,6 +416,7 @@ def test_network_connection_error(
     mock_openstack_data.get_object_store_service.assert_not_called()
     mock_openstack_data.get_s3_services.assert_not_called()
 
+    assert openstack_item.error
     assert openstack_item.project == project_create
     assert openstack_item.block_storage_service == block_storage_service_create
     assert openstack_item.compute_service == compute_service_create
@@ -521,6 +525,7 @@ def test_s3_connection_error(
     # mock_openstack_data.get_object_store_service.assert_called()
     mock_openstack_data.get_s3_services.assert_called()
 
+    assert openstack_item.error
     assert openstack_item.project == project_create
     assert openstack_item.block_storage_service == block_storage_service_create
     assert openstack_item.compute_service == compute_service_create

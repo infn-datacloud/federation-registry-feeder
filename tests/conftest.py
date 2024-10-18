@@ -1,5 +1,4 @@
 import os
-from random import randint
 from uuid import uuid4
 
 import pytest
@@ -17,11 +16,6 @@ from fed_reg.provider.schemas_extended import (
     UserGroupCreateExtended,
 )
 from fed_reg.service.enum import ObjectStoreServiceName
-from openstack.block_storage.v3.quota_set import (
-    QuotaSet as OpenstackBlockStorageQuotaSet,
-)
-from openstack.compute.v2.quota_set import QuotaSet as OpenstackComputeQuotaSet
-from openstack.network.v2.quota import QuotaDetails as OpenstackNetworkQuota
 from pytest_cases import parametrize
 
 from tests.schemas.utils import (
@@ -649,86 +643,86 @@ def region_create(
 #     return f
 
 
-def openstack_block_storage_quotas_dict() -> dict[str, int]:
-    """dict with the block storage quotas attributes."""
-    return {
-        "backup_gigabytes": randint(0, 100),
-        "backups": randint(0, 100),
-        "gigabytes": randint(0, 100),
-        "groups": randint(0, 100),
-        "per_volume_gigabytes": randint(0, 100),
-        "snapshots": randint(0, 100),
-        "volumes": randint(0, 100),
-    }
+# def openstack_block_storage_quotas_dict() -> dict[str, int]:
+#     """dict with the block storage quotas attributes."""
+#     return {
+#         "backup_gigabytes": randint(0, 100),
+#         "backups": randint(0, 100),
+#         "gigabytes": randint(0, 100),
+#         "groups": randint(0, 100),
+#         "per_volume_gigabytes": randint(0, 100),
+#         "snapshots": randint(0, 100),
+#         "volumes": randint(0, 100),
+#     }
 
 
-def openstack_compute_quotas_dict() -> dict[str, int]:
-    """dict with the compute quotas attributes."""
-    return {
-        "cores": randint(0, 100),
-        "fixed_ips": randint(0, 100),
-        "floating_ips": randint(0, 100),
-        "injected_file_content_bytes": randint(0, 100),
-        "injected_file_path_bytes": randint(0, 100),
-        "injected_files": randint(0, 100),
-        "instances": randint(0, 100),
-        "key_pairs": randint(0, 100),
-        "metadata_items": randint(0, 100),
-        "networks": randint(0, 100),
-        "ram": randint(0, 100),
-        "security_group_rules": randint(0, 100),
-        "security_groups": randint(0, 100),
-        "server_groups": randint(0, 100),
-        "server_group_members": randint(0, 100),
-        "force": False,
-    }
+# def openstack_compute_quotas_dict() -> dict[str, int]:
+#     """dict with the compute quotas attributes."""
+#     return {
+#         "cores": randint(0, 100),
+#         "fixed_ips": randint(0, 100),
+#         "floating_ips": randint(0, 100),
+#         "injected_file_content_bytes": randint(0, 100),
+#         "injected_file_path_bytes": randint(0, 100),
+#         "injected_files": randint(0, 100),
+#         "instances": randint(0, 100),
+#         "key_pairs": randint(0, 100),
+#         "metadata_items": randint(0, 100),
+#         "networks": randint(0, 100),
+#         "ram": randint(0, 100),
+#         "security_group_rules": randint(0, 100),
+#         "security_groups": randint(0, 100),
+#         "server_groups": randint(0, 100),
+#         "server_group_members": randint(0, 100),
+#         "force": False,
+#     }
 
 
-def openstack_network_quotas_dict() -> dict[str, int]:
-    """dict with the network quotas attributes."""
-    return {
-        # "check_limit": False,
-        "floating_ips": randint(0, 100),
-        "health_monitors": randint(0, 100),
-        "listeners": randint(0, 100),
-        "load_balancers": randint(0, 100),
-        "l7_policies": randint(0, 100),
-        "networks": randint(0, 100),
-        "pools": randint(0, 100),
-        "ports": randint(0, 100),
-        # "project_id": ?,
-        "rbac_policies": randint(0, 100),
-        "routers": randint(0, 100),
-        "subnets": randint(0, 100),
-        "subnet_pools": randint(0, 100),
-        "security_group_rules": randint(0, 100),
-        "security_groups": randint(0, 100),
-    }
+# def openstack_network_quotas_dict() -> dict[str, int]:
+#     """dict with the network quotas attributes."""
+#     return {
+#         # "check_limit": False,
+#         "floating_ips": randint(0, 100),
+#         "health_monitors": randint(0, 100),
+#         "listeners": randint(0, 100),
+#         "load_balancers": randint(0, 100),
+#         "l7_policies": randint(0, 100),
+#         "networks": randint(0, 100),
+#         "pools": randint(0, 100),
+#         "ports": randint(0, 100),
+#         # "project_id": ?,
+#         "rbac_policies": randint(0, 100),
+#         "routers": randint(0, 100),
+#         "subnets": randint(0, 100),
+#         "subnet_pools": randint(0, 100),
+#         "security_group_rules": randint(0, 100),
+#         "security_groups": randint(0, 100),
+#     }
 
 
-@pytest.fixture
-def openstack_block_storage_quotas() -> OpenstackBlockStorageQuotaSet:
-    """Fixture with the block storage quotas."""
-    return OpenstackBlockStorageQuotaSet(
-        **openstack_block_storage_quotas_dict(),
-        usage=openstack_block_storage_quotas_dict(),
-    )
+# @pytest.fixture
+# def openstack_block_storage_quotas() -> OpenstackBlockStorageQuotaSet:
+#     """Fixture with the block storage quotas."""
+#     return OpenstackBlockStorageQuotaSet(
+#         **openstack_block_storage_quotas_dict(),
+#         usage=openstack_block_storage_quotas_dict(),
+#     )
 
 
-@pytest.fixture
-def openstack_compute_quotas() -> OpenstackComputeQuotaSet:
-    """Fixture with the compute quotas."""
-    return OpenstackComputeQuotaSet(
-        **openstack_compute_quotas_dict(), usage=openstack_compute_quotas_dict()
-    )
+# @pytest.fixture
+# def openstack_compute_quotas() -> OpenstackComputeQuotaSet:
+#     """Fixture with the compute quotas."""
+#     return OpenstackComputeQuotaSet(
+#         **openstack_compute_quotas_dict(), usage=openstack_compute_quotas_dict()
+#     )
 
 
-@pytest.fixture
-def openstack_network_quotas() -> OpenstackNetworkQuota:
-    """Fixture with the network quotas."""
-    d = {}
-    limit_dict = openstack_network_quotas_dict()
-    usage_dict = openstack_network_quotas_dict()
-    for k in limit_dict.keys():
-        d[k] = {"limit": limit_dict[k], "used": usage_dict[k]}
-    return OpenstackNetworkQuota(**d)
+# @pytest.fixture
+# def openstack_network_quotas() -> OpenstackNetworkQuota:
+#     """Fixture with the network quotas."""
+#     d = {}
+#     limit_dict = openstack_network_quotas_dict()
+#     usage_dict = openstack_network_quotas_dict()
+#     for k in limit_dict.keys():
+#         d[k] = {"limit": limit_dict[k], "used": usage_dict[k]}
+#     return OpenstackNetworkQuota(**d)

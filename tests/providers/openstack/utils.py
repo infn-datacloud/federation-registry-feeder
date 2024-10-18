@@ -89,6 +89,72 @@ def openstack_network_dict() -> dict[str, Any]:
     }
 
 
+def openstack_block_storage_quotas_dict() -> dict[str, int]:
+    """dict with the block storage quotas attributes."""
+    return {
+        "backup_gigabytes": randint(0, 100),
+        "backups": randint(0, 100),
+        "gigabytes": randint(0, 100),
+        "groups": randint(0, 100),
+        "per_volume_gigabytes": randint(0, 100),
+        "snapshots": randint(0, 100),
+        "volumes": randint(0, 100),
+    }
+
+
+def openstack_compute_quotas_dict() -> dict[str, int]:
+    """dict with the compute quotas attributes."""
+    return {
+        "cores": randint(0, 100),
+        "fixed_ips": randint(0, 100),
+        "floating_ips": randint(0, 100),
+        "injected_file_content_bytes": randint(0, 100),
+        "injected_file_path_bytes": randint(0, 100),
+        "injected_files": randint(0, 100),
+        "instances": randint(0, 100),
+        "key_pairs": randint(0, 100),
+        "metadata_items": randint(0, 100),
+        "networks": randint(0, 100),
+        "ram": randint(0, 100),
+        "security_group_rules": randint(0, 100),
+        "security_groups": randint(0, 100),
+        "server_groups": randint(0, 100),
+        "server_group_members": randint(0, 100),
+        "force": False,
+    }
+
+
+def openstack_network_quotas_dict() -> dict[str, int]:
+    """dict with the network quotas attributes."""
+    return {
+        # "check_limit": False,
+        "floating_ips": randint(0, 100),
+        "health_monitors": randint(0, 100),
+        "listeners": randint(0, 100),
+        "load_balancers": randint(0, 100),
+        "l7_policies": randint(0, 100),
+        "networks": randint(0, 100),
+        "pools": randint(0, 100),
+        "ports": randint(0, 100),
+        # "project_id": ?,
+        "rbac_policies": randint(0, 100),
+        "routers": randint(0, 100),
+        "subnets": randint(0, 100),
+        "subnet_pools": randint(0, 100),
+        "security_group_rules": randint(0, 100),
+        "security_groups": randint(0, 100),
+    }
+
+
+def openstack_object_store_headers() -> dict[str, int]:
+    return {
+        "X-Account-Bytes-Used": randint(0, 100),
+        "X-Account-Container-Count": randint(0, 100),
+        "X-Account-Object-Count": randint(0, 100),
+        "X-Account-Meta-Quota-Bytes": randint(0, 100),
+    }
+
+
 def filter_item_by_tags(item: Image | Network, tags: list[str] | None) -> bool:
     """Return true if the item contains any of given tags."""
     valid_tag = tags is None or len(tags) == 0

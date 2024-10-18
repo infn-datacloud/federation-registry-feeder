@@ -49,7 +49,8 @@ def test_no_block_storage_service(
     openstack_item.conn = mock_conn
 
     assert not openstack_item.get_block_storage_service()
-
+    if resp:
+        assert openstack_item.error
     mock_conn.block_storage.get_endpoint.assert_called_once()
 
 

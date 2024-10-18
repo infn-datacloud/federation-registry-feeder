@@ -169,6 +169,7 @@ def test_catch_forbidden_exception_when_reading_flavor_projects(
 
     data = openstack_item.get_flavor_projects(openstack_flavor)
     assert len(data) == 0
+    assert openstack_item.error
 
 
 # This case should neve happen

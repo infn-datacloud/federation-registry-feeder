@@ -46,7 +46,6 @@ def test_no_object_store_service(
     openstack_item.conn = mock_conn
 
     assert not openstack_item.get_object_store_service()
-
     mock_conn.object_store.get_endpoint.assert_called_once()
 
 

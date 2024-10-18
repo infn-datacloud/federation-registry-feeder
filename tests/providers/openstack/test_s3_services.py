@@ -108,7 +108,6 @@ def test_no_s3_service(
 
     s3_services = openstack_item.get_s3_services()
     assert not len(s3_services)
-
     mock_conn.service_catalog.__iter__.assert_called_once()
 
 

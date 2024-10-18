@@ -107,6 +107,7 @@ class OpenstackData:
             GatewayTimeout,
             HttpException,
         ) as e:
+            self.error = True
             self.logger.error(e)
             self.logger.error("Connection aborted")
             raise ProviderException from e
@@ -180,7 +181,9 @@ class OpenstackData:
             **data_usage, project=self.conn.current_project_id, usage=True
         )
 
-    def get_network_quotas(self) -> NetworkQuotaCreateExtended:
+    def get_network_quotas(
+        self,
+    ) -> tuple[NetworkQuotaCreateExtended, NetworkQuotaCreateExtended]:
         """Retrieve current project accessible network quota"""
         self.logger.info("Retrieve current project accessible network quotas")
         quota = self.conn.network.get_quota(self.conn.current_project_id, details=True)
@@ -213,11 +216,11 @@ class OpenstackData:
         self.logger.debug("Object storage service info=%s", info)
         data_limits = {}
         data_usage = {}
-        data_usage["bytes"] = resp.headers.pop("X-Account-Bytes-Used", 0)
-        data_usage["containers"] = resp.headers.pop("X-Account-Container-Count", 0)
-        data_usage["objects"] = resp.headers.pop("X-Account-Object-Count", 0)
-        data_limits["bytes"] = resp.headers.pop("X-Account-Meta-Quota-Bytes", -1)
-        data_limits["containers"] = info.swift.pop("container_listing_limit", 10000)
+        data_usage["bytes"] = resp.headers.get("X-Account-Bytes-Used", 0)
+        data_usage["containers"] = resp.headers.get("X-Account-Container-Count", 0)
+        data_usage["objects"] = resp.headers.get("X-Account-Object-Count", 0)
+        data_limits["bytes"] = resp.headers.get("X-Account-Meta-Quota-Bytes", -1)
+        data_limits["containers"] = info.swift.get("container_listing_limit", 10000)
         data_limits["objects"] = -1
         self.logger.debug("Block storage service quota limits=%s", data_limits)
         self.logger.debug("Block storage service quota usage=%s", data_usage)

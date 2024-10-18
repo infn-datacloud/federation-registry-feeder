@@ -69,7 +69,8 @@ def test_no_network_service(
     openstack_item.conn = mock_conn
 
     assert not openstack_item.get_network_service()
-
+    if resp:
+        assert openstack_item.error
     mock_conn.network.get_endpoint.assert_called_once()
 
 

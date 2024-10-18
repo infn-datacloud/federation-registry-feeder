@@ -68,7 +68,8 @@ def test_no_compute_service(
     openstack_item.conn = mock_conn
 
     assert not openstack_item.get_compute_service()
-
+    if resp:
+        assert openstack_item.error
     mock_conn.compute.get_endpoint.assert_called_once()
 
 
