@@ -1,25 +1,17 @@
-from logging import getLogger
 from typing import Any, Literal
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
 from fed_reg.provider.schemas_extended import (
-    IdentityProviderCreateExtended,
     ObjectStoreQuotaCreateExtended,
     ObjectStoreServiceCreateExtended,
 )
 from fed_reg.service.enum import ObjectStoreServiceName, ServiceType
 from pytest_cases import parametrize_with_cases
 
-from src.models.provider import Openstack, Project
+from src.models.provider import Limits
 from src.providers.openstack import OpenstackData
-from tests.schemas.utils import (
-    auth_method_dict,
-    openstack_dict,
-    project_dict,
-    random_lower_string,
-    random_url,
-)
+from tests.schemas.utils import random_lower_string, random_url
 
 
 class CaseEndpointResp:
@@ -95,20 +87,10 @@ class CaseUserQuotaPresence:
 
 @parametrize_with_cases("resp", cases=CaseEndpointResp)
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 def test_no_s3_service(
-    mock_retrieve_info: Mock,
-    mock_conn: Mock,
-    resp: list[dict[str, Any]],
-    identity_provider_create: IdentityProviderCreateExtended,
+    mock_conn: Mock, resp: list[dict[str, Any]], openstack_item: OpenstackData
 ) -> None:
     """If the endpoint is not found or the service response is None, return None."""
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
     # Set region name to match the once in the catalog only in a specific case
     if (
         len(resp) > 0
@@ -116,27 +98,17 @@ def test_no_s3_service(
         and resp[0].get("name") == "swift_s3"
         and resp[0].get("endpoints")[0].get("interface") != "public"
     ):
-        region_name = resp[0].get("endpoints")[0].get("region")
+        openstack_item.region_name = resp[0].get("endpoints")[0].get("region")
     else:
-        region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
+        openstack_item.region_name = random_lower_string()
 
     with patch("src.providers.openstack.Connection.service_catalog") as mock_catalog:
         mock_catalog.__iter__.return_value = iter(resp)
     mock_conn.service_catalog = mock_catalog
     type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
-    item.conn = mock_conn
+    openstack_item.conn = mock_conn
 
-    s3_services = item.get_s3_services()
+    s3_services = openstack_item.get_s3_services()
     assert not len(s3_services)
 
     mock_catalog.__iter__.assert_called_once()
@@ -145,40 +117,25 @@ def test_no_s3_service(
 @patch("src.providers.openstack.OpenstackData.get_s3_quotas")
 @patch("src.providers.openstack.Connection.service_catalog")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases("user_quota", cases=CaseUserQuotaPresence)
 def test_retrieve_s3_service_with_quotas(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_catalog: Mock,
     mock_s3_quotas: Mock,
     user_quota: bool,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
 ) -> None:
     """Check quotas in the returned service."""
-    per_user_limits = {"object_store": {"per_user": True}} if user_quota else {}
-    project_conf = Project(**project_dict(), per_user_limits=per_user_limits)
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
+    per_user_limits = Limits(
+        **{"object_store": {"per_user": True}} if user_quota else {}
     )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
+    openstack_item.project_conf.per_user_limits = per_user_limits
     endpoint = random_url()
     mock_s3_quotas.return_value = (
-        ObjectStoreQuotaCreateExtended(project=project_conf.id),
-        ObjectStoreQuotaCreateExtended(project=project_conf.id, usage=True),
+        ObjectStoreQuotaCreateExtended(project=openstack_item.project_conf.id),
+        ObjectStoreQuotaCreateExtended(
+            project=openstack_item.project_conf.id, usage=True
+        ),
     )
 
     mock_catalog.__iter__.return_value = iter(
@@ -188,8 +145,8 @@ def test_retrieve_s3_service_with_quotas(
                     {
                         "id": uuid4().hex,
                         "interface": "public",
-                        "region": region_name,
-                        "region_id": region_name,
+                        "region": openstack_item.region_name,
+                        "region_id": openstack_item.region_name,
                         "url": endpoint,
                     }
                 ],
@@ -201,9 +158,9 @@ def test_retrieve_s3_service_with_quotas(
     )
     mock_conn.service_catalog = mock_catalog
     type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
-    item.conn = mock_conn
+    openstack_item.conn = mock_conn
 
-    items = item.get_s3_services()
+    items = openstack_item.get_s3_services()
     assert len(items) == 1
     item = items[0]
     assert isinstance(item, ObjectStoreServiceCreateExtended)

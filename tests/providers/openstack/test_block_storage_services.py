@@ -1,5 +1,4 @@
 import os
-from logging import getLogger
 from typing import Literal
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
@@ -7,21 +6,14 @@ from uuid import uuid4
 from fed_reg.provider.schemas_extended import (
     BlockStorageQuotaCreateExtended,
     BlockStorageServiceCreateExtended,
-    IdentityProviderCreateExtended,
 )
 from fed_reg.service.enum import BlockStorageServiceName, ServiceType
 from keystoneauth1.exceptions.catalog import EndpointNotFound
 from pytest_cases import parametrize_with_cases
 
-from src.models.provider import Openstack, Project
+from src.models.provider import Limits
 from src.providers.openstack import OpenstackData
-from tests.schemas.utils import (
-    auth_method_dict,
-    openstack_dict,
-    project_dict,
-    random_lower_string,
-    random_url,
-)
+from tests.schemas.utils import random_url
 
 
 class CaseEndpointResp:
@@ -42,42 +34,24 @@ class CaseUserQuotaPresence:
 
 @parametrize_with_cases("resp", cases=CaseEndpointResp)
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 def test_no_block_storage_service(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     resp: EndpointNotFound | None,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
 ) -> None:
     """If the endpoint is not found or the service response is None, return None."""
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
     with patch("src.providers.openstack.Connection.block_storage") as mock_srv:
         if resp:
             mock_srv.get_endpoint.side_effect = resp
         else:
             mock_srv.get_endpoint.return_value = resp
     mock_conn.block_storage = mock_srv
-    type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    assert not item.get_block_storage_service()
+    assert not openstack_item.get_block_storage_service()
 
     mock_srv.get_endpoint.assert_called_once()
 
@@ -85,47 +59,32 @@ def test_no_block_storage_service(
 @patch("src.providers.openstack.OpenstackData.get_block_storage_quotas")
 @patch("src.providers.openstack.Connection.block_storage")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases("user_quota", cases=CaseUserQuotaPresence)
 def test_retrieve_block_storage_service_with_quotas(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_block_storage: Mock,
     mock_block_storage_quotas: Mock,
     user_quota: bool,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
 ) -> None:
     """Check quotas in the returned service."""
-    per_user_limits = {"block_storage": {"per_user": True}} if user_quota else {}
-    project_conf = Project(**project_dict(), per_user_limits=per_user_limits)
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
+    per_user_limits = Limits(
+        **{"block_storage": {"per_user": True}} if user_quota else {}
     )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
+    openstack_item.project_conf.per_user_limits = per_user_limits
     endpoint = random_url()
     mock_block_storage_quotas.return_value = (
-        BlockStorageQuotaCreateExtended(project=project_conf.id),
-        BlockStorageQuotaCreateExtended(project=project_conf.id, usage=True),
+        BlockStorageQuotaCreateExtended(project=openstack_item.project_conf.id),
+        BlockStorageQuotaCreateExtended(
+            project=openstack_item.project_conf.id, usage=True
+        ),
     )
     mock_block_storage.get_endpoint.return_value = os.path.join(endpoint, uuid4().hex)
     mock_conn.block_storage = mock_block_storage
     type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
-    item.conn = mock_conn
+    openstack_item.conn = mock_conn
 
-    item = item.get_block_storage_service()
+    item = openstack_item.get_block_storage_service()
     assert isinstance(item, BlockStorageServiceCreateExtended)
     assert item.description == ""
     assert item.endpoint == endpoint

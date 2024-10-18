@@ -1,27 +1,17 @@
-from logging import getLogger
 from unittest.mock import Mock, PropertyMock, patch
 
-from fed_reg.provider.schemas_extended import (
-    IdentityProviderCreateExtended,
-    NetworkCreateExtended,
-)
+from fed_reg.provider.schemas_extended import NetworkCreateExtended
 from openstack.network.v2.network import Network
 from pytest_cases import case, parametrize, parametrize_with_cases
 
-from src.models.provider import Openstack, PrivateNetProxy, Project
+from src.models.provider import PrivateNetProxy
 from src.providers.openstack import OpenstackData
 from tests.providers.openstack.utils import (
     filter_item_by_tags,
     openstack_network_dict,
     random_network_status,
 )
-from tests.schemas.utils import (
-    auth_method_dict,
-    openstack_dict,
-    private_net_proxy_dict,
-    project_dict,
-    random_lower_string,
-)
+from tests.schemas.utils import private_net_proxy_dict, random_lower_string
 
 
 class CaseTaglist:
@@ -86,15 +76,13 @@ class CaseOpenstackNetwork:
 
 @patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases("openstack_network", cases=CaseOpenstackNetwork)
 @parametrize_with_cases("tags", cases=CaseTaglist, has_tag="empty")
 def test_retrieve_networks(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_network: Mock,
     openstack_network: Network,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
     tags: list[str] | None,
 ) -> None:
     """Successful retrieval of a Network.
@@ -105,32 +93,16 @@ def test_retrieve_networks(
     Networks retrieval fail is not tested here. It is tested where the exception is
     caught: get_data_from_openstack function.
     """
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
-    openstack_network.project_id = project_conf.id
+    openstack_network.project_id = openstack_item.project_conf.id
     networks = [openstack_network]
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    data = item.get_networks(tags=tags)
+    data = openstack_item.get_networks(tags=tags)
 
     assert len(data) == len(networks)
     if len(data) > 0:
@@ -158,13 +130,11 @@ def test_retrieve_networks(
 
 @patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases("tags", cases=CaseTaglist, has_tag="not-empty")
 def test_tags_filter(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_network: Mock,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
     tags: list[str],
 ) -> None:
     """Successful retrieval of an Image.
@@ -175,23 +145,6 @@ def test_tags_filter(
     Images retrieval fail is not tested here. It is tested where the exception is
     caught: get_data_from_openstack function.
     """
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
     openstack_network1 = Network(**openstack_network_dict())
     openstack_network1.is_shared = True
     openstack_network1.tags = ["one", "two"]
@@ -207,10 +160,12 @@ def test_tags_filter(
     )
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    data = item.get_networks(tags=tags)
+    data = openstack_item.get_networks(tags=tags)
     assert len(data) == 1
     item = data[0]
     assert len(set(tags).intersection(set(item.tags)))
@@ -218,89 +173,53 @@ def test_tags_filter(
 
 @patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases(
     "openstack_network", cases=CaseOpenstackNetwork, has_tag="private"
 )
 def test_not_owned_private_net(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_network: Mock,
     openstack_network: Network,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
 ) -> None:
     """Networks owned by another project are not returned."""
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
     networks = [openstack_network]
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    data = item.get_networks()
+    data = openstack_item.get_networks()
     assert len(data) == 0
 
 
 @patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases("openstack_network", cases=CaseOpenstackNetwork, has_tag="base")
 def test_retrieve_networks_with_proxy(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_network: Mock,
     openstack_network: Network,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
 ) -> None:
     """Test retrieving networks with proxy ip and user.
 
     The network does not have proxy ip and user. This function attaches them to the
     network.
     """
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
     net_proxy = PrivateNetProxy(**private_net_proxy_dict())
-
-    openstack_network.project_id = project_conf.id
+    openstack_network.project_id = openstack_item.project_conf.id
     networks = [openstack_network]
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    data = item.get_networks(proxy=net_proxy)
+    data = openstack_item.get_networks(proxy=net_proxy)
     assert len(data) == len(networks)
     assert data[0].proxy_host == str(net_proxy.host)
     assert data[0].proxy_user == net_proxy.user
@@ -308,45 +227,27 @@ def test_retrieve_networks_with_proxy(
 
 @patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases("openstack_network", cases=CaseOpenstackNetwork, has_tag="base")
 @parametrize_with_cases("default_net", cases=CaseDefaultNet)
 def test_retrieve_networks_with_default_net(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_network: Mock,
     openstack_network: Network,
     default_net: str,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
 ) -> None:
     """Test how the is_default attribute in NetworkCreateExtended is built."""
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
     args = {default_net: openstack_network.name}
-    openstack_network.project_id = project_conf.id
+    openstack_network.project_id = openstack_item.project_conf.id
     networks = [openstack_network]
     mock_network.networks.return_value = networks
     mock_conn.network = mock_network
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    data = item.get_networks(**args)
+    data = openstack_item.get_networks(**args)
     assert len(data) == len(networks)
     item = data[0]
     if (openstack_network.is_shared and default_net == "default_public_net") or (
@@ -355,44 +256,21 @@ def test_retrieve_networks_with_default_net(
         assert item.is_default
 
 
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases("openstack_network", cases=CaseOpenstackNetwork, has_tag="base")
-def test_is_default_network(
-    mock_retrieve_info: Mock,
-    openstack_network: Network,
-    identity_provider_create: IdentityProviderCreateExtended,
-):
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
-    assert not item.is_default_network(network=openstack_network)
+def test_is_default_network(openstack_network: Network, openstack_item: OpenstackData):
+    assert not openstack_item.is_default_network(network=openstack_network)
 
     if openstack_network.is_shared:
         args = {"default_private_net": openstack_network.name}
     else:
         args = {"default_public_net": openstack_network.name}
-    assert not item.is_default_network(network=openstack_network, **args)
+    assert not openstack_item.is_default_network(network=openstack_network, **args)
 
     if openstack_network.is_shared:
         args = {"default_public_net": openstack_network.name}
     else:
         args = {"default_private_net": openstack_network.name}
-    assert item.is_default_network(network=openstack_network, **args)
+    assert openstack_item.is_default_network(network=openstack_network, **args)
 
     openstack_network.is_default = True
-    assert item.is_default_network(network=openstack_network)
+    assert openstack_item.is_default_network(network=openstack_network)

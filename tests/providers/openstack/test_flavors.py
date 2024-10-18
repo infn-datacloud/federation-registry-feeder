@@ -1,26 +1,15 @@
-from logging import getLogger
 from random import getrandbits, randint
 from typing import Any
 from unittest.mock import Mock, PropertyMock, patch
-from uuid import uuid4
 
-from fed_reg.provider.schemas_extended import (
-    FlavorCreateExtended,
-    IdentityProviderCreateExtended,
-)
+from fed_reg.provider.schemas_extended import FlavorCreateExtended
 from openstack.compute.v2.flavor import Flavor
 from openstack.exceptions import ForbiddenException
 from pytest_cases import case, parametrize, parametrize_with_cases
 
-from src.models.provider import Openstack, Project
 from src.providers.openstack import OpenstackData
 from tests.providers.openstack.utils import openstack_flavor_dict
-from tests.schemas.utils import (
-    auth_method_dict,
-    openstack_dict,
-    project_dict,
-    random_lower_string,
-)
+from tests.schemas.utils import random_lower_string
 
 
 class CaseExtraSpecs:
@@ -70,15 +59,13 @@ class CaseOpenstackFlavor:
 @patch("src.providers.openstack.Connection.compute.get_flavor_access")
 @patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases("openstack_flavor", cases=CaseOpenstackFlavor)
 def test_retrieve_flavors(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_compute: Mock,
     mock_flavor_access: Mock,
     openstack_flavor: Flavor,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
 ) -> None:
     """Successful retrieval of a flavors.
 
@@ -87,33 +74,16 @@ def test_retrieve_flavors(
     Flavors retrieval fail is not tested here. It is tested where the exception is
     caught: get_data_from_openstack function.
     """
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
     flavors = list(filter(lambda x: not x.is_disabled, [openstack_flavor]))
-    project_id = uuid4().hex
-    mock_flavor_access.return_value = [{"tenant_id": project_id}]
+    mock_flavor_access.return_value = [{"tenant_id": openstack_item.project_conf.id}]
     mock_compute.flavors.return_value = flavors
     mock_conn.compute = mock_compute
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    data = item.get_flavors()
+    data = openstack_item.get_flavors()
     assert len(data) == len(flavors)
     if len(data) > 0:
         item = data[0]
@@ -143,12 +113,9 @@ def test_retrieve_flavors(
             assert len(item.projects) == 1
 
 
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases("extra_specs", cases=CaseExtraSpecs)
 def test_retrieve_flavor_extra_specs(
-    mock_retrieve_info: Mock,
-    extra_specs: dict[str, Any],
-    identity_provider_create: IdentityProviderCreateExtended,
+    extra_specs: dict[str, Any], openstack_item: OpenstackData
 ) -> None:
     """Successful retrieval of a flavors.
 
@@ -157,25 +124,7 @@ def test_retrieve_flavor_extra_specs(
     Flavors retrieval fail is not tested here. It is tested where the exception is
     caught: get_data_from_openstack function.
     """
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
-    data = item.get_flavor_extra_specs(extra_specs)
+    data = openstack_item.get_flavor_extra_specs(extra_specs)
     assert data.get("gpus") == extra_specs.get("gpu_number", 0)
     assert data.get("gpu_model") == extra_specs.get("gpu_model")
     assert data.get("gpu_vendor") == extra_specs.get("gpu_vendor")
@@ -188,92 +137,56 @@ def test_retrieve_flavor_extra_specs(
 @patch("src.providers.openstack.Connection.compute.get_flavor_access")
 @patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases(
     "openstack_flavor", cases=CaseOpenstackFlavor, has_tag="private"
 )
 def test_retrieve_private_flavor_projects(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_compute: Mock,
     mock_flavor_access: Mock,
     openstack_flavor: Flavor,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
 ) -> None:
     """ """
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
-    mock_flavor_access.return_value = [{"tenant_id": project_conf.id}]
+    mock_flavor_access.return_value = [{"tenant_id": openstack_item.project_conf.id}]
     mock_compute.get_flavor_access = mock_flavor_access
     mock_conn.compute = mock_compute
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    data = item.get_flavor_projects(openstack_flavor)
+    data = openstack_item.get_flavor_projects(openstack_flavor)
     assert len(data) == 1
-    assert data[0] == project_conf.id
+    assert data[0] == openstack_item.project_conf.id
 
 
 @patch("src.providers.openstack.Connection.compute.get_flavor_access")
 @patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases(
     "openstack_flavor", cases=CaseOpenstackFlavor, has_tag="private"
 )
 def test_catch_forbidden_exception_when_reading_flavor_projects(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_compute: Mock,
     mock_flavor_access: Mock,
     openstack_flavor: Flavor,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
 ) -> None:
     """
     Catch ForbiddenException and filter out private flavors if the openstack policy does
     not allow to read os-flavor-access.
     """
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
     mock_flavor_access.side_effect = ForbiddenException()
     mock_compute.get_flavor_access = mock_flavor_access
     mock_conn.compute = mock_compute
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    data = item.get_flavor_projects(openstack_flavor)
+    data = openstack_item.get_flavor_projects(openstack_flavor)
     assert len(data) == 0
 
 
@@ -281,17 +194,15 @@ def test_catch_forbidden_exception_when_reading_flavor_projects(
 # @patch("src.providers.openstack.Connection.compute.get_flavor_access")
 # @patch("src.providers.openstack.Connection.compute")
 # @patch("src.providers.openstack.Connection")
-# @patch("src.providers.openstack.OpenstackData.retrieve_info")
 # @parametrize_with_cases(
 #     "openstack_flavor", cases=CaseOpenstackFlavor, has_tag="private"
 # )
 # def test_no_matching_project_id_when_retrieving_private_flavor(
-#     mock_retrieve_info: Mock,
 #     mock_conn: Mock,
 #     mock_compute: Mock,
 #     mock_flavor_access: Mock,
 #     openstack_flavor: Flavor,
-#     identity_provider_create: IdentityProviderCreateExtended,
+#     openstack_item: OpenstackData
 # ) -> None:
 #     """
 #     Filter out private flavors not visible to the current project.

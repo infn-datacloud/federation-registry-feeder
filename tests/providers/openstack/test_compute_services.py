@@ -1,4 +1,3 @@
-from logging import getLogger
 from typing import Literal
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
@@ -7,22 +6,15 @@ from fed_reg.provider.schemas_extended import (
     ComputeQuotaCreateExtended,
     ComputeServiceCreateExtended,
     FlavorCreateExtended,
-    IdentityProviderCreateExtended,
     ImageCreateExtended,
 )
 from fed_reg.service.enum import ComputeServiceName, ServiceType
 from keystoneauth1.exceptions.catalog import EndpointNotFound
 from pytest_cases import parametrize_with_cases
 
-from src.models.provider import Openstack, Project
+from src.models.provider import Limits
 from src.providers.openstack import OpenstackData
-from tests.schemas.utils import (
-    auth_method_dict,
-    openstack_dict,
-    project_dict,
-    random_lower_string,
-    random_url,
-)
+from tests.schemas.utils import random_lower_string, random_url
 
 
 class CaseEndpointResp:
@@ -62,42 +54,22 @@ class CaseTagList:
 
 @parametrize_with_cases("resp", cases=CaseEndpointResp)
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 def test_no_compute_service(
-    mock_retrieve_info: Mock,
-    mock_conn: Mock,
-    resp: EndpointNotFound | None,
-    identity_provider_create: IdentityProviderCreateExtended,
+    mock_conn: Mock, resp: EndpointNotFound | None, openstack_item: OpenstackData
 ) -> None:
     """If the endpoint is not found or the service response is None, return None."""
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
     with patch("src.providers.openstack.Connection.compute") as mock_srv:
         if resp:
             mock_srv.get_endpoint.side_effect = resp
         else:
             mock_srv.get_endpoint.return_value = resp
     mock_conn.compute = mock_srv
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    assert not item.get_compute_service()
+    assert not openstack_item.get_compute_service()
 
     mock_srv.get_endpoint.assert_called_once()
 
@@ -105,47 +77,30 @@ def test_no_compute_service(
 @patch("src.providers.openstack.OpenstackData.get_compute_quotas")
 @patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases("user_quota", cases=CaseUserQuotaPresence)
 def test_retrieve_compute_service_with_quotas(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_compute: Mock,
     mock_compute_quotas: Mock,
     user_quota: bool,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
 ) -> None:
     """Check quotas in the returned service."""
-    per_user_limits = {"compute": {"per_user": True}} if user_quota else {}
-    project_conf = Project(**project_dict(), per_user_limits=per_user_limits)
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
+    per_user_limits = Limits(**{"compute": {"per_user": True}} if user_quota else {})
+    openstack_item.project_conf.per_user_limits = per_user_limits
     endpoint = random_url()
     mock_compute_quotas.return_value = (
-        ComputeQuotaCreateExtended(project=project_conf.id),
-        ComputeQuotaCreateExtended(project=project_conf.id, usage=True),
+        ComputeQuotaCreateExtended(project=openstack_item.project_conf.id),
+        ComputeQuotaCreateExtended(project=openstack_item.project_conf.id, usage=True),
     )
     mock_compute.get_endpoint.return_value = endpoint
     mock_conn.compute = mock_compute
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    item = item.get_compute_service()
+    item = openstack_item.get_compute_service()
     assert isinstance(item, ComputeServiceCreateExtended)
     assert item.description == ""
     assert item.endpoint == endpoint
@@ -166,34 +121,14 @@ def test_retrieve_compute_service_with_quotas(
 @patch("src.providers.openstack.OpenstackData.get_flavors")
 @patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 def test_retrieve_compute_service_with_flavors(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_compute: Mock,
     mock_flavors: Mock,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
     visibility: str,
 ) -> None:
     """Check flavors in the returned service."""
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
     endpoint = random_url()
     if visibility == "public":
         mock_flavors.return_value = [
@@ -205,17 +140,19 @@ def test_retrieve_compute_service_with_flavors(
                 uuid=uuid4(),
                 name=random_lower_string(),
                 is_public=False,
-                projects=[project_conf.id],
+                projects=[openstack_item.project_conf.id],
             )
         ]
     elif visibility == "no-access":
         mock_flavors.return_value = []
     mock_compute.get_endpoint.return_value = endpoint
     mock_conn.compute = mock_compute
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    item = item.get_compute_service()
+    item = openstack_item.get_compute_service()
     if visibility == "no-access":
         assert len(item.flavors) == 0
     else:
@@ -226,34 +163,14 @@ def test_retrieve_compute_service_with_flavors(
 @patch("src.providers.openstack.OpenstackData.get_images")
 @patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 def test_retrieve_compute_service_with_images(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_compute: Mock,
     mock_images: Mock,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
     visibility: str,
 ) -> None:
     """Check images in the returned service."""
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
     endpoint = random_url()
     if visibility == "public":
         mock_images.return_value = [
@@ -265,17 +182,19 @@ def test_retrieve_compute_service_with_images(
                 uuid=uuid4(),
                 name=random_lower_string(),
                 is_public=False,
-                projects=[project_conf.id],
+                projects=[openstack_item.project_conf.id],
             )
         ]
     elif visibility == "no-access":
         mock_images.return_value = []
     mock_compute.get_endpoint.return_value = endpoint
     mock_conn.compute = mock_compute
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    item = item.get_compute_service()
+    item = openstack_item.get_compute_service()
     if visibility == "no-access":
         assert len(item.images) == 0
     else:
@@ -286,42 +205,25 @@ def test_retrieve_compute_service_with_images(
 @patch("src.providers.openstack.OpenstackData.get_images")
 @patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 def test_retrieve_compute_service_images_tags(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_compute: Mock,
     mock_images: Mock,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
     tags: list[str],
 ) -> None:
     """Check images in the returned service."""
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-        image_tags=tags,
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
+    openstack_item.provider_conf.image_tags = tags
     endpoint = random_url()
-    image = ImageCreateExtended(uuid=uuid4(), name=random_lower_string())
-    mock_images.return_value = [image]
+    mock_images.return_value = []
     mock_compute.get_endpoint.return_value = endpoint
     mock_conn.compute = mock_compute
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    item = item.get_compute_service()
-    mock_images.assert_called_once_with(tags=provider_conf.image_tags)
+    item = openstack_item.get_compute_service()
+    assert item is not None
+
+    mock_images.assert_called_once_with(tags=openstack_item.provider_conf.image_tags)

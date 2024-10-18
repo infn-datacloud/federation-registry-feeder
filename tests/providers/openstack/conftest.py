@@ -1,6 +1,7 @@
 from logging import getLogger
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, patch
 
+import pytest
 from fed_reg.provider.schemas_extended import IdentityProviderCreateExtended
 
 from src.models.provider import Openstack, Project
@@ -13,12 +14,12 @@ from tests.schemas.utils import (
 )
 
 
+@pytest.fixture
 @patch("src.providers.openstack.OpenstackData.retrieve_info")
-def test_connection(
-    mock_retrieve_info: Mock,
+def openstack_item(
+    mock_retrieve_info: MagicMock,
     identity_provider_create: IdentityProviderCreateExtended,
-) -> None:
-    """Connection creation always succeeds, it is its usage that may fail."""
+):
     project_conf = Project(**project_dict())
     provider_conf = Openstack(
         **openstack_dict(),
@@ -26,9 +27,9 @@ def test_connection(
         projects=[project_conf],
     )
     region_name = random_lower_string()
-    logger = getLogger("test")
     token = random_lower_string()
-    item = OpenstackData(
+    logger = getLogger("test")
+    return OpenstackData(
         provider_conf=provider_conf,
         project_conf=project_conf,
         identity_provider=identity_provider_create,
@@ -36,15 +37,3 @@ def test_connection(
         token=token,
         logger=logger,
     )
-
-    assert item.conn.auth.get("auth_url") == provider_conf.auth_url
-    assert (
-        item.conn.auth.get("identity_provider")
-        == identity_provider_create.relationship.idp_name
-    )
-    assert (
-        item.conn.auth.get("protocol") == identity_provider_create.relationship.protocol
-    )
-    assert item.conn.auth.get("access_token") == token
-    assert item.conn.auth.get("project_id") == project_conf.id
-    assert item.conn._compute_region == region_name

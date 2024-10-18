@@ -1,28 +1,17 @@
-from logging import getLogger
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
-from fed_reg.provider.schemas_extended import (
-    IdentityProviderCreateExtended,
-    ImageCreateExtended,
-)
+from fed_reg.provider.schemas_extended import ImageCreateExtended
 from openstack.image.v2.image import Image
 from openstack.image.v2.member import Member
 from pytest_cases import case, parametrize, parametrize_with_cases
 from pytest_cases import filters as ft
 
-from src.models.provider import Openstack, Project
 from src.providers.openstack import OpenstackData
 from tests.providers.openstack.utils import (
     filter_item_by_tags,
     openstack_image_dict,
     random_image_status,
-)
-from tests.schemas.utils import (
-    auth_method_dict,
-    openstack_dict,
-    project_dict,
-    random_lower_string,
 )
 
 
@@ -91,15 +80,13 @@ class CaseOpenstackImage:
 
 @patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases("openstack_image", cases=CaseOpenstackImage, has_tag="public")
 @parametrize_with_cases("tags", cases=CaseTaglist, has_tag="empty")
 def test_retrieve_public_images(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_image: Mock,
     openstack_image: Image,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
     tags: list[str] | None,
 ) -> None:
     """Successful retrieval of an Image.
@@ -110,31 +97,15 @@ def test_retrieve_public_images(
     Images retrieval fail is not tested here. It is tested where the exception is
     caught: get_data_from_openstack function.
     """
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
     images = [openstack_image]
     mock_image.images.return_value = images
     mock_conn.image = mock_image
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    data = item.get_images(tags=tags)
+    data = openstack_item.get_images(tags=tags)
     assert len(data) == len(images)
     if len(data) > 0:
         item = data[0]
@@ -156,13 +127,11 @@ def test_retrieve_public_images(
 
 @patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases("tags", cases=CaseTaglist, has_tag="not-empty")
 def test_tags_filter(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_image: Mock,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
     tags: list[str],
 ) -> None:
     """Successful retrieval of an Image.
@@ -173,23 +142,6 @@ def test_tags_filter(
     Images retrieval fail is not tested here. It is tested where the exception is
     caught: get_data_from_openstack function.
     """
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
     openstack_image1 = Image(**openstack_image_dict())
     openstack_image1.tags = ["one", "two"]
     openstack_image2 = Image(**openstack_image_dict())
@@ -203,10 +155,12 @@ def test_tags_filter(
     )
     mock_image.images.return_value = images
     mock_conn.image = mock_image
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    data = item.get_images(tags=tags)
+    data = openstack_item.get_images(tags=tags)
     assert len(data) == 1
     item = data[0]
     assert len(set(tags).intersection(set(item.tags)))
@@ -215,46 +169,28 @@ def test_tags_filter(
 @patch("src.providers.openstack.Connection.image.members")
 @patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases("openstack_image", cases=CaseOpenstackImage, has_tag="shared")
 @parametrize_with_cases("acceptance_status", cases=CaseAcceptStatus)
 def test_retrieve_shared_image_projects(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_image: Mock,
     mock_members: Mock,
     openstack_image: Image,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
     acceptance_status: str,
 ) -> None:
-    """ """
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
+    """Owner does not appear in shared images"""
     project_id = uuid4().hex
     members = [Member(status=acceptance_status, id=project_id)]
     mock_members.return_value = members
     mock_image.members = mock_members
     mock_conn.image = mock_image
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    data = item.get_image_projects(openstack_image)
+    data = openstack_item.get_image_projects(openstack_image)
     if acceptance_status == "accepted":
         assert len(data) == 2
         assert openstack_image.owner_id in data
@@ -267,54 +203,36 @@ def test_retrieve_shared_image_projects(
 @patch("src.providers.openstack.OpenstackData.get_image_projects")
 @patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
 @parametrize_with_cases(
     "openstack_image",
     cases=CaseOpenstackImage,
     filter=ft.has_tag("shared") | ft.has_tag("private"),
 )
 def test_retrieve_private_images(
-    mock_retrieve_info: Mock,
     mock_conn: Mock,
     mock_image: Mock,
     mock_image_projects: Mock,
     openstack_image: Image,
-    identity_provider_create: IdentityProviderCreateExtended,
+    openstack_item: OpenstackData,
 ) -> None:
     """Successful retrieval of an Image with a specified visibility.
 
     Check that the is_public flag is correctly set to False and projects list is
     correct.
     """
-    project_conf = Project(**project_dict())
-    provider_conf = Openstack(
-        **openstack_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_conf],
-    )
-    region_name = random_lower_string()
-    logger = getLogger("test")
-    token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
-
-    openstack_image.owner_id = project_conf.id
+    openstack_image.owner_id = openstack_item.project_conf.id
     images = [openstack_image]
-    mock_image_projects.return_value = [project_conf.id]
+    mock_image_projects.return_value = [openstack_item.project_conf.id]
     mock_image.images.return_value = images
     mock_conn.image = mock_image
-    type(mock_conn).current_project_id = PropertyMock(return_value=project_conf.id)
-    item.conn = mock_conn
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
+    openstack_item.conn = mock_conn
 
-    data = item.get_images()
+    data = openstack_item.get_images()
     assert len(data) == len(images)
     item = data[0]
     assert isinstance(item, ImageCreateExtended)
     assert not item.is_public
-    assert item.projects[0] == project_conf.id
+    assert item.projects[0] == openstack_item.project_conf.id
