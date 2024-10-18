@@ -10,11 +10,13 @@ from fed_reg.provider.schemas_extended import (
     IdentityProviderCreateExtended,
     IdentityServiceCreate,
     NetworkServiceCreateExtended,
+    ObjectStoreServiceCreateExtended,
     ProjectCreate,
     RegionCreateExtended,
     SLACreateExtended,
     UserGroupCreateExtended,
 )
+from fed_reg.service.enum import ObjectStoreServiceName
 from openstack.block_storage.v3.quota_set import (
     QuotaSet as OpenstackBlockStorageQuotaSet,
 )
@@ -305,6 +307,22 @@ def network_service_create() -> NetworkServiceCreateExtended:
     """Fixture with a NetworkServiceCreateExtended."""
     return NetworkServiceCreateExtended(
         endpoint=random_url(), name=random_network_service_name()
+    )
+
+
+@pytest.fixture
+def object_store_service_create() -> ObjectStoreServiceCreateExtended:
+    """Fixture with a NetworkServiceCreateExtended."""
+    return ObjectStoreServiceCreateExtended(
+        endpoint=random_url(), name=ObjectStoreServiceName.OPENSTACK_SWIFT
+    )
+
+
+@pytest.fixture
+def s3_service_create() -> ObjectStoreServiceCreateExtended:
+    """Fixture with a NetworkServiceCreateExtended."""
+    return ObjectStoreServiceCreateExtended(
+        endpoint=random_url(), name=ObjectStoreServiceName.OPENSTACK_SWIFT_S3
     )
 
 
