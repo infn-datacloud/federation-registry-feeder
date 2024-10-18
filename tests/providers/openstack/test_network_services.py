@@ -59,12 +59,10 @@ def test_no_network_service(
     mock_conn: Mock, resp: EndpointNotFound | None, openstack_item: OpenstackData
 ) -> None:
     """If the endpoint is not found or the service response is None, return None."""
-    with patch("src.providers.openstack.Connection.network") as mock_srv:
-        if resp:
-            mock_srv.get_endpoint.side_effect = resp
-        else:
-            mock_srv.get_endpoint.return_value = resp
-    mock_conn.network = mock_srv
+    if resp:
+        mock_conn.network.get_endpoint.side_effect = resp
+    else:
+        mock_conn.network.get_endpoint.return_value = resp
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )
@@ -72,16 +70,14 @@ def test_no_network_service(
 
     assert not openstack_item.get_network_service()
 
-    mock_srv.get_endpoint.assert_called_once()
+    mock_conn.network.get_endpoint.assert_called_once()
 
 
 @patch("src.providers.openstack.OpenstackData.get_network_quotas")
-@patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("user_quota", cases=CaseUserQuotaPresence)
 def test_retrieve_network_service_with_quotas(
     mock_conn: Mock,
-    mock_network: Mock,
     mock_network_quotas: Mock,
     user_quota: bool,
     openstack_item: OpenstackData,
@@ -89,13 +85,12 @@ def test_retrieve_network_service_with_quotas(
     """Check quotas in the returned service."""
     per_user_limits = Limits(**{"network": {"per_user": True}} if user_quota else {})
     openstack_item.project_conf.per_user_limits = per_user_limits
-    endpoint = random_url()
     mock_network_quotas.return_value = (
         NetworkQuotaCreateExtended(project=openstack_item.project_conf.id),
         NetworkQuotaCreateExtended(project=openstack_item.project_conf.id, usage=True),
     )
-    mock_network.get_endpoint.return_value = endpoint
-    mock_conn.network = mock_network
+    endpoint = random_url()
+    mock_conn.network.get_endpoint.return_value = endpoint
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )
@@ -119,17 +114,14 @@ def test_retrieve_network_service_with_quotas(
 
 @parametrize_with_cases("visibility", cases=CaseResourceVisibility)
 @patch("src.providers.openstack.OpenstackData.get_networks")
-@patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_network_service_with_networks(
     mock_conn: Mock,
-    mock_network: Mock,
     mock_networks: Mock,
     openstack_item: OpenstackData,
     visibility: str,
 ) -> None:
     """Check networks in the returned service."""
-    endpoint = random_url()
     if visibility == "public":
         mock_networks.return_value = [
             NetworkCreateExtended(uuid=uuid4(), name=random_lower_string())
@@ -145,8 +137,8 @@ def test_retrieve_network_service_with_networks(
         ]
     elif visibility == "no-access":
         mock_networks.return_value = []
-    mock_network.get_endpoint.return_value = endpoint
-    mock_conn.network = mock_network
+    endpoint = random_url()
+    mock_conn.network.get_endpoint.return_value = endpoint
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )
@@ -161,21 +153,18 @@ def test_retrieve_network_service_with_networks(
 
 @parametrize_with_cases("tags", cases=CaseTagList)
 @patch("src.providers.openstack.OpenstackData.get_networks")
-@patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_network_service_networks_tags(
     mock_conn: Mock,
-    mock_network: Mock,
     mock_networks: Mock,
     openstack_item: OpenstackData,
     tags: list[str],
 ) -> None:
     """Check networks in the returned service."""
     openstack_item.provider_conf.network_tags = tags
-    endpoint = random_url()
     mock_networks.return_value = []
-    mock_network.get_endpoint.return_value = endpoint
-    mock_conn.network = mock_network
+    endpoint = random_url()
+    mock_conn.network.get_endpoint.return_value = endpoint
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )
@@ -194,11 +183,9 @@ def test_retrieve_network_service_networks_tags(
 
 @parametrize_with_cases("visibility", cases=CaseResourceVisibility, has_tag="default")
 @patch("src.providers.openstack.OpenstackData.get_networks")
-@patch("src.providers.openstack.Connection.network")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_network_service_default_net(
     mock_conn: Mock,
-    mock_network: Mock,
     mock_networks: Mock,
     openstack_item: OpenstackData,
     visibility: str,
@@ -212,10 +199,9 @@ def test_retrieve_network_service_default_net(
         openstack_item.project_conf.private_net_proxy = PrivateNetProxy(
             **private_net_proxy_dict()
         )
-    endpoint = random_url()
     mock_networks.return_value = []
-    mock_network.get_endpoint.return_value = endpoint
-    mock_conn.network = mock_network
+    endpoint = random_url()
+    mock_conn.network.get_endpoint.return_value = endpoint
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )

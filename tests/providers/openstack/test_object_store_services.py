@@ -38,27 +38,23 @@ def test_no_object_store_service(
     mock_conn: Mock, resp: EndpointNotFound | None, openstack_item: OpenstackData
 ) -> None:
     """If the endpoint is not found or the service response is None, return None."""
-    with patch("src.providers.openstack.Connection.object_store") as mock_srv:
-        if resp:
-            mock_srv.get_endpoint.side_effect = resp
-        else:
-            mock_srv.get_endpoint.return_value = resp
-    mock_conn.object_store = mock_srv
+    if resp:
+        mock_conn.object_store.get_endpoint.side_effect = resp
+    else:
+        mock_conn.object_store.get_endpoint.return_value = resp
     type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
     openstack_item.conn = mock_conn
 
     assert not openstack_item.get_object_store_service()
 
-    mock_srv.get_endpoint.assert_called_once()
+    mock_conn.object_store.get_endpoint.assert_called_once()
 
 
 @patch("src.providers.openstack.OpenstackData.get_object_store_quotas")
-@patch("src.providers.openstack.Connection.object_store")
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("user_quota", cases=CaseUserQuotaPresence)
 def test_retrieve_object_store_service_with_quotas(
     mock_conn: Mock,
-    mock_object_store: Mock,
     mock_object_store_quotas: Mock,
     user_quota: bool,
     openstack_item: OpenstackData,
@@ -68,17 +64,16 @@ def test_retrieve_object_store_service_with_quotas(
         **{"object_store": {"per_user": True}} if user_quota else {}
     )
     openstack_item.project_conf.per_user_limits = per_user_limits
-    endpoint = random_url()
     mock_object_store_quotas.return_value = (
         ObjectStoreQuotaCreateExtended(project=openstack_item.project_conf.id),
         ObjectStoreQuotaCreateExtended(
             project=openstack_item.project_conf.id, usage=True
         ),
     )
-    mock_object_store.get_endpoint.return_value = os.path.join(
+    endpoint = random_url()
+    mock_conn.object_store.get_endpoint.return_value = os.path.join(
         endpoint, openstack_item.project_conf.id
     )
-    mock_conn.object_store = mock_object_store
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )

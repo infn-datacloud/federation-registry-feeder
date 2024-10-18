@@ -78,13 +78,11 @@ class CaseOpenstackImage:
         return Image(**d)
 
 
-@patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("openstack_image", cases=CaseOpenstackImage, has_tag="public")
 @parametrize_with_cases("tags", cases=CaseTaglist, has_tag="empty")
 def test_retrieve_public_images(
     mock_conn: Mock,
-    mock_image: Mock,
     openstack_image: Image,
     openstack_item: OpenstackData,
     tags: list[str] | None,
@@ -97,16 +95,14 @@ def test_retrieve_public_images(
     Images retrieval fail is not tested here. It is tested where the exception is
     caught: get_data_from_openstack function.
     """
-    images = [openstack_image]
-    mock_image.images.return_value = images
-    mock_conn.image = mock_image
+    mock_conn.image.images.return_value = [openstack_image]
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )
     openstack_item.conn = mock_conn
 
     data = openstack_item.get_images(tags=tags)
-    assert len(data) == len(images)
+    assert len(data) == 1
     if len(data) > 0:
         item = data[0]
         assert isinstance(item, ImageCreateExtended)
@@ -125,12 +121,10 @@ def test_retrieve_public_images(
         assert len(item.projects) == 0
 
 
-@patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("tags", cases=CaseTaglist, has_tag="not-empty")
 def test_tags_filter(
     mock_conn: Mock,
-    mock_image: Mock,
     openstack_item: OpenstackData,
     tags: list[str],
 ) -> None:
@@ -146,15 +140,13 @@ def test_tags_filter(
     openstack_image1.tags = ["one", "two"]
     openstack_image2 = Image(**openstack_image_dict())
     openstack_image2.tags = ["one-two"]
-
     images = list(
         filter(
             lambda x: filter_item_by_tags(x, tags) and x.status == "active",
             [openstack_image1, openstack_image2],
         )
     )
-    mock_image.images.return_value = images
-    mock_conn.image = mock_image
+    mock_conn.image.images.return_value = images
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )
@@ -166,25 +158,20 @@ def test_tags_filter(
     assert len(set(tags).intersection(set(item.tags)))
 
 
-@patch("src.providers.openstack.Connection.image.members")
-@patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("openstack_image", cases=CaseOpenstackImage, has_tag="shared")
 @parametrize_with_cases("acceptance_status", cases=CaseAcceptStatus)
 def test_retrieve_shared_image_projects(
     mock_conn: Mock,
-    mock_image: Mock,
-    mock_members: Mock,
     openstack_image: Image,
     openstack_item: OpenstackData,
     acceptance_status: str,
 ) -> None:
     """Owner does not appear in shared images"""
     project_id = uuid4().hex
-    members = [Member(status=acceptance_status, id=project_id)]
-    mock_members.return_value = members
-    mock_image.members = mock_members
-    mock_conn.image = mock_image
+    mock_conn.image.members.return_value = [
+        Member(status=acceptance_status, id=project_id)
+    ]
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )
@@ -201,7 +188,6 @@ def test_retrieve_shared_image_projects(
 
 
 @patch("src.providers.openstack.OpenstackData.get_image_projects")
-@patch("src.providers.openstack.Connection.image")
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases(
     "openstack_image",
@@ -210,7 +196,6 @@ def test_retrieve_shared_image_projects(
 )
 def test_retrieve_private_images(
     mock_conn: Mock,
-    mock_image: Mock,
     mock_image_projects: Mock,
     openstack_image: Image,
     openstack_item: OpenstackData,
@@ -221,17 +206,15 @@ def test_retrieve_private_images(
     correct.
     """
     openstack_image.owner_id = openstack_item.project_conf.id
-    images = [openstack_image]
     mock_image_projects.return_value = [openstack_item.project_conf.id]
-    mock_image.images.return_value = images
-    mock_conn.image = mock_image
+    mock_conn.image.images.return_value = [openstack_image]
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )
     openstack_item.conn = mock_conn
 
     data = openstack_item.get_images()
-    assert len(data) == len(images)
+    assert len(data) == 1
     item = data[0]
     assert isinstance(item, ImageCreateExtended)
     assert not item.is_public

@@ -102,25 +102,21 @@ def test_no_s3_service(
     else:
         openstack_item.region_name = random_lower_string()
 
-    with patch("src.providers.openstack.Connection.service_catalog") as mock_catalog:
-        mock_catalog.__iter__.return_value = iter(resp)
-    mock_conn.service_catalog = mock_catalog
+    mock_conn.service_catalog.__iter__.return_value = iter(resp)
     type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
     openstack_item.conn = mock_conn
 
     s3_services = openstack_item.get_s3_services()
     assert not len(s3_services)
 
-    mock_catalog.__iter__.assert_called_once()
+    mock_conn.service_catalog.__iter__.assert_called_once()
 
 
 @patch("src.providers.openstack.OpenstackData.get_s3_quotas")
-@patch("src.providers.openstack.Connection.service_catalog")
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("user_quota", cases=CaseUserQuotaPresence)
 def test_retrieve_s3_service_with_quotas(
     mock_conn: Mock,
-    mock_catalog: Mock,
     mock_s3_quotas: Mock,
     user_quota: bool,
     openstack_item: OpenstackData,
@@ -138,7 +134,7 @@ def test_retrieve_s3_service_with_quotas(
         ),
     )
 
-    mock_catalog.__iter__.return_value = iter(
+    mock_conn.service_catalog.__iter__.return_value = iter(
         [
             {
                 "endpoints": [
@@ -156,7 +152,6 @@ def test_retrieve_s3_service_with_quotas(
             }
         ]
     )
-    mock_conn.service_catalog = mock_catalog
     type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
     openstack_item.conn = mock_conn
 

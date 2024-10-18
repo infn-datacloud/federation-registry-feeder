@@ -1,7 +1,6 @@
 import os
 from typing import Literal
 from unittest.mock import Mock, PropertyMock, patch
-from uuid import uuid4
 
 from fed_reg.provider.schemas_extended import (
     BlockStorageQuotaCreateExtended,
@@ -40,12 +39,10 @@ def test_no_block_storage_service(
     openstack_item: OpenstackData,
 ) -> None:
     """If the endpoint is not found or the service response is None, return None."""
-    with patch("src.providers.openstack.Connection.block_storage") as mock_srv:
-        if resp:
-            mock_srv.get_endpoint.side_effect = resp
-        else:
-            mock_srv.get_endpoint.return_value = resp
-    mock_conn.block_storage = mock_srv
+    if resp:
+        mock_conn.block_storage.get_endpoint.side_effect = resp
+    else:
+        mock_conn.block_storage.get_endpoint.return_value = resp
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )
@@ -53,16 +50,14 @@ def test_no_block_storage_service(
 
     assert not openstack_item.get_block_storage_service()
 
-    mock_srv.get_endpoint.assert_called_once()
+    mock_conn.block_storage.get_endpoint.assert_called_once()
 
 
 @patch("src.providers.openstack.OpenstackData.get_block_storage_quotas")
-@patch("src.providers.openstack.Connection.block_storage")
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("user_quota", cases=CaseUserQuotaPresence)
 def test_retrieve_block_storage_service_with_quotas(
     mock_conn: Mock,
-    mock_block_storage: Mock,
     mock_block_storage_quotas: Mock,
     user_quota: bool,
     openstack_item: OpenstackData,
@@ -72,16 +67,19 @@ def test_retrieve_block_storage_service_with_quotas(
         **{"block_storage": {"per_user": True}} if user_quota else {}
     )
     openstack_item.project_conf.per_user_limits = per_user_limits
-    endpoint = random_url()
     mock_block_storage_quotas.return_value = (
         BlockStorageQuotaCreateExtended(project=openstack_item.project_conf.id),
         BlockStorageQuotaCreateExtended(
             project=openstack_item.project_conf.id, usage=True
         ),
     )
-    mock_block_storage.get_endpoint.return_value = os.path.join(endpoint, uuid4().hex)
-    mock_conn.block_storage = mock_block_storage
-    type(mock_conn).current_project_id = PropertyMock(return_value=uuid4().hex)
+    endpoint = random_url()
+    mock_conn.block_storage.get_endpoint.return_value = os.path.join(
+        endpoint, openstack_item.project_conf.id
+    )
+    type(mock_conn).current_project_id = PropertyMock(
+        return_value=openstack_item.project_conf.id
+    )
     openstack_item.conn = mock_conn
 
     item = openstack_item.get_block_storage_service()

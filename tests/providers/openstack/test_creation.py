@@ -49,11 +49,7 @@ def test_creation(
     mock_retrieve_info.assert_called_once()
 
 
-@patch("src.providers.openstack.OpenstackData.retrieve_info")
-def test_connection(
-    mock_retrieve_info: Mock,
-    identity_provider_create: IdentityProviderCreateExtended,
-) -> None:
+def test_connection(identity_provider_create: IdentityProviderCreateExtended) -> None:
     """Connection creation always succeeds, it is its usage that may fail."""
     project_conf = Project(**project_dict())
     provider_conf = Openstack(
@@ -64,14 +60,15 @@ def test_connection(
     region_name = random_lower_string()
     logger = getLogger("test")
     token = random_lower_string()
-    item = OpenstackData(
-        provider_conf=provider_conf,
-        project_conf=project_conf,
-        identity_provider=identity_provider_create,
-        region_name=region_name,
-        token=token,
-        logger=logger,
-    )
+    with patch("src.providers.openstack.OpenstackData.retrieve_info"):
+        item = OpenstackData(
+            provider_conf=provider_conf,
+            project_conf=project_conf,
+            identity_provider=identity_provider_create,
+            region_name=region_name,
+            token=token,
+            logger=logger,
+        )
 
     assert item.conn.auth.get("auth_url") == provider_conf.auth_url
     assert (

@@ -56,16 +56,10 @@ class CaseOpenstackFlavor:
         return Flavor(**d)
 
 
-@patch("src.providers.openstack.Connection.compute.get_flavor_access")
-@patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases("openstack_flavor", cases=CaseOpenstackFlavor)
 def test_retrieve_flavors(
-    mock_conn: Mock,
-    mock_compute: Mock,
-    mock_flavor_access: Mock,
-    openstack_flavor: Flavor,
-    openstack_item: OpenstackData,
+    mock_conn: Mock, openstack_flavor: Flavor, openstack_item: OpenstackData
 ) -> None:
     """Successful retrieval of a flavors.
 
@@ -75,9 +69,10 @@ def test_retrieve_flavors(
     caught: get_data_from_openstack function.
     """
     flavors = list(filter(lambda x: not x.is_disabled, [openstack_flavor]))
-    mock_flavor_access.return_value = [{"tenant_id": openstack_item.project_conf.id}]
-    mock_compute.flavors.return_value = flavors
-    mock_conn.compute = mock_compute
+    mock_conn.compute.get_flavor_access.return_value = [
+        {"tenant_id": openstack_item.project_conf.id}
+    ]
+    mock_conn.compute.flavors.return_value = flavors
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )
@@ -134,23 +129,17 @@ def test_retrieve_flavor_extra_specs(
     assert data.get("infiniband") == extra_specs.get("infiniband", False)
 
 
-@patch("src.providers.openstack.Connection.compute.get_flavor_access")
-@patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases(
     "openstack_flavor", cases=CaseOpenstackFlavor, has_tag="private"
 )
 def test_retrieve_private_flavor_projects(
-    mock_conn: Mock,
-    mock_compute: Mock,
-    mock_flavor_access: Mock,
-    openstack_flavor: Flavor,
-    openstack_item: OpenstackData,
+    mock_conn: Mock, openstack_flavor: Flavor, openstack_item: OpenstackData
 ) -> None:
     """ """
-    mock_flavor_access.return_value = [{"tenant_id": openstack_item.project_conf.id}]
-    mock_compute.get_flavor_access = mock_flavor_access
-    mock_conn.compute = mock_compute
+    mock_conn.compute.get_flavor_access.return_value = [
+        {"tenant_id": openstack_item.project_conf.id}
+    ]
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )
@@ -161,26 +150,18 @@ def test_retrieve_private_flavor_projects(
     assert data[0] == openstack_item.project_conf.id
 
 
-@patch("src.providers.openstack.Connection.compute.get_flavor_access")
-@patch("src.providers.openstack.Connection.compute")
 @patch("src.providers.openstack.Connection")
 @parametrize_with_cases(
     "openstack_flavor", cases=CaseOpenstackFlavor, has_tag="private"
 )
 def test_catch_forbidden_exception_when_reading_flavor_projects(
-    mock_conn: Mock,
-    mock_compute: Mock,
-    mock_flavor_access: Mock,
-    openstack_flavor: Flavor,
-    openstack_item: OpenstackData,
+    mock_conn: Mock, openstack_flavor: Flavor, openstack_item: OpenstackData
 ) -> None:
     """
     Catch ForbiddenException and filter out private flavors if the openstack policy does
     not allow to read os-flavor-access.
     """
-    mock_flavor_access.side_effect = ForbiddenException()
-    mock_compute.get_flavor_access = mock_flavor_access
-    mock_conn.compute = mock_compute
+    mock_conn.compute.get_flavor_access.side_effect = ForbiddenException()
     type(mock_conn).current_project_id = PropertyMock(
         return_value=openstack_item.project_conf.id
     )

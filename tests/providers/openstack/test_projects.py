@@ -28,11 +28,9 @@ def openstack_project(with_desc: bool) -> OpenstackProject:
     return OpenstackProject(**d)
 
 
-@patch("src.providers.openstack.Connection.identity")
 @patch("src.providers.openstack.Connection")
 def test_retrieve_project(
     mock_conn: Mock,
-    mock_identity: Mock,
     openstack_project: OpenstackProject,
     openstack_item: OpenstackData,
 ) -> None:
@@ -42,8 +40,7 @@ def test_retrieve_project(
     caught: get_data_from_openstack function.
     """
     openstack_item.project_conf.id = openstack_project.id
-    mock_identity.get_project.return_value = openstack_project
-    mock_conn.identity = mock_identity
+    mock_conn.identity.get_project.return_value = openstack_project
     type(mock_conn).current_project_id = PropertyMock(return_value=openstack_project.id)
     openstack_item.conn = mock_conn
 
@@ -56,4 +53,4 @@ def test_retrieve_project(
     assert item.uuid == openstack_project.id
     assert item.name == openstack_project.name
 
-    mock_identity.get_project.assert_called_once()
+    mock_conn.identity.get_project.assert_called_once()
