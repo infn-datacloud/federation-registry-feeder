@@ -36,7 +36,7 @@ from openstack.image.v2.image import Image
 from openstack.network.v2.network import Network
 from requests import Response
 
-from src.models.provider import AuthMethod, PrivateNetProxy, Project
+from src.models.provider import PrivateNetProxy
 from src.models.site_config import Openstack
 from src.providers.exceptions import ProviderException
 
@@ -46,20 +46,11 @@ TIMEOUT = 2  # s
 class OpenstackData:
     """Class to organize data retrieved from and Openstack instance."""
 
-    def __init__(
-        self,
-        *,
-        provider_conf: Openstack,
-        project_conf: Project,
-        auth_method: AuthMethod,
-        region_name: str,
-        token: str,
-        logger: Logger,
-    ) -> None:
+    def __init__(self, *, provider_conf: Openstack, token: str, logger: Logger) -> None:
         self.provider_conf = provider_conf
-        self.project_conf = project_conf
-        self.auth_method = auth_method
-        self.region_name = region_name
+        self.project_conf = provider_conf.projects[0]
+        self.auth_method = provider_conf.identity_providers[0]
+        self.region_name = provider_conf.regions[0].name
         self.logger = logger
         self.error = False
 
