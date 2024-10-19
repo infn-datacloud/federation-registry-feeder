@@ -14,14 +14,12 @@ from fed_reg.provider.schemas_extended import (
     ProjectCreate,
     ProviderCreateExtended,
     RegionCreateExtended,
-    SLACreateExtended,
-    UserGroupCreateExtended,
 )
 
 from src.kafka_conn import Producer
 from src.logger import create_logger
-from src.models.identity_provider import SLA, Issuer, UserGroup
-from src.models.provider import Project, Provider, ProviderSiblings
+from src.models.identity_provider import Issuer
+from src.models.provider import AuthMethod, Project, Provider, ProviderSiblings
 from src.providers.openstack import OpenstackData, ProviderException
 
 
@@ -32,7 +30,7 @@ class ConnectionThread:
         self,
         *,
         provider_conf: Provider,
-        issuers: list[Issuer],
+        issuer: Issuer,
         log_level: str | int | None = None,
     ) -> None:
         assert (
@@ -41,10 +39,22 @@ class ConnectionThread:
         assert (
             len(provider_conf.projects) == 1
         ), f"Invalid number or projects: {len(provider_conf.projects)}"
+        msg = "Invalid number or trusted identity providers: "
+        msg += f"{len(provider_conf.identity_providers)}"
+        assert len(provider_conf.identity_providers) == 1, msg
+        msg = f"Issuer endpoint {issuer.endpoint} does not match trusted identity "
+        msg += f"provider's one {provider_conf.identity_providers[0].endpoint}"
+        assert issuer.endpoint == provider_conf.identity_providers[0].endpoint, msg
+        assert (
+            len(issuer.user_groups) == 1
+        ), f"Invalid number or user groups: {len(issuer.user_groups)}"
+        assert (
+            len(issuer.user_groups[0].slas) == 1
+        ), f"Invalid number or user groups: {len(issuer.user_groups[0].slas)}"
 
         self.provider_conf = provider_conf
         self.region_name = provider_conf.regions[0].name
-        self.issuers = issuers
+        self.issuer = issuer
 
         logger_name = f"Provider {provider_conf.name}, "
         logger_name += f"Region {provider_conf.regions[0].name}, "
@@ -61,24 +71,30 @@ class ConnectionThread:
 
         Return an object with 3 main entities: region, project and identity provider.
         """
-        project = self.provider_conf.projects[0]
-
-        try:
-            identity_provider, token = self.get_idp_matching_project(project)
-        except ValueError as e:
-            self.logger.error(e)
-            self.logger.error("Skipping project")
-            self.error = True
-            return None
+        identity_provider = IdentityProviderCreateExtended(
+            description=self.issuer.description,
+            group_claim=self.issuer.group_claim,
+            endpoint=self.issuer.endpoint,
+            relationship=self.provider_conf.identity_providers[0],
+            user_groups=[
+                {
+                    **self.issuer.user_groups[0].dict(exclude={"slas"}),
+                    "sla": {
+                        **self.issuer.user_groups[0].slas[0].dict(),
+                        "project": self.provider_conf.projects[0].id,
+                    },
+                }
+            ],
+        )
 
         if self.provider_conf.type == ProviderType.OS.value:
             try:
                 data = OpenstackData(
                     provider_conf=self.provider_conf,
-                    project_conf=project,
+                    project_conf=self.provider_conf.projects[0],
                     region_name=self.region_name,
                     identity_provider=identity_provider,
-                    token=token,
+                    token=self.issuer.token,
                     logger=self.logger,
                 )
                 self.error |= data.error
@@ -105,54 +121,6 @@ class ConnectionThread:
             identity_provider=identity_provider, project=data.project, region=region
         )
 
-    def get_idp_matching_project(
-        self, project: Project
-    ) -> tuple[IdentityProviderCreateExtended, str]:
-        """Find the identity provider with an SLA matching the target project's one.
-
-        For each sla of each user group of each issuer listed in the yaml file, find the
-        one matching the SLA of the target project.
-
-        Return the indentity provider data and the token to use to establish the
-        connection.
-        """
-        for issuer in self.issuers:
-            for user_group in issuer.user_groups:
-                for sla in user_group.slas:
-                    if sla.doc_uuid == project.sla:
-                        return self.get_identity_provider_with_auth_method(
-                            issuer=issuer,
-                            user_group=user_group,
-                            sla=sla,
-                            project=project.id,
-                        ), issuer.token
-        raise ValueError(
-            f"No SLA matches doc_uuid `{project.sla}` in project configuration"
-        )
-
-    def get_identity_provider_with_auth_method(
-        self, *, issuer: Issuer, user_group: UserGroup, sla: SLA, project: str
-    ) -> IdentityProviderCreateExtended:
-        """Generate the IdentityProvider instance."""
-        for auth_method in self.provider_conf.identity_providers:
-            if auth_method.endpoint == issuer.endpoint:
-                sla = SLACreateExtended(**sla.dict(), project=project)
-                user_group = UserGroupCreateExtended(
-                    description=user_group.description, name=user_group.name, sla=sla
-                )
-                return IdentityProviderCreateExtended(
-                    description=issuer.description,
-                    group_claim=issuer.group_claim,
-                    endpoint=issuer.endpoint,
-                    relationship=auth_method,
-                    user_groups=[user_group],
-                )
-        trusted_endpoints = [i.endpoint for i in self.provider_conf.identity_providers]
-        raise ValueError(
-            f"No identity provider matches endpoint `{issuer.endpoint}` in provider "
-            f"trusted identity providers {trusted_endpoints}."
-        )
-
 
 class ProviderThread:
     """Provider data shared between the same thread."""
@@ -174,7 +142,7 @@ class ProviderThread:
         )
         self.error = False
 
-    def get_project_conf_params(self, *, project: Project, region_name: str) -> Project:
+    def prepare_project_conf(self, *, project: Project, region_name: str) -> Project:
         """Get project parameters defined in the yaml file.
 
         If the `per_region_props` attribute has been defined and the current region name
@@ -194,6 +162,46 @@ class ProviderThread:
             item.private_net_proxy = region_props.private_net_proxy
             item.per_user_limits = region_props.per_user_limits
         return item
+
+    def get_issuer_matching_project(
+        self, *, issuers: list[Issuer], project_sla: str
+    ) -> Issuer:
+        """Find the identity provider with an SLA matching the target project's one.
+
+        For each sla of each user group of each issuer listed in the yaml file, find the
+        one matching the SLA of the target project.
+
+        Return the indentity provider data and the token to use to establish the
+        connection.
+        """
+        for issuer in issuers:
+            for user_group in issuer.user_groups:
+                for sla in user_group.slas:
+                    if sla.doc_uuid == project_sla:
+                        return Issuer(
+                            **issuer.dict(by_alias=True, exclude={"user_groups"}),
+                            user_groups=[
+                                {
+                                    **user_group.dict(exclude={"slas"}),
+                                    "slas": [{**sla.dict()}],
+                                }
+                            ],
+                        )
+        raise ValueError(
+            f"No SLA matches project's doc_uuid `{self.provider_conf.projects[0].sla}`"
+        )
+
+    def get_auth_method_matching_issuer(
+        self, *, provider_auth_methods: list[AuthMethod], issuer_endpoint
+    ) -> AuthMethod:
+        for auth_method in provider_auth_methods:
+            if auth_method.endpoint == issuer_endpoint:
+                return auth_method
+        trusted_endpoints = [i.endpoint for i in provider_auth_methods]
+        raise ValueError(
+            f"No identity provider matches endpoint `{self.issuer.endpoint}` in "
+            f"provider's trusted identity providers {trusted_endpoints}."
+        )
 
     def get_provider(self) -> ProviderCreateExtended:
         """Generate a list of generic providers.
@@ -217,19 +225,32 @@ class ProviderThread:
         connections: list[ConnectionThread] = []
         for region in self.provider_conf.regions:
             for project in self.provider_conf.projects:
-                project_conf = self.get_project_conf_params(
-                    project=project, region_name=region.name
-                )
-                provider_conf = copy.deepcopy(self.provider_conf)
-                provider_conf.regions = [region]
-                provider_conf.projects = [project_conf]
-                connections.append(
-                    ConnectionThread(
-                        provider_conf=provider_conf,
-                        issuers=self.issuers,
-                        log_level=self.log_level,
+                try:
+                    project_conf = self.prepare_project_conf(
+                        project=project, region_name=region.name
                     )
-                )
+                    issuer = self.get_issuer_matching_project(
+                        issuers=self.issuers, project_sla=project_conf.sla
+                    )
+                    auth_method = self.get_auth_method_matching_issuer(
+                        provider_auth_methods=self.provider_conf.identity_providers,
+                        issuer_endpoint=issuer.endpoint,
+                    )
+                    provider_conf = copy.deepcopy(self.provider_conf)
+                    provider_conf.regions = [region]
+                    provider_conf.projects = [project_conf]
+                    provider_conf.identity_providers = [auth_method]
+                    connections.append(
+                        ConnectionThread(
+                            provider_conf=provider_conf,
+                            issuer=issuer,
+                            log_level=self.log_level,
+                        )
+                    )
+                except (ValueError, AssertionError) as e:
+                    self.error = True
+                    self.logger.error(e)
+                    self.logger.error("Skipping project")
 
         with ThreadPoolExecutor() as executor:
             siblings = executor.map(lambda x: x.get_provider_siblings(), connections)
