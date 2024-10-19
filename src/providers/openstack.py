@@ -47,24 +47,40 @@ class OpenstackData:
     """Class to organize data retrieved from and Openstack instance."""
 
     def __init__(self, *, provider_conf: Openstack, token: str, logger: Logger) -> None:
-        self.provider_conf = provider_conf
-        self.project_conf = provider_conf.projects[0]
-        self.auth_method = provider_conf.identity_providers[0]
-        self.region_name = provider_conf.regions[0].name
-        self.logger = logger
-        self.error = False
+        try:
+            self.logger = logger
+            self.error = False
 
-        self.project = None
-        self.block_storage_service = None
-        self.compute_service = None
-        self.network_service = None
-        self.object_store_services = []
+            assert (
+                len(provider_conf.regions) == 1
+            ), f"Invalid number or regions: {len(provider_conf.regions)}"
+            assert (
+                len(provider_conf.projects) == 1
+            ), f"Invalid number or projects: {len(provider_conf.projects)}"
+            msg = "Invalid number or trusted identity providers: "
+            msg += f"{len(provider_conf.identity_providers)}"
+            assert len(provider_conf.identity_providers) == 1, msg
 
-        # Connection is only defined, not yet opened
-        self.conn = self.create_connection(token=token)
+            self.provider_conf = provider_conf
+            self.project_conf = provider_conf.projects[0]
+            self.auth_method = provider_conf.identity_providers[0]
+            self.region_name = provider_conf.regions[0].name
 
-        # Retrieve information
-        self.retrieve_info()
+            self.project = None
+            self.block_storage_service = None
+            self.compute_service = None
+            self.network_service = None
+            self.object_store_services = []
+
+            # Connection is only defined, not yet opened
+            self.conn = self.create_connection(token=token)
+
+            # Retrieve information
+            self.retrieve_info()
+        except AssertionError as e:
+            self.error = True
+            self.logger.error(e)
+            raise ProviderException from e
 
     def retrieve_info(self) -> None:
         """Connect to the provider e retrieve information"""
