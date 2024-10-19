@@ -21,6 +21,7 @@ from src.logger import create_logger
 from src.models.identity_provider import Issuer
 from src.models.provider import AuthMethod, Kubernetes, Openstack, Project
 from src.providers.conn_thread import ConnectionThread
+from src.providers.openstack import OpenstackProviderException
 
 
 class ProviderThread:
@@ -148,15 +149,19 @@ class ProviderThread:
                             log_level=self.log_level,
                         )
                     )
-                except (ValueError, AssertionError) as e:
+                except (
+                    OpenstackProviderException,
+                    NotImplementedError,
+                    ValueError,
+                    AssertionError,
+                ) as e:
                     self.error = True
                     self.logger.error(e)
                     self.logger.error("Skipping project")
 
         with ThreadPoolExecutor() as executor:
-            siblings = executor.map(lambda x: x.get_provider_siblings(), connections)
+            siblings = executor.map(lambda x: x.get_provider_components(), connections)
         siblings = list(siblings)
-        siblings = list(filter(lambda x: x is not None, siblings))
         self.error = any([x.error for x in connections])
 
         # Merge regions, identity providers and projects retrieved from previous

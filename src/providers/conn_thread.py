@@ -7,7 +7,7 @@ from fed_reg.provider.schemas_extended import (
 from src.logger import create_logger
 from src.models.identity_provider import Issuer
 from src.models.provider import Kubernetes, Openstack
-from src.providers.openstack import OpenstackData, ProviderException
+from src.providers.openstack import OpenstackData
 
 
 class ConnectionThread:
@@ -49,12 +49,9 @@ class ConnectionThread:
         logger_name += f"Project {provider_conf.projects[0].id}"
         self.logger = create_logger(logger_name, level=log_level)
 
-    def get_provider_siblings(
+    def get_provider_components(
         self,
-    ) -> (
-        tuple[IdentityProviderCreateExtended, ProjectCreate, RegionCreateExtended]
-        | None
-    ):
+    ) -> tuple[IdentityProviderCreateExtended, ProjectCreate, RegionCreateExtended]:
         """Retrieve the provider region, project and identity provider.
 
         From the current configuration, connect to the correct provider and retrieve the
@@ -63,20 +60,13 @@ class ConnectionThread:
         Return an object with 3 main entities: region, project and identity provider.
         """
         if isinstance(self.provider_conf, Openstack):
-            try:
-                data = OpenstackData(
-                    provider_conf=self.provider_conf,
-                    token=self.issuer.token,
-                    logger=self.logger,
-                )
-                self.error |= data.error
-            except ProviderException:
-                self.error = True
-                return None
+            data = OpenstackData(
+                provider_conf=self.provider_conf,
+                token=self.issuer.token,
+                logger=self.logger,
+            )
         elif isinstance(self.provider_conf, Kubernetes):
-            self.logger.warning("Not yet implemented")
-            self.logger.warning("Skipping project")
-            return None
+            raise NotImplementedError("Not yet implemented")
 
         region = RegionCreateExtended(
             **self.provider_conf.regions[0].dict(),

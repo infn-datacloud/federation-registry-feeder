@@ -38,9 +38,12 @@ from requests import Response
 
 from src.models.provider import PrivateNetProxy
 from src.models.site_config import Openstack
-from src.providers.exceptions import ProviderException
 
 TIMEOUT = 2  # s
+
+
+class OpenstackProviderException(BaseException):
+    """Raised when data retrieval from an openstack provider fails."""
 
 
 class OpenstackData:
@@ -80,7 +83,7 @@ class OpenstackData:
         except AssertionError as e:
             self.error = True
             self.logger.error(e)
-            raise ProviderException from e
+            raise OpenstackProviderException from e
 
     def retrieve_info(self) -> None:
         """Connect to the provider e retrieve information"""
@@ -124,7 +127,7 @@ class OpenstackData:
             self.error = True
             self.logger.error(e)
             self.logger.error("Connection aborted")
-            raise ProviderException from e
+            raise OpenstackProviderException from e
         self.conn.close()
         self.logger.info("Connection closed")
 
