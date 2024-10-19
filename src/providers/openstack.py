@@ -67,9 +67,10 @@ class OpenstackData:
             self.region_name = provider_conf.regions[0].name
 
             self.project = None
-            self.block_storage_service = None
-            self.compute_service = None
-            self.network_service = None
+            self.block_storage_services = []
+            self.compute_services = []
+            self.identity_services = []
+            self.network_services = []
             self.object_store_services = []
 
             # Connection is only defined, not yet opened
@@ -85,18 +86,26 @@ class OpenstackData:
     def retrieve_info(self) -> None:
         """Connect to the provider e retrieve information"""
         try:
-            self.identity_service = IdentityServiceCreate(
-                endpoint=self.provider_conf.auth_url,
-                name=IdentityServiceName.OPENSTACK_KEYSTONE,
-            )
+            self.identity_services = [
+                IdentityServiceCreate(
+                    endpoint=self.provider_conf.auth_url,
+                    name=IdentityServiceName.OPENSTACK_KEYSTONE,
+                )
+            ]
 
             # Create project entity
             self.project = self.get_project()
 
             # Retrieve provider services (block_storage, compute, identity and network)
-            self.block_storage_service = self.get_block_storage_service()
-            self.compute_service = self.get_compute_service()
-            self.network_service = self.get_network_service()
+            srv = self.get_block_storage_service()
+            if srv is not None:
+                self.block_storage_services.append(srv)
+            srv = self.get_compute_service()
+            if srv is not None:
+                self.compute_services.append(srv)
+            srv = self.get_network_service()
+            if srv is not None:
+                self.network_services.append(srv)
             self.object_store_services = []
             # object_store_service = self.get_object_store_service()
             # if object_store_service is not None:
