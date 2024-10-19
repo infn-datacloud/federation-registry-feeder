@@ -104,85 +104,11 @@ class ProviderThread:
             f"provider's trusted identity providers {trusted_endpoints}."
         )
 
-    def get_provider(self) -> ProviderCreateExtended:
-        """Generate a list of generic providers.
-
-        Read data from real instances.
-        Supported providers:
-        - Openstack
-        """
-        if self.provider_conf.status != ProviderStatus.ACTIVE.value:
-            self.logger.info("Provider not active: %s", self.provider_conf.status)
-            return ProviderCreateExtended(
-                name=self.provider_conf.name,
-                type=self.provider_conf.type,
-                is_public=self.provider_conf.is_public,
-                support_emails=self.provider_conf.support_emails,
-                status=self.provider_conf.status,
-            )
-
-        # For each couple (region-project), create a separated thread and try to connect
-        # to the provider
-        connections: list[ConnectionThread] = []
-        for region in self.provider_conf.regions:
-            for project in self.provider_conf.projects:
-                try:
-                    project_conf = self.prepare_project_conf(
-                        project=project, region_name=region.name
-                    )
-                    issuer = self.get_issuer_matching_project(project_conf.sla)
-                    auth_method = self.get_auth_method_matching_issuer(issuer.endpoint)
-                    provider_conf = copy.deepcopy(self.provider_conf)
-                    provider_conf.regions = [region]
-                    provider_conf.projects = [project_conf]
-                    provider_conf.identity_providers = [auth_method]
-                    connections.append(
-                        ConnectionThread(
-                            provider_conf=provider_conf,
-                            issuer=issuer,
-                            log_level=self.log_level,
-                        )
-                    )
-                except (
-                    OpenstackProviderException,
-                    NotImplementedError,
-                    ValueError,
-                    AssertionError,
-                ) as e:
-                    self.error = True
-                    self.logger.error(e)
-                    self.logger.error("Skipping project")
-
-        with ThreadPoolExecutor() as executor:
-            siblings = executor.map(lambda x: x.get_provider_components(), connections)
-        siblings = list(siblings)
-        self.error = any([x.error for x in connections])
-
-        # Merge regions, identity providers and projects retrieved from previous
-        # parallel step.
-        identity_providers, projects, regions = self.merge_data(siblings)
-
-        # Send data to kafka
-        self.send_kafka_messages(
-            regions.values(), identity_providers=identity_providers.values()
-        )
-
-        return ProviderCreateExtended(
-            name=self.provider_conf.name,
-            type=self.provider_conf.type,
-            is_public=self.provider_conf.is_public,
-            support_emails=self.provider_conf.support_emails,
-            status=self.provider_conf.status,
-            identity_providers=identity_providers.values(),
-            projects=projects.values(),
-            regions=regions.values(),
-        )
-
-    def update_idp_user_groups(
+    def get_updated_identity_provider(
         self,
         *,
-        current_issuer: IdentityProviderCreateExtended,
-        new_issuer: IdentityProviderCreateExtended,
+        current_idp: IdentityProviderCreateExtended | None,
+        new_idp: IdentityProviderCreateExtended,
     ) -> IdentityProviderCreateExtended:
         """
         Update the identity provider user groups.
@@ -191,15 +117,22 @@ class ProviderThread:
         one project. If the user group is not already in the current identity provider
         user groups add it, otherwise skip.
         """
-        names = [i.name for i in current_issuer.user_groups]
-        if new_issuer.user_groups[0].name not in names:
-            current_issuer.user_groups.append(new_issuer.user_groups[0])
-        return current_issuer
+        if current_idp is None:
+            return new_idp
+        names = [i.name for i in current_idp.user_groups]
+        if new_idp.user_groups[0].name not in names:
+            current_idp.user_groups.append(new_idp.user_groups[0])
+        return current_idp
 
-    def update_region_services(
-        self, *, current_region: RegionCreateExtended, new_region: RegionCreateExtended
+    def get_updated_region(
+        self,
+        *,
+        current_region: RegionCreateExtended | None,
+        new_region: RegionCreateExtended,
     ) -> RegionCreateExtended:
         """Update region services."""
+        if current_region is None:
+            return new_region
         current_region.block_storage_services = (
             self.update_region_block_storage_services(
                 current_services=current_region.block_storage_services,
@@ -376,24 +309,17 @@ class ProviderThread:
         projects: dict[str, ProjectCreate] = {}
         regions: dict[str, RegionCreateExtended] = {}
 
-        for sibling in siblings:
-            identity_provider, project, region = sibling
+        for identity_provider, project, region in siblings:
             projects[project.uuid] = project
-            if identity_providers.get(identity_provider.endpoint) is None:
-                identity_providers[identity_provider.endpoint] = identity_provider
-            else:
-                identity_providers[
-                    identity_provider.endpoint
-                ] = self.update_idp_user_groups(
-                    current_issuer=identity_providers[identity_provider.endpoint],
-                    new_issuer=identity_provider,
-                )
-            if regions.get(region.name) is None:
-                regions[region.name] = region
-            else:
-                regions[region.name] = self.update_region_services(
-                    current_region=regions[region.name], new_region=region
-                )
+            identity_providers[
+                identity_provider.endpoint
+            ] = self.get_updated_identity_provider(
+                current_idp=identity_providers.get(identity_provider.endpoint),
+                new_idp=identity_provider,
+            )
+            regions[region.name] = self.get_updated_region(
+                current_region=regions.get(region.name), new_region=region
+            )
 
         # Filter non-federated projects from shared resources
         for region in regions.values():
@@ -404,7 +330,7 @@ class ProviderThread:
                 service.flavors = flavors
                 service.images = images
 
-        return identity_providers, projects, regions
+        return identity_providers.values(), projects.values(), regions.values()
 
     def send_kafka_messages(
         self,
@@ -471,3 +397,75 @@ class ProviderThread:
             for user_group in issuer.user_groups:
                 if project == user_group.sla.project:
                     return str(issuer.endpoint), user_group.name
+
+    def get_provider(self) -> ProviderCreateExtended:
+        """Generate a list of generic providers.
+
+        Read data from real instances.
+        Supported providers:
+        - Openstack
+        """
+        if self.provider_conf.status != ProviderStatus.ACTIVE.value:
+            self.logger.info("Provider not active: %s", self.provider_conf.status)
+            return ProviderCreateExtended(
+                name=self.provider_conf.name,
+                type=self.provider_conf.type,
+                is_public=self.provider_conf.is_public,
+                support_emails=self.provider_conf.support_emails,
+                status=self.provider_conf.status,
+            )
+
+        # For each couple (region-project), create a separated thread and try to connect
+        # to the provider
+        connections: list[ConnectionThread] = []
+        for region in self.provider_conf.regions:
+            for project in self.provider_conf.projects:
+                try:
+                    project_conf = self.prepare_project_conf(
+                        project=project, region_name=region.name
+                    )
+                    issuer = self.get_issuer_matching_project(project_conf.sla)
+                    auth_method = self.get_auth_method_matching_issuer(issuer.endpoint)
+                    provider_conf = copy.deepcopy(self.provider_conf)
+                    provider_conf.regions = [region]
+                    provider_conf.projects = [project_conf]
+                    provider_conf.identity_providers = [auth_method]
+                    connections.append(
+                        ConnectionThread(
+                            provider_conf=provider_conf,
+                            issuer=issuer,
+                            log_level=self.log_level,
+                        )
+                    )
+                except (
+                    OpenstackProviderException,
+                    NotImplementedError,
+                    ValueError,
+                    AssertionError,
+                ) as e:
+                    self.error = True
+                    self.logger.error(e)
+                    self.logger.error("Skipping project")
+
+        with ThreadPoolExecutor() as executor:
+            siblings = executor.map(lambda x: x.get_provider_components(), connections)
+        siblings = list(siblings)
+        self.error = any([x.error for x in connections])
+
+        # Merge regions, identity providers and projects retrieved from previous
+        # parallel step.
+        identity_providers, projects, regions = self.merge_data(siblings)
+
+        # Send data to kafka
+        self.send_kafka_messages(regions=regions, identity_providers=identity_providers)
+
+        return ProviderCreateExtended(
+            name=self.provider_conf.name,
+            type=self.provider_conf.type,
+            is_public=self.provider_conf.is_public,
+            support_emails=self.provider_conf.support_emails,
+            status=self.provider_conf.status,
+            identity_providers=identity_providers,
+            projects=projects,
+            regions=regions,
+        )
