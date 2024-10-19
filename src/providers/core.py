@@ -1,3 +1,4 @@
+import copy
 from concurrent.futures import ThreadPoolExecutor
 
 from fed_reg.provider.enum import ProviderStatus, ProviderType
@@ -20,7 +21,7 @@ from fed_reg.provider.schemas_extended import (
 from src.kafka_conn import Producer
 from src.logger import create_logger
 from src.models.identity_provider import SLA, Issuer, UserGroup
-from src.models.provider import Project, Provider, ProviderSiblings, Region
+from src.models.provider import Project, Provider, ProviderSiblings
 from src.providers.openstack import OpenstackData, ProviderException
 
 
@@ -31,20 +32,23 @@ class ConnectionThread:
         self,
         *,
         provider_conf: Provider,
-        region_conf: Region,
-        project_conf: Project,
         issuers: list[Issuer],
         log_level: str | int | None = None,
     ) -> None:
+        assert (
+            len(provider_conf.regions) == 1
+        ), f"Invalid number or regions: {len(provider_conf.regions)}"
+        assert (
+            len(provider_conf.projects) == 1
+        ), f"Invalid number or projects: {len(provider_conf.projects)}"
+
         self.provider_conf = provider_conf
-        self.region_conf = region_conf
-        self.project_conf = project_conf
+        self.region_name = provider_conf.regions[0].name
         self.issuers = issuers
 
-        self.log_level = log_level
-        logger_name = f"Provider {self.provider_conf.name}, "
-        logger_name += f"Region {self.region_conf.name}, "
-        logger_name += f"Project {self.project_conf.id}"
+        logger_name = f"Provider {provider_conf.name}, "
+        logger_name += f"Region {provider_conf.regions[0].name}, "
+        logger_name += f"Project {provider_conf.projects[0].id}"
         self.logger = create_logger(logger_name, level=log_level)
 
         self.error = False
@@ -72,7 +76,7 @@ class ConnectionThread:
                 data = OpenstackData(
                     provider_conf=self.provider_conf,
                     project_conf=project,
-                    region_name=self.region_conf.name,
+                    region_name=self.region_name,
                     identity_provider=identity_provider,
                     token=token,
                     logger=self.logger,
@@ -87,7 +91,7 @@ class ConnectionThread:
             return None
 
         region = RegionCreateExtended(
-            **self.region_conf.dict(),
+            **self.provider_conf.regions[0].dict(),
             block_storage_services=[data.block_storage_service]
             if data.block_storage_service
             else [],
@@ -110,12 +114,14 @@ class ConnectionThread:
         """
         # Find region props matching current region.
         region_props = filter(
-            lambda x: x.region_name == self.region_conf.name,
-            self.project_conf.per_region_props,
+            lambda x: x.region_name == self.region_name,
+            self.provider_conf.projects[0].per_region_props,
         )
         region_props = next(region_props, None)
 
-        new_conf = Project(**self.project_conf.dict(exclude={"per_region_props"}))
+        new_conf = Project(
+            **self.provider_conf.projects[0].dict(exclude={"per_region_props"})
+        )
         if region_props:
             new_conf.default_private_net = region_props.default_private_net
             new_conf.default_public_net = region_props.default_public_net
@@ -214,11 +220,12 @@ class ProviderThread:
         connections: list[ConnectionThread] = []
         for region_conf in self.provider_conf.regions:
             for project_conf in self.provider_conf.projects:
+                provider_conf = copy.deepcopy(self.provider_conf)
+                provider_conf.regions = [region_conf]
+                provider_conf.projects = [project_conf]
                 connections.append(
                     ConnectionThread(
-                        provider_conf=self.provider_conf,
-                        region_conf=region_conf,
-                        project_conf=project_conf,
+                        provider_conf=provider_conf,
                         issuers=self.issuers,
                         log_level=self.log_level,
                     )
@@ -226,9 +233,8 @@ class ProviderThread:
 
         with ThreadPoolExecutor() as executor:
             siblings = executor.map(lambda x: x.get_provider_siblings(), connections)
-        siblings: list[ProviderSiblings] = list(
-            filter(lambda x: x is not None, siblings)
-        )
+        siblings = list(siblings)
+        siblings = list(filter(lambda x: x is not None, siblings))
         self.error = any([x.error for x in connections])
 
         # Merge regions, identity providers and projects retrieved from previous
@@ -436,7 +442,11 @@ class ProviderThread:
 
     def merge_data(
         self, siblings: list[ProviderSiblings]
-    ) -> tuple[list[IdentityProviderCreateExtended], list[ProjectCreate], list[Region]]:
+    ) -> tuple[
+        list[IdentityProviderCreateExtended],
+        list[ProjectCreate],
+        list[RegionCreateExtended],
+    ]:
         """Merge regions, identity providers and projects."""
         identity_providers: dict[str, IdentityProviderCreateExtended] = {}
         projects: dict[str, ProjectCreate] = {}
