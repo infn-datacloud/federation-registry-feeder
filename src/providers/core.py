@@ -15,6 +15,7 @@ from fed_reg.provider.schemas_extended import (
     ProviderCreateExtended,
     RegionCreateExtended,
 )
+from pydantic import AnyHttpUrl
 
 from src.kafka_conn import Producer
 from src.logger import create_logger
@@ -65,9 +66,7 @@ class ProviderThread:
             item.per_user_limits = region_props.per_user_limits
         return item
 
-    def get_issuer_matching_project(
-        self, *, issuers: list[Issuer], project_sla: str
-    ) -> Issuer:
+    def get_issuer_matching_project(self, project_sla: str) -> Issuer:
         """Find the identity provider with an SLA matching the target project's one.
 
         For each sla of each user group of each issuer listed in the yaml file, find the
@@ -76,7 +75,7 @@ class ProviderThread:
         Return the indentity provider data and the token to use to establish the
         connection.
         """
-        for issuer in issuers:
+        for issuer in self.issuers:
             for user_group in issuer.user_groups:
                 for sla in user_group.slas:
                     if sla.doc_uuid == project_sla:
@@ -94,14 +93,14 @@ class ProviderThread:
         )
 
     def get_auth_method_matching_issuer(
-        self, *, provider_auth_methods: list[AuthMethod], issuer_endpoint
+        self, issuer_endpoint: AnyHttpUrl
     ) -> AuthMethod:
-        for auth_method in provider_auth_methods:
+        for auth_method in self.provider_conf.identity_providers:
             if auth_method.endpoint == issuer_endpoint:
                 return auth_method
-        trusted_endpoints = [i.endpoint for i in provider_auth_methods]
+        trusted_endpoints = [i.endpoint for i in self.provider_conf.identity_providers]
         raise ValueError(
-            f"No identity provider matches endpoint `{self.issuer.endpoint}` in "
+            f"No identity provider matches endpoint `{issuer_endpoint}` in "
             f"provider's trusted identity providers {trusted_endpoints}."
         )
 
@@ -131,13 +130,8 @@ class ProviderThread:
                     project_conf = self.prepare_project_conf(
                         project=project, region_name=region.name
                     )
-                    issuer = self.get_issuer_matching_project(
-                        issuers=self.issuers, project_sla=project_conf.sla
-                    )
-                    auth_method = self.get_auth_method_matching_issuer(
-                        provider_auth_methods=self.provider_conf.identity_providers,
-                        issuer_endpoint=issuer.endpoint,
-                    )
+                    issuer = self.get_issuer_matching_project(project_conf.sla)
+                    auth_method = self.get_auth_method_matching_issuer(issuer.endpoint)
                     provider_conf = copy.deepcopy(self.provider_conf)
                     provider_conf.regions = [region]
                     provider_conf.projects = [project_conf]
