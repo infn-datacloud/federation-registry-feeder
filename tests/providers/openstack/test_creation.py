@@ -1,14 +1,28 @@
 from logging import getLogger
+from typing import Literal
 from unittest.mock import Mock, patch
 
-from src.models.provider import Openstack
+import pytest
+from pytest_cases import parametrize_with_cases
+
+from src.models.provider import AuthMethod, Openstack, Project, Region
+from src.providers.exceptions import ProviderException
 from src.providers.openstack import OpenstackData
 from tests.schemas.utils import (
     auth_method_dict,
     openstack_dict,
     project_dict,
     random_lower_string,
+    region_dict,
 )
+
+
+class CaseNum:
+    def case_0(self) -> Literal[0]:
+        return 0
+
+    def case_2(self) -> Literal[2]:
+        return 2
 
 
 @patch("src.providers.openstack.OpenstackData.create_connection")
@@ -61,3 +75,72 @@ def test_connection() -> None:
     assert item.conn.auth.get("access_token") == token
     assert item.conn.auth.get("project_id") == provider_conf.projects[0].id
     assert item.conn._compute_region == provider_conf.regions[0].name
+
+
+@parametrize_with_cases("num", cases=CaseNum)
+def test_failed_creation_because_regions(num: int) -> None:
+    """Connection creation always succeeds, it is its usage that may fail."""
+    provider_conf = Openstack(
+        **openstack_dict(),
+        identity_providers=[auth_method_dict()],
+        projects=[project_dict()],
+    )
+    if num == 0:
+        provider_conf.regions.clear()
+    else:
+        provider_conf.regions.append(Region(**region_dict()))
+    token = random_lower_string()
+    logger = getLogger("test")
+    with patch("src.providers.openstack.OpenstackData.retrieve_info"):
+        with pytest.raises(ProviderException):
+            OpenstackData(
+                provider_conf=provider_conf,
+                token=token,
+                logger=logger,
+            )
+
+
+@parametrize_with_cases("num", cases=CaseNum)
+def test_failed_creation_because_projects(num: int) -> None:
+    """Connection creation always succeeds, it is its usage that may fail."""
+    provider_conf = Openstack(
+        **openstack_dict(),
+        identity_providers=[auth_method_dict()],
+        projects=[project_dict()],
+    )
+    if num == 0:
+        provider_conf.projects.clear()
+    else:
+        provider_conf.projects.append(Project(**project_dict()))
+    token = random_lower_string()
+    logger = getLogger("test")
+    with patch("src.providers.openstack.OpenstackData.retrieve_info"):
+        with pytest.raises(ProviderException):
+            OpenstackData(
+                provider_conf=provider_conf,
+                token=token,
+                logger=logger,
+            )
+
+
+@parametrize_with_cases("num", cases=CaseNum)
+def test_failed_creation_because_idps(num: int) -> None:
+    """Connection creation always succeeds, it is its usage that may fail."""
+    provider_conf = Openstack(
+        **openstack_dict(),
+        identity_providers=[auth_method_dict()],
+        projects=[project_dict()],
+    )
+    if num == 0:
+        provider_conf.identity_providers.clear()
+    else:
+        provider_conf.identity_providers.append(AuthMethod(**auth_method_dict()))
+    token = random_lower_string()
+    logger = getLogger("test")
+    with patch("src.providers.openstack.OpenstackData.retrieve_info"):
+        with pytest.raises(ProviderException):
+            OpenstackData(
+                provider_conf=provider_conf,
+                token=token,
+                logger=logger,
+            )
