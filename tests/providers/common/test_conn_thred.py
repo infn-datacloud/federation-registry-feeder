@@ -21,11 +21,10 @@ from tests.schemas.utils import (
 
 class CaseProvider:
     def case_openstack(self) -> Openstack:
-        project_conf = Project(**project_dict())
         return Openstack(
             **openstack_dict(),
             identity_providers=[auth_method_dict()],
-            projects=[project_conf],
+            projects=[project_dict()],
         )
 
 
