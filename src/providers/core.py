@@ -1,7 +1,7 @@
 import copy
 from concurrent.futures import ThreadPoolExecutor
 
-from fed_reg.provider.enum import ProviderStatus, ProviderType
+from fed_reg.provider.enum import ProviderStatus
 from fed_reg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
@@ -19,102 +19,14 @@ from fed_reg.provider.schemas_extended import (
 from src.kafka_conn import Producer
 from src.logger import create_logger
 from src.models.identity_provider import Issuer
-from src.models.provider import AuthMethod, Project, Provider, ProviderSiblings
-from src.providers.openstack import OpenstackData, ProviderException
-
-
-class ConnectionThread:
-    """Data shared between the same connection socket"""
-
-    def __init__(
-        self,
-        *,
-        provider_conf: Provider,
-        issuer: Issuer,
-        log_level: str | int | None = None,
-    ) -> None:
-        assert (
-            len(provider_conf.regions) == 1
-        ), f"Invalid number or regions: {len(provider_conf.regions)}"
-        assert (
-            len(provider_conf.projects) == 1
-        ), f"Invalid number or projects: {len(provider_conf.projects)}"
-        msg = "Invalid number or trusted identity providers: "
-        msg += f"{len(provider_conf.identity_providers)}"
-        assert len(provider_conf.identity_providers) == 1, msg
-        msg = f"Issuer endpoint {issuer.endpoint} does not match trusted identity "
-        msg += f"provider's one {provider_conf.identity_providers[0].endpoint}"
-        assert issuer.endpoint == provider_conf.identity_providers[0].endpoint, msg
-        assert (
-            len(issuer.user_groups) == 1
-        ), f"Invalid number or user groups: {len(issuer.user_groups)}"
-        assert (
-            len(issuer.user_groups[0].slas) == 1
-        ), f"Invalid number or user groups: {len(issuer.user_groups[0].slas)}"
-
-        self.provider_conf = provider_conf
-        self.region_name = provider_conf.regions[0].name
-        self.issuer = issuer
-
-        logger_name = f"Provider {provider_conf.name}, "
-        logger_name += f"Region {provider_conf.regions[0].name}, "
-        logger_name += f"Project {provider_conf.projects[0].id}"
-        self.logger = create_logger(logger_name, level=log_level)
-
-        self.error = False
-
-    def get_provider_siblings(self) -> ProviderSiblings | None:
-        """Retrieve the provider region, project and identity provider.
-
-        From the current configuration, connect to the correct provider and retrieve the
-        current configuration and resources.
-
-        Return an object with 3 main entities: region, project and identity provider.
-        """
-        if self.provider_conf.type == ProviderType.OS.value:
-            try:
-                data = OpenstackData(
-                    provider_conf=self.provider_conf,
-                    token=self.issuer.token,
-                    logger=self.logger,
-                )
-                self.error |= data.error
-            except ProviderException:
-                self.error = True
-                return None
-        elif self.provider_conf.type == ProviderType.K8S.value:
-            self.logger.warning("Not yet implemented")
-            self.logger.warning("Skipping project")
-            return None
-
-        region = RegionCreateExtended(
-            **self.provider_conf.regions[0].dict(),
-            block_storage_services=[data.block_storage_service]
-            if data.block_storage_service
-            else [],
-            compute_services=[data.compute_service] if data.compute_service else [],
-            identity_services=[data.identity_service] if data.identity_service else [],
-            network_services=[data.network_service] if data.network_service else [],
-            object_store_services=data.object_store_services,
-        )
-        identity_provider = IdentityProviderCreateExtended(
-            description=self.issuer.description,
-            group_claim=self.issuer.group_claim,
-            endpoint=self.issuer.endpoint,
-            relationship=self.provider_conf.identity_providers[0],
-            user_groups=[
-                {
-                    **self.issuer.user_groups[0].dict(exclude={"slas"}),
-                    "sla": {
-                        **self.issuer.user_groups[0].slas[0].dict(),
-                        "project": self.provider_conf.projects[0].id,
-                    },
-                }
-            ],
-        )
-        return ProviderSiblings(
-            identity_provider=identity_provider, project=data.project, region=region
-        )
+from src.models.provider import (
+    AuthMethod,
+    Kubernetes,
+    Openstack,
+    Project,
+    ProviderSiblings,
+)
+from src.providers.conn_thread import ConnectionThread
 
 
 class ProviderThread:
@@ -123,7 +35,7 @@ class ProviderThread:
     def __init__(
         self,
         *,
-        provider_conf: Provider,
+        provider_conf: Openstack | Kubernetes,
         issuers: list[Issuer],
         kafka_prod: Producer | None = None,
         log_level: str | int | None = None,
