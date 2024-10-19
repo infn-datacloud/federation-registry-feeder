@@ -6,8 +6,7 @@ import pytest
 from pytest_cases import parametrize_with_cases
 
 from src.models.provider import AuthMethod, Openstack, Project, Region
-from src.providers.exceptions import ProviderException
-from src.providers.openstack import OpenstackData
+from src.providers.openstack import OpenstackData, OpenstackProviderException
 from tests.schemas.utils import (
     auth_method_dict,
     openstack_dict,
@@ -92,7 +91,7 @@ def test_failed_creation_because_regions(num: int) -> None:
     token = random_lower_string()
     logger = getLogger("test")
     with patch("src.providers.openstack.OpenstackData.retrieve_info"):
-        with pytest.raises(ProviderException):
+        with pytest.raises(OpenstackProviderException):
             OpenstackData(
                 provider_conf=provider_conf,
                 token=token,
@@ -115,7 +114,7 @@ def test_failed_creation_because_projects(num: int) -> None:
     token = random_lower_string()
     logger = getLogger("test")
     with patch("src.providers.openstack.OpenstackData.retrieve_info"):
-        with pytest.raises(ProviderException):
+        with pytest.raises(OpenstackProviderException):
             OpenstackData(
                 provider_conf=provider_conf,
                 token=token,
@@ -138,7 +137,7 @@ def test_failed_creation_because_idps(num: int) -> None:
     token = random_lower_string()
     logger = getLogger("test")
     with patch("src.providers.openstack.OpenstackData.retrieve_info"):
-        with pytest.raises(ProviderException):
+        with pytest.raises(OpenstackProviderException):
             OpenstackData(
                 provider_conf=provider_conf,
                 token=token,
