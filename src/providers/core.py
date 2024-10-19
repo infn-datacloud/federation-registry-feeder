@@ -71,22 +71,6 @@ class ConnectionThread:
 
         Return an object with 3 main entities: region, project and identity provider.
         """
-        identity_provider = IdentityProviderCreateExtended(
-            description=self.issuer.description,
-            group_claim=self.issuer.group_claim,
-            endpoint=self.issuer.endpoint,
-            relationship=self.provider_conf.identity_providers[0],
-            user_groups=[
-                {
-                    **self.issuer.user_groups[0].dict(exclude={"slas"}),
-                    "sla": {
-                        **self.issuer.user_groups[0].slas[0].dict(),
-                        "project": self.provider_conf.projects[0].id,
-                    },
-                }
-            ],
-        )
-
         if self.provider_conf.type == ProviderType.OS.value:
             try:
                 data = OpenstackData(
@@ -113,7 +97,21 @@ class ConnectionThread:
             network_services=[data.network_service] if data.network_service else [],
             object_store_services=data.object_store_services,
         )
-
+        identity_provider = IdentityProviderCreateExtended(
+            description=self.issuer.description,
+            group_claim=self.issuer.group_claim,
+            endpoint=self.issuer.endpoint,
+            relationship=self.provider_conf.identity_providers[0],
+            user_groups=[
+                {
+                    **self.issuer.user_groups[0].dict(exclude={"slas"}),
+                    "sla": {
+                        **self.issuer.user_groups[0].slas[0].dict(),
+                        "project": self.provider_conf.projects[0].id,
+                    },
+                }
+            ],
+        )
         return ProviderSiblings(
             identity_provider=identity_provider, project=data.project, region=region
         )
