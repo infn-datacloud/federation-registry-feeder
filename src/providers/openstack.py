@@ -47,10 +47,9 @@ class OpenstackData:
     """Class to organize data retrieved from and Openstack instance."""
 
     def __init__(self, *, provider_conf: Openstack, token: str, logger: Logger) -> None:
+        self.error = False
+        self.logger = logger
         try:
-            self.logger = logger
-            self.error = False
-
             assert (
                 len(provider_conf.regions) == 1
             ), f"Invalid number or regions: {len(provider_conf.regions)}"

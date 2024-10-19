@@ -20,13 +20,15 @@ class ConnectionThread:
         issuer: Issuer,
         log_level: str | int | None = None,
     ) -> None:
+        self.error = False
+
         assert (
             len(provider_conf.regions) == 1
-        ), f"Invalid number or regions: {len(provider_conf.regions)}"
+        ), f"Invalid number of regions: {len(provider_conf.regions)}"
         assert (
             len(provider_conf.projects) == 1
-        ), f"Invalid number or projects: {len(provider_conf.projects)}"
-        msg = "Invalid number or trusted identity providers: "
+        ), f"Invalid number of projects: {len(provider_conf.projects)}"
+        msg = "Invalid number of trusted identity providers: "
         msg += f"{len(provider_conf.identity_providers)}"
         assert len(provider_conf.identity_providers) == 1, msg
         msg = f"Issuer endpoint {issuer.endpoint} does not match trusted identity "
@@ -34,10 +36,10 @@ class ConnectionThread:
         assert issuer.endpoint == provider_conf.identity_providers[0].endpoint, msg
         assert (
             len(issuer.user_groups) == 1
-        ), f"Invalid number or user groups: {len(issuer.user_groups)}"
+        ), f"Invalid number of user groups: {len(issuer.user_groups)}"
         assert (
             len(issuer.user_groups[0].slas) == 1
-        ), f"Invalid number or user groups: {len(issuer.user_groups[0].slas)}"
+        ), f"Invalid number of slas: {len(issuer.user_groups[0].slas)}"
 
         self.provider_conf = provider_conf
         self.issuer = issuer
@@ -46,8 +48,6 @@ class ConnectionThread:
         logger_name += f"Region {provider_conf.regions[0].name}, "
         logger_name += f"Project {provider_conf.projects[0].id}"
         self.logger = create_logger(logger_name, level=log_level)
-
-        self.error = False
 
     def get_provider_siblings(
         self,
