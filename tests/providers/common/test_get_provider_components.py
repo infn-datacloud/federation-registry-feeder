@@ -1,5 +1,3 @@
-from logging import CRITICAL, DEBUG, ERROR, INFO, NOTSET, WARNING
-from typing import Literal
 from unittest.mock import PropertyMock, patch
 
 import pytest
@@ -13,7 +11,6 @@ from fed_reg.provider.schemas_extended import (
     ProjectCreate,
     RegionCreateExtended,
 )
-from pytest_cases import parametrize
 
 from src.models.identity_provider import Issuer
 from src.models.provider import Kubernetes, Openstack
@@ -29,32 +26,6 @@ from tests.schemas.utils import (
     sla_dict,
     user_group_dict,
 )
-
-
-class CaseProvider:
-    def case_openstack(self) -> Openstack:
-        return Openstack(
-            **openstack_dict(),
-            identity_providers=[auth_method_dict()],
-            projects=[project_dict()],
-        )
-
-
-class CaseLoggingLevel:
-    def case_none(self) -> None:
-        return None
-
-    @parametrize(level=(CRITICAL, DEBUG, ERROR, INFO, NOTSET, WARNING))
-    def case_level(self, level: int) -> int:
-        return level
-
-
-class CaseInvalidNum:
-    def case_0(self) -> Literal[0]:
-        return 0
-
-    def case_2(self) -> Literal[2]:
-        return 2
 
 
 @patch("src.providers.conn_thread.OpenstackData")
