@@ -5,12 +5,7 @@ from fed_reg.location.schemas import LocationBase
 from fed_reg.models import BaseNode
 from fed_reg.provider.enum import ProviderType
 from fed_reg.provider.schemas import ProviderBase
-from fed_reg.provider.schemas_extended import (
-    IdentityProviderCreateExtended,
-    ProjectCreate,
-    RegionCreateExtended,
-    find_duplicates,
-)
+from fed_reg.provider.schemas_extended import find_duplicates
 from fed_reg.quota.schemas import (
     BlockStorageQuotaBase,
     ComputeQuotaBase,
@@ -184,13 +179,3 @@ class Kubernetes(Provider):
         if len(v) == 0:
             v.append(Region(name="default"))
         return v
-
-
-class ProviderSiblings(BaseModel):
-    """Entity with the Provider's create subschemas"""
-
-    project: ProjectCreate = Field(description="Project")
-    identity_provider: IdentityProviderCreateExtended = Field(
-        description="Identity provider"
-    )
-    region: RegionCreateExtended = Field(description="Region")

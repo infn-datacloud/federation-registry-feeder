@@ -1,11 +1,12 @@
 from fed_reg.provider.schemas_extended import (
     IdentityProviderCreateExtended,
+    ProjectCreate,
     RegionCreateExtended,
 )
 
 from src.logger import create_logger
 from src.models.identity_provider import Issuer
-from src.models.provider import Kubernetes, Openstack, ProviderSiblings
+from src.models.provider import Kubernetes, Openstack
 from src.providers.openstack import OpenstackData, ProviderException
 
 
@@ -48,7 +49,12 @@ class ConnectionThread:
 
         self.error = False
 
-    def get_provider_siblings(self) -> ProviderSiblings | None:
+    def get_provider_siblings(
+        self,
+    ) -> (
+        tuple[IdentityProviderCreateExtended, ProjectCreate, RegionCreateExtended]
+        | None
+    ):
         """Retrieve the provider region, project and identity provider.
 
         From the current configuration, connect to the correct provider and retrieve the
@@ -95,6 +101,4 @@ class ConnectionThread:
                 }
             ],
         )
-        return ProviderSiblings(
-            identity_provider=identity_provider, project=data.project, region=region
-        )
+        return identity_provider, data.project, region

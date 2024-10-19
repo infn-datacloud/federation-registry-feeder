@@ -19,13 +19,7 @@ from fed_reg.provider.schemas_extended import (
 from src.kafka_conn import Producer
 from src.logger import create_logger
 from src.models.identity_provider import Issuer
-from src.models.provider import (
-    AuthMethod,
-    Kubernetes,
-    Openstack,
-    Project,
-    ProviderSiblings,
-)
+from src.models.provider import AuthMethod, Kubernetes, Openstack, Project
 from src.providers.conn_thread import ConnectionThread
 
 
@@ -369,7 +363,10 @@ class ProviderThread:
         return service.flavors, service.images
 
     def merge_data(
-        self, siblings: list[ProviderSiblings]
+        self,
+        siblings: list[
+            tuple[IdentityProviderCreateExtended, ProjectCreate, RegionCreateExtended]
+        ],
     ) -> tuple[
         list[IdentityProviderCreateExtended],
         list[ProjectCreate],
@@ -381,26 +378,22 @@ class ProviderThread:
         regions: dict[str, RegionCreateExtended] = {}
 
         for sibling in siblings:
-            projects[sibling.project.uuid] = sibling.project
-            if identity_providers.get(sibling.identity_provider.endpoint) is None:
-                identity_providers[
-                    sibling.identity_provider.endpoint
-                ] = sibling.identity_provider
+            identity_provider, project, region = sibling
+            projects[project.uuid] = project
+            if identity_providers.get(identity_provider.endpoint) is None:
+                identity_providers[identity_provider.endpoint] = identity_provider
             else:
                 identity_providers[
-                    sibling.identity_provider.endpoint
+                    identity_provider.endpoint
                 ] = self.update_idp_user_groups(
-                    current_issuer=identity_providers[
-                        sibling.identity_provider.endpoint
-                    ],
-                    new_issuer=sibling.identity_provider,
+                    current_issuer=identity_providers[identity_provider.endpoint],
+                    new_issuer=identity_provider,
                 )
-            if regions.get(sibling.region.name) is None:
-                regions[sibling.region.name] = sibling.region
+            if regions.get(region.name) is None:
+                regions[region.name] = region
             else:
-                regions[sibling.region.name] = self.update_region_services(
-                    current_region=regions[sibling.region.name],
-                    new_region=sibling.region,
+                regions[region.name] = self.update_region_services(
+                    current_region=regions[region.name], new_region=region
                 )
 
         # Filter non-federated projects from shared resources
