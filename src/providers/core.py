@@ -61,7 +61,7 @@ class ConnectionThread:
 
         Return an object with 3 main entities: region, project and identity provider.
         """
-        project = self.get_project_conf_params()
+        project = self.provider_conf.projects[0]
 
         try:
             identity_provider, token = self.get_idp_matching_project(project)
@@ -104,30 +104,6 @@ class ConnectionThread:
         return ProviderSiblings(
             identity_provider=identity_provider, project=data.project, region=region
         )
-
-    def get_project_conf_params(self) -> Project:
-        """Get project parameters defined in the yaml file.
-
-        If the `per_region_props` attribute has been defined and the current region name
-        matches the name of the region definining the new props, override project's
-        corresponding values.
-        """
-        # Find region props matching current region.
-        region_props = filter(
-            lambda x: x.region_name == self.region_name,
-            self.provider_conf.projects[0].per_region_props,
-        )
-        region_props = next(region_props, None)
-
-        new_conf = Project(
-            **self.provider_conf.projects[0].dict(exclude={"per_region_props"})
-        )
-        if region_props:
-            new_conf.default_private_net = region_props.default_private_net
-            new_conf.default_public_net = region_props.default_public_net
-            new_conf.private_net_proxy = region_props.private_net_proxy
-            new_conf.per_user_limits = region_props.per_user_limits
-        return new_conf
 
     def get_idp_matching_project(
         self, project: Project
@@ -198,6 +174,27 @@ class ProviderThread:
         )
         self.error = False
 
+    def get_project_conf_params(self, *, project: Project, region_name: str) -> Project:
+        """Get project parameters defined in the yaml file.
+
+        If the `per_region_props` attribute has been defined and the current region name
+        matches the name of the region definining the new props, override project's
+        corresponding values.
+        """
+        # Find region props matching current region.
+        region_props = filter(
+            lambda x: x.region_name == region_name, project.per_region_props
+        )
+        region_props = next(region_props, None)
+
+        item = Project(**project.dict(exclude={"per_region_props"}))
+        if region_props:
+            item.default_private_net = region_props.default_private_net
+            item.default_public_net = region_props.default_public_net
+            item.private_net_proxy = region_props.private_net_proxy
+            item.per_user_limits = region_props.per_user_limits
+        return item
+
     def get_provider(self) -> ProviderCreateExtended:
         """Generate a list of generic providers.
 
@@ -218,10 +215,13 @@ class ProviderThread:
         # For each couple (region-project), create a separated thread and try to connect
         # to the provider
         connections: list[ConnectionThread] = []
-        for region_conf in self.provider_conf.regions:
-            for project_conf in self.provider_conf.projects:
+        for region in self.provider_conf.regions:
+            for project in self.provider_conf.projects:
+                project_conf = self.get_project_conf_params(
+                    project=project, region_name=region.name
+                )
                 provider_conf = copy.deepcopy(self.provider_conf)
-                provider_conf.regions = [region_conf]
+                provider_conf.regions = [region]
                 provider_conf.projects = [project_conf]
                 connections.append(
                     ConnectionThread(
