@@ -8,7 +8,6 @@ from fed_reg.provider.schemas_extended import (
     ComputeQuotaCreateExtended,
     ComputeServiceCreateExtended,
     FlavorCreateExtended,
-    IdentityProviderCreateExtended,
     IdentityServiceCreate,
     ImageCreateExtended,
     NetworkCreateExtended,
@@ -37,7 +36,7 @@ from openstack.image.v2.image import Image
 from openstack.network.v2.network import Network
 from requests import Response
 
-from src.models.provider import PrivateNetProxy, Project
+from src.models.provider import AuthMethod, PrivateNetProxy, Project
 from src.models.site_config import Openstack
 from src.providers.exceptions import ProviderException
 
@@ -52,14 +51,14 @@ class OpenstackData:
         *,
         provider_conf: Openstack,
         project_conf: Project,
-        identity_provider: IdentityProviderCreateExtended,
+        auth_method: AuthMethod,
         region_name: str,
         token: str,
         logger: Logger,
     ) -> None:
         self.provider_conf = provider_conf
         self.project_conf = project_conf
-        self.identity_provider = identity_provider
+        self.auth_method = auth_method
         self.region_name = region_name
         self.logger = logger
         self.error = False
@@ -118,7 +117,7 @@ class OpenstackData:
         """Connect to Openstack provider"""
         self.logger.info(
             "Connecting through IDP '%s' to openstack '%s' and region '%s'",
-            self.identity_provider.endpoint,
+            self.auth_method.endpoint,
             self.provider_conf.name,
             self.region_name,
         )
@@ -127,8 +126,8 @@ class OpenstackData:
         return connect(
             auth_url=self.provider_conf.auth_url,
             auth_type=auth_type,
-            identity_provider=self.identity_provider.relationship.idp_name,
-            protocol=self.identity_provider.relationship.protocol,
+            identity_provider=self.auth_method.idp_name,
+            protocol=self.auth_method.protocol,
             access_token=token,
             project_id=self.project_conf.id,
             region_name=self.region_name,

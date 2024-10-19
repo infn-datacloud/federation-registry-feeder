@@ -93,7 +93,7 @@ class ConnectionThread:
                     provider_conf=self.provider_conf,
                     project_conf=self.provider_conf.projects[0],
                     region_name=self.region_name,
-                    identity_provider=identity_provider,
+                    auth_method=self.provider_conf.identity_providers[0],
                     token=self.issuer.token,
                     logger=self.logger,
                 )
