@@ -343,7 +343,7 @@ class ProviderThread:
         with ThreadPoolExecutor() as executor:
             siblings = executor.map(lambda x: x.get_provider_components(), connections)
         siblings = list(siblings)
-        self.error = any([x.error for x in connections])
+        self.error |= any([x.error for x in connections])
 
         # Merge regions, identity providers and projects retrieved from previous
         # parallel step.
