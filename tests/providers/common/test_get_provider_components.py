@@ -1,4 +1,4 @@
-from unittest.mock import PropertyMock, patch
+from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
 from fed_reg.provider.schemas_extended import (
@@ -15,7 +15,7 @@ from fed_reg.provider.schemas_extended import (
 from src.models.identity_provider import Issuer
 from src.models.provider import Kubernetes, Openstack
 from src.providers.conn_thread import ConnectionThread
-from src.providers.openstack import OpenstackData, OpenstackProviderException
+from src.providers.openstack import OpenstackProviderException
 from tests.schemas.utils import (
     auth_method_dict,
     issuer_dict,
@@ -30,7 +30,7 @@ from tests.schemas.utils import (
 
 @patch("src.providers.conn_thread.OpenstackData")
 def test_get_openstack_components(
-    mock_openstack_data: OpenstackData,
+    mock_openstack_data: Mock,
     project_create: ProjectCreate,
     block_storage_service_create: BlockStorageServiceCreateExtended,
     compute_service_create: ComputeServiceCreateExtended,
