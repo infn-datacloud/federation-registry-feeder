@@ -183,7 +183,8 @@ def test_update_existing_service_flavors(
 ) -> None:
     curr_srv = services[:1]
     new_srv = copy.deepcopy(services[:1])
-    new_srv[0].flavors[0].project = services[1].flavors[0].project
+    new_srv[0].quotas[0].project = services[1].quotas[0].project
+    new_srv[0].flavors[0] = services[1].flavors[0]
     update_services = provider_thread_item.get_updated_services(
         current_services=curr_srv, new_services=new_srv
     )
@@ -202,7 +203,8 @@ def test_update_existing_service_images(
 ) -> None:
     curr_srv = services[:1]
     new_srv = copy.deepcopy(services[:1])
-    new_srv[0].images[0].project = services[1].images[0].project
+    new_srv[0].quotas[0].project = services[1].quotas[0].project
+    new_srv[0].images[0] = services[1].images[0]
     update_services = provider_thread_item.get_updated_services(
         current_services=curr_srv, new_services=new_srv
     )
@@ -221,7 +223,8 @@ def test_update_existing_service_networks(
 ) -> None:
     curr_srv = services[:1]
     new_srv = copy.deepcopy(services[:1])
-    new_srv[0].networks[0].project = services[1].networks[0].project
+    new_srv[0].quotas[0].project = services[1].quotas[0].project
+    new_srv[0].networks[0] = services[1].networks[0]
     update_services = provider_thread_item.get_updated_services(
         current_services=curr_srv, new_services=new_srv
     )
