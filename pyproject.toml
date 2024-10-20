@@ -38,3 +38,11 @@ extend-select = ["B", "C90", "E", "F", "G", "I", "N", "Q", "RUF", "UP", "W"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.coverage.run]
+relative_files = true
+source = ["src/"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = ["if __name__ == .__main__.:"]
