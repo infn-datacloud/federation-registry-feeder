@@ -13,6 +13,7 @@ from fed_reg.service.enum import (
     ComputeServiceName,
     IdentityServiceName,
     NetworkServiceName,
+    ObjectStoreServiceName,
 )
 from pycountry import countries
 from pydantic import AnyHttpUrl
@@ -71,6 +72,11 @@ def random_lower_string() -> str:
 def random_network_service_name() -> str:
     """Return one of the possible NetworkService names."""
     return choice([i.value for i in NetworkServiceName])
+
+
+def random_object_store_service_name() -> str:
+    """Return one of the possible NetworkService names."""
+    return choice([i.value for i in ObjectStoreServiceName])
 
 
 def random_provider_type(*, exclude: list[str] | None = None) -> str:

@@ -386,6 +386,7 @@ def region_create(
     compute_service_create: ComputeServiceCreateExtended,
     identity_service_create: IdentityServiceCreate,
     network_service_create: NetworkServiceCreateExtended,
+    s3_service_create: ObjectStoreServiceCreateExtended,
 ):
     """Fixture with a RegionCreateExtended"""
     return RegionCreateExtended(
@@ -394,6 +395,7 @@ def region_create(
         compute_services=[compute_service_create],
         identity_services=[identity_service_create],
         network_services=[network_service_create],
+        object_store_services=[s3_service_create],
     )
 
 
