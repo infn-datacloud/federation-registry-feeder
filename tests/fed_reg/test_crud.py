@@ -35,12 +35,11 @@ class CaseReadProviders:
 
 
 class CaseConnException:
-    @parametrize(exception=[ConnectionError, ReadTimeout])
-    def case_exception(
-        self,
-        exception: type[ConnectionError] | type[ReadTimeout],
-    ) -> type[ConnectionError] | type[ReadTimeout]:
-        return exception
+    def case_conn_err(self) -> ConnectionError:
+        return ConnectionError()
+
+    def case_read_timeout(self) -> ReadTimeout:
+        return ReadTimeout()
 
 
 class CaseRequest:
@@ -227,7 +226,7 @@ def test_managed_http_error(error_code: int, operation: str) -> None:
 @parametrize_with_cases("exception", cases=CaseConnException)
 @parametrize_with_cases("operation", cases=CaseRequest)
 def test_read_no_connection(
-    operation: str, exception: type[ConnectionError] | type[ReadTimeout]
+    operation: str, exception: ConnectionError | ReadTimeout
 ) -> None:
     """Connection error: no connection or read timeout.
 
@@ -238,8 +237,8 @@ def test_read_no_connection(
     provider_read = ProviderRead(uid=uuid4(), **provider_create.dict())
 
     with patch(f"src.fed_reg_conn.requests.{operation}") as mock_req:
-        mock_req.side_effect = exception()
-        with pytest.raises(exception):
+        mock_req.side_effect = exception
+        with pytest.raises(type(exception)):
             execute_operation(
                 crud=crud,
                 operation=operation,
