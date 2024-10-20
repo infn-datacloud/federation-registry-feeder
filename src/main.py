@@ -1,9 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 
-from fed_reg.provider.schemas_extended import ProviderCreateExtended
-
 from src.fed_reg_conn import update_database
-from src.kafka_conn import get_kafka_prod
+from src.kafka_conn import get_kafka_prod, send_kafka_messages
 from src.logger import create_logger
 from src.models.config import get_settings
 from src.parser import parser
@@ -22,11 +20,6 @@ def main(log_level: str) -> None:
     logger = create_logger("Federation-Registry-Feeder", level=log_level)
     settings = get_settings()
 
-    # Create kafka producer if needed
-    kafka_prod = get_kafka_prod(
-        hostname=settings.KAFKA_HOSTNAME, topic=settings.KAFKA_TOPIC, logger=logger
-    )
-
     # Read all yaml files containing providers configurations.
     yaml_files = get_conf_files(settings=settings, logger=logger)
     site_configs, error = get_site_configs(yaml_files=yaml_files, log_level=log_level)
@@ -38,12 +31,7 @@ def main(log_level: str) -> None:
         issuers = config.trusted_idps
         for conf in prov_configs:
             pthreads.append(
-                ProviderThread(
-                    provider_conf=conf,
-                    issuers=issuers,
-                    kafka_prod=kafka_prod,
-                    log_level=log_level,
-                )
+                ProviderThread(provider_conf=conf, issuers=issuers, log_level=log_level)
             )
 
     # Multithreading read
@@ -51,8 +39,17 @@ def main(log_level: str) -> None:
     with ThreadPoolExecutor() as executor:
         providers = executor.map(lambda x: x.get_provider(), pthreads)
     providers = list(providers)
-    providers: list[ProviderCreateExtended] = list(filter(lambda x: x, providers))
+    providers = list(filter(lambda x: x, providers))
     error |= any([x.error for x in pthreads])
+
+    # Create kafka producer if needed
+    kafka_prod = get_kafka_prod(
+        hostname=settings.KAFKA_HOSTNAME, topic=settings.KAFKA_TOPIC, logger=logger
+    )
+    if kafka_prod is not None:
+        for provider in providers:
+            # Send data to kafka
+            send_kafka_messages(kafka_prod=kafka_prod, provider=provider)
 
     # Update the Federation-Registry
     token = site_configs[0].trusted_idps[0].token if len(site_configs) > 0 else ""

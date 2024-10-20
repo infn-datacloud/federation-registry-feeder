@@ -16,7 +16,6 @@ from fed_reg.provider.schemas_extended import (
 )
 from pydantic import AnyHttpUrl
 
-from src.kafka_conn import Producer
 from src.logger import create_logger
 from src.models.identity_provider import Issuer
 from src.models.provider import AuthMethod, Kubernetes, Openstack, Project
@@ -32,12 +31,10 @@ class ProviderThread:
         *,
         provider_conf: Openstack | Kubernetes,
         issuers: list[Issuer],
-        kafka_prod: Producer | None = None,
         log_level: str | int | None = None,
     ) -> None:
         self.provider_conf = provider_conf
         self.issuers = issuers
-        self.kafka_prod = kafka_prod
         self.log_level = log_level
         self.logger = create_logger(
             f"Provider {self.provider_conf.name}", level=log_level
@@ -284,79 +281,17 @@ class ProviderThread:
         for region in regions.values():
             for service in region.compute_services:
                 service.flavors = self.filter_compute_resources_projects(
-                    service=service.flavors, projects=projects.keys()
+                    items=service.flavors, projects=projects.keys()
                 )
                 service.images = self.filter_compute_resources_projects(
-                    service=service.images, projects=projects.keys()
+                    items=service.images, projects=projects.keys()
                 )
 
-        return identity_providers.values(), projects.values(), regions.values()
-
-    def send_kafka_messages(
-        self,
-        regions: list[RegionCreateExtended],
-        identity_providers: list[IdentityProviderCreateExtended],
-    ):
-        """Organize quotas data and send them to kafka."""
-        if self.kafka_prod is not None:
-            for region in regions:
-                data_list = {}
-                for service in [
-                    *region.block_storage_services,
-                    *region.compute_services,
-                    *region.network_services,
-                ]:
-                    service_type = service.type.replace("-", "_")
-                    service_endpoint = str(service.endpoint)
-                    for quota in service.quotas:
-                        data_list[quota.project] = data_list.get(quota.project, {})
-                        data_list[quota.project][service_endpoint] = data_list[
-                            quota.project
-                        ].get(
-                            service_endpoint,
-                            {f"{service_type}_service": service_endpoint},
-                        )
-                        for k, v in quota.dict(
-                            exclude={
-                                "description",
-                                "per_user",
-                                "project",
-                                "type",
-                                "usage",
-                            }
-                        ).items():
-                            if quota.usage:
-                                data_list[quota.project][service_endpoint][
-                                    f"{service_type}_usage_{k}"
-                                ] = v
-                            else:
-                                data_list[quota.project][service_endpoint][
-                                    f"{service_type}_limit_{k}"
-                                ] = v
-
-                for project, value in data_list.items():
-                    issuer, user_group = self.find_issuer_and_user_group(
-                        identity_providers, project
-                    )
-                    msg_data = {
-                        "provider": self.provider_conf.name,
-                        "region": region.name,
-                        "project": project,
-                        "issuer": issuer,
-                        "user_group": user_group,
-                    }
-                    for data in value.values():
-                        msg_data = {**msg_data, **data}
-                    self.kafka_prod.send(msg_data)
-
-    def find_issuer_and_user_group(
-        self, identity_providers: list[IdentityProviderCreateExtended], project: str
-    ) -> tuple[str, str]:
-        """Return issuer and user group matching project."""
-        for issuer in identity_providers:
-            for user_group in issuer.user_groups:
-                if project == user_group.sla.project:
-                    return str(issuer.endpoint), user_group.name
+        return (
+            list(identity_providers.values()),
+            list(projects.values()),
+            list(regions.values()),
+        )
 
     def get_provider(self) -> ProviderCreateExtended:
         """Generate a list of generic providers.
@@ -415,9 +350,6 @@ class ProviderThread:
         # Merge regions, identity providers and projects retrieved from previous
         # parallel step.
         identity_providers, projects, regions = self.merge_data(siblings)
-
-        # Send data to kafka
-        self.send_kafka_messages(regions=regions, identity_providers=identity_providers)
 
         return ProviderCreateExtended(
             name=self.provider_conf.name,
