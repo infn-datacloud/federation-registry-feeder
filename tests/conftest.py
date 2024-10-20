@@ -2,6 +2,7 @@ import os
 from uuid import uuid4
 
 import pytest
+from fed_reg.provider.enum import ProviderType
 from fed_reg.provider.schemas_extended import (
     AuthMethodCreate,
     BlockStorageServiceCreateExtended,
@@ -11,6 +12,7 @@ from fed_reg.provider.schemas_extended import (
     NetworkServiceCreateExtended,
     ObjectStoreServiceCreateExtended,
     ProjectCreate,
+    ProviderCreateExtended,
     RegionCreateExtended,
     SLACreateExtended,
     UserGroupCreateExtended,
@@ -396,6 +398,22 @@ def region_create(
         identity_services=[identity_service_create],
         network_services=[network_service_create],
         object_store_services=[s3_service_create],
+    )
+
+
+@pytest.fixture
+def provider_create(
+    identity_provider_create: IdentityProviderCreateExtended,
+    project_create: ProjectCreate,
+    region_create: RegionCreateExtended,
+):
+    identity_provider_create.user_groups[0].sla.project = project_create.uuid
+    return ProviderCreateExtended(
+        name=random_lower_string(),
+        type=ProviderType.OS,
+        identity_providers=[identity_provider_create],
+        regions=[region_create],
+        projects=[project_create],
     )
 
 
