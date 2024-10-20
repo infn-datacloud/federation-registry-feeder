@@ -14,7 +14,7 @@ from pytest_cases import parametrize_with_cases
 
 from src.models.provider import Limits
 from src.providers.openstack import OpenstackData
-from tests.schemas.utils import random_lower_string, random_url
+from tests.utils import random_lower_string, random_url
 
 
 class CaseEndpointResp:

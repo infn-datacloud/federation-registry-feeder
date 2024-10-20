@@ -3,7 +3,7 @@ from logging import CRITICAL, DEBUG, ERROR, INFO, NOTSET, WARNING, Logger
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.logger import StderrFilter, StdoutFilter, create_logger
-from tests.schemas.utils import random_lower_string
+from tests.utils import random_lower_string
 
 
 class CaseLevel:

@@ -5,7 +5,8 @@ from pydantic import IPvAnyAddress
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.provider import PrivateNetProxy
-from tests.schemas.utils import private_net_proxy_dict, random_ip, random_lower_string
+from tests.schemas.utils import private_net_proxy_dict
+from tests.utils import random_ip, random_lower_string
 
 
 class CaseHost:

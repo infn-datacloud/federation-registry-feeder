@@ -11,7 +11,8 @@ from tests.providers.openstack.utils import (
     openstack_network_dict,
     random_network_status,
 )
-from tests.schemas.utils import private_net_proxy_dict, random_lower_string
+from tests.schemas.utils import private_net_proxy_dict
+from tests.utils import random_lower_string
 
 
 class CaseTaglist:

@@ -23,7 +23,7 @@ from src.kafka_conn import (
     group_project_quotas,
     send_kafka_messages,
 )
-from tests.schemas.utils import random_lower_string, random_url
+from tests.utils import random_lower_string, random_url
 
 
 class CaseHostname:

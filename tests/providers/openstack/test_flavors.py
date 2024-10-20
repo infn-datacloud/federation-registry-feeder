@@ -9,7 +9,7 @@ from pytest_cases import case, parametrize, parametrize_with_cases
 
 from src.providers.openstack import OpenstackData
 from tests.providers.openstack.utils import openstack_flavor_dict
-from tests.schemas.utils import random_lower_string
+from tests.utils import random_lower_string
 
 
 class CaseExtraSpecs:

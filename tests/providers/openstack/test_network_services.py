@@ -13,7 +13,8 @@ from pytest_cases import case, parametrize_with_cases
 
 from src.models.provider import Limits, PrivateNetProxy
 from src.providers.openstack import OpenstackData
-from tests.schemas.utils import private_net_proxy_dict, random_lower_string, random_url
+from tests.schemas.utils import private_net_proxy_dict
+from tests.utils import random_lower_string, random_url
 
 
 class CaseEndpointResp:

@@ -11,9 +11,9 @@ from tests.schemas.utils import (
     auth_method_dict,
     openstack_dict,
     project_dict,
-    random_lower_string,
     region_dict,
 )
+from tests.utils import random_lower_string
 
 
 class CaseNum:

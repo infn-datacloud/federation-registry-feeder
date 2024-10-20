@@ -16,7 +16,7 @@ from openstack.exceptions import ForbiddenException, HttpException
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.providers.openstack import OpenstackData, OpenstackProviderException
-from tests.schemas.utils import random_lower_string
+from tests.utils import random_lower_string
 
 
 class CaseConnException:

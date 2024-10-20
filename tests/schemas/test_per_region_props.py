@@ -4,11 +4,8 @@ import pytest
 from pytest_cases import parametrize_with_cases
 
 from src.models.provider import Limits, PerRegionProps, PrivateNetProxy
-from tests.schemas.utils import (
-    per_region_props_dict,
-    private_net_proxy_dict,
-    random_lower_string,
-)
+from tests.schemas.utils import per_region_props_dict, private_net_proxy_dict
+from tests.utils import random_lower_string
 
 
 class CaseValidAttr:

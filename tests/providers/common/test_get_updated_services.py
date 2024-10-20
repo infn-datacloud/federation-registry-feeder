@@ -13,21 +13,22 @@ from pytest_cases import case, parametrize_with_cases
 from src.models.identity_provider import Issuer
 from src.models.provider import Kubernetes, Openstack
 from src.providers.core import ProviderThread
+from tests.fed_reg.utils import (
+    random_block_storage_service_name,
+    random_compute_service_name,
+    random_identity_service_name,
+    random_network_service_name,
+    random_object_store_service_name,
+)
 from tests.schemas.utils import (
     auth_method_dict,
     issuer_dict,
     openstack_dict,
     project_dict,
-    random_block_storage_service_name,
-    random_compute_service_name,
-    random_identity_service_name,
-    random_lower_string,
-    random_network_service_name,
-    random_object_store_service_name,
-    random_url,
     sla_dict,
     user_group_dict,
 )
+from tests.utils import random_lower_string, random_url
 
 
 class CaseProviderThread:

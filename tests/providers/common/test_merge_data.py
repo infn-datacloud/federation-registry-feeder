@@ -18,11 +18,10 @@ from tests.schemas.utils import (
     issuer_dict,
     openstack_dict,
     project_dict,
-    random_lower_string,
-    random_url,
     sla_dict,
     user_group_dict,
 )
+from tests.utils import random_lower_string, random_url
 
 
 class CaseProviderThread:

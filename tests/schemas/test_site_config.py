@@ -11,11 +11,10 @@ from tests.schemas.utils import (
     auth_method_dict,
     issuer_dict,
     project_dict,
-    random_lower_string,
-    random_url,
     sla_dict,
     user_group_dict,
 )
+from tests.utils import random_lower_string, random_url
 
 
 class CaseProviderType:

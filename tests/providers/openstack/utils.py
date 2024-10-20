@@ -5,7 +5,8 @@ from uuid import uuid4
 from openstack.image.v2.image import Image
 from openstack.network.v2.network import Network
 
-from tests.schemas.utils import random_float, random_image_os_type, random_lower_string
+from tests.fed_reg.utils import random_image_os_type
+from tests.utils import random_float, random_lower_string
 
 
 def random_image_status(*, exclude: list[str] | None = None) -> str:

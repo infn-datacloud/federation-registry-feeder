@@ -16,8 +16,8 @@ from pytest_cases import case, parametrize, parametrize_with_cases
 from requests.exceptions import ConnectionError, ReadTimeout
 
 from src.fed_reg_conn import CRUD
-from tests.fed_reg.utils import crud_dict, execute_operation, provider_dict
-from tests.schemas.utils import random_lower_string
+from tests.fed_reg.utils import crud_dict, execute_operation, fed_reg_provider_dict
+from tests.utils import random_lower_string
 
 
 class CaseCRUDCreation:
@@ -31,7 +31,7 @@ class CaseReadProviders:
         return []
 
     def case_providers(self) -> list[ProviderRead]:
-        return [ProviderRead(uid=uuid4(), **provider_dict())]
+        return [ProviderRead(uid=uuid4(), **fed_reg_provider_dict())]
 
 
 class CaseConnException:
@@ -123,7 +123,7 @@ def test_read(mock_get: Mock, providers: list[ProviderRead]) -> None:
 @patch("src.fed_reg_conn.requests.post")
 def test_create(mock_post: Mock) -> None:
     crud = CRUD(**crud_dict())
-    provider_create = ProviderCreateExtended(**provider_dict())
+    provider_create = ProviderCreateExtended(**fed_reg_provider_dict())
     provider_read_extended = ProviderReadExtended(uid=uuid4(), **provider_create.dict())
     mock_post.return_value.status_code = status.HTTP_201_CREATED
     mock_post.return_value.json.return_value = jsonable_encoder(provider_read_extended)
@@ -140,7 +140,7 @@ def test_create(mock_post: Mock) -> None:
 )
 def test_remove(mock_delete: Mock) -> None:
     crud = CRUD(**crud_dict())
-    provider_read = ProviderRead(uid=uuid4(), **provider_dict())
+    provider_read = ProviderRead(uid=uuid4(), **fed_reg_provider_dict())
 
     resp_body = crud.remove(item=provider_read)
     mock_delete.return_value.raise_for_status.assert_not_called()
@@ -151,7 +151,7 @@ def test_remove(mock_delete: Mock) -> None:
 @patch("src.fed_reg_conn.requests.put")
 def test_update(mock_put: Mock) -> None:
     crud = CRUD(**crud_dict())
-    provider_create = ProviderCreateExtended(**provider_dict())
+    provider_create = ProviderCreateExtended(**fed_reg_provider_dict())
     provider_read = ProviderRead(uid=uuid4(), **provider_create.dict())
     provider_create.name = random_lower_string()
     new_read_data = ProviderReadExtended(
@@ -172,7 +172,7 @@ def test_update(mock_put: Mock) -> None:
 )
 def test_update_no_changes(mock_put: Mock) -> None:
     crud = CRUD(**crud_dict())
-    provider_create = ProviderCreateExtended(**provider_dict())
+    provider_create = ProviderCreateExtended(**fed_reg_provider_dict())
     provider_read = ProviderRead(uid=uuid4(), **provider_create.dict())
 
     resp_body = crud.update(new_data=provider_create, old_data=provider_read)
@@ -186,7 +186,7 @@ def test_update_no_changes(mock_put: Mock) -> None:
 def test_generic_http_error(error_code: int, operation: str) -> None:
     """Endpoint responds with error codes."""
     crud = CRUD(**crud_dict())
-    provider_create = ProviderCreateExtended(**provider_dict())
+    provider_create = ProviderCreateExtended(**fed_reg_provider_dict())
     provider_read = ProviderRead(uid=uuid4(), **provider_create.dict())
 
     with patch(f"src.fed_reg_conn.requests.{operation}") as mock_req:
@@ -206,7 +206,7 @@ def test_generic_http_error(error_code: int, operation: str) -> None:
 def test_managed_http_error(error_code: int, operation: str) -> None:
     """Endpoint responds with error codes."""
     crud = CRUD(**crud_dict())
-    provider_create = ProviderCreateExtended(**provider_dict())
+    provider_create = ProviderCreateExtended(**fed_reg_provider_dict())
     provider_read = ProviderRead(uid=uuid4(), **provider_create.dict())
 
     with patch(f"src.fed_reg_conn.requests.{operation}") as mock_req:
@@ -233,7 +233,7 @@ def test_read_no_connection(
     This error is not related to a status code.
     """
     crud = CRUD(**crud_dict())
-    provider_create = ProviderCreateExtended(**provider_dict())
+    provider_create = ProviderCreateExtended(**fed_reg_provider_dict())
     provider_read = ProviderRead(uid=uuid4(), **provider_create.dict())
 
     with patch(f"src.fed_reg_conn.requests.{operation}") as mock_req:

@@ -6,13 +6,8 @@ from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
 from pytest_cases import parametrize_with_cases
 
 from src.models.identity_provider import Issuer, UserGroup, retrieve_token
-from tests.schemas.utils import (
-    issuer_dict,
-    random_lower_string,
-    random_url,
-    sla_dict,
-    user_group_dict,
-)
+from tests.schemas.utils import issuer_dict, sla_dict, user_group_dict
+from tests.utils import random_lower_string, random_url
 
 
 class CaseInvalidUserGroups:

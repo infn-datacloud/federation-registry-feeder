@@ -9,9 +9,9 @@ from tests.schemas.utils import (
     auth_method_dict,
     kubernetes_dict,
     project_dict,
-    random_lower_string,
     region_dict,
 )
+from tests.utils import random_lower_string
 
 # TODO: Add BlockStorageVolMap case
 

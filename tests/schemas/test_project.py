@@ -8,8 +8,8 @@ from tests.schemas.utils import (
     per_region_props_dict,
     private_net_proxy_dict,
     project_dict,
-    random_lower_string,
 )
+from tests.utils import random_lower_string
 
 
 class CaseValidAttr:

@@ -9,7 +9,7 @@ from openstack.identity.v3.project import Project as OpenstackProject
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.providers.openstack import OpenstackData
-from tests.schemas.utils import random_lower_string
+from tests.utils import random_lower_string
 
 
 class CaseWithDesc:
