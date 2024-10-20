@@ -232,9 +232,12 @@ class ProviderThread:
         )
         return current_region
 
-    def filter_projects_on_compute_service(
-        self, *, service: ComputeServiceCreateExtended, include_projects: list[str]
-    ) -> tuple[list[FlavorCreateExtended], list[ImageCreateExtended]]:
+    def filter_compute_resources_projects(
+        self,
+        *,
+        items: list[FlavorCreateExtended] | list[ImageCreateExtended],
+        projects: list[str],
+    ) -> list[FlavorCreateExtended] | list[ImageCreateExtended]:
         """Remove from compute resources projects not imported in the Fed-Reg.
 
         Apply the filtering only on private flavors and images.
@@ -243,15 +246,12 @@ class ProviderThread:
         already been discarded, on a specific resource, after the filtering projects,
         there can't be an empty projects list.
         """
-        for flavor in filter(lambda x: not x.is_public, service.flavors):
-            flavor.projects = list(
-                filter(lambda x: x in include_projects, flavor.projects)
-            )
-        for image in filter(lambda x: not x.is_public, service.images):
-            image.projects = list(
-                filter(lambda x: x in include_projects, image.projects)
-            )
-        return service.flavors, service.images
+        for item in items:
+            if not item.is_public:
+                item.projects = list(
+                    filter(lambda x, projects=projects: x in projects, item.projects)
+                )
+        return items
 
     def merge_data(
         self,
@@ -283,11 +283,12 @@ class ProviderThread:
         # Filter non-federated projects from shared resources
         for region in regions.values():
             for service in region.compute_services:
-                flavors, images = self.filter_projects_on_compute_service(
-                    service=service, include_projects=projects.keys()
+                service.flavors = self.filter_compute_resources_projects(
+                    service=service.flavors, projects=projects.keys()
                 )
-                service.flavors = flavors
-                service.images = images
+                service.images = self.filter_compute_resources_projects(
+                    service=service.images, projects=projects.keys()
+                )
 
         return identity_providers.values(), projects.values(), regions.values()
 
