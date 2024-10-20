@@ -7,7 +7,6 @@ from fed_reg.provider.schemas_extended import (
     ComputeServiceCreateExtended,
     FlavorCreateExtended,
     IdentityProviderCreateExtended,
-    IdentityServiceCreate,
     ImageCreateExtended,
     NetworkServiceCreateExtended,
     ObjectStoreServiceCreateExtended,
@@ -124,6 +123,84 @@ class ProviderThread:
             current_idp.user_groups.append(new_idp.user_groups[0])
         return current_idp
 
+    def get_updated_resources(
+        self,
+        *,
+        current_resources: list[FlavorCreateExtended]
+        | list[ImageCreateExtended]
+        | list[NetworkServiceCreateExtended],
+        new_resources: list[FlavorCreateExtended]
+        | list[ImageCreateExtended]
+        | list[NetworkServiceCreateExtended],
+    ) -> (
+        list[FlavorCreateExtended]
+        | list[ImageCreateExtended]
+        | list[NetworkServiceCreateExtended]
+    ):
+        """Update Compute services.
+
+        If the service does not exist, add it; otherwise, add new quotas, flavors and
+        images.
+        """
+        curr_uuids = [i.uuid for i in current_resources]
+        current_resources += list(
+            filter(lambda x, uuids=curr_uuids: x.uuid not in uuids, new_resources)
+        )
+        return current_resources
+
+    def get_updated_services(
+        self,
+        *,
+        current_services: list[BlockStorageServiceCreateExtended]
+        | list[ComputeServiceCreateExtended]
+        | list[NetworkServiceCreateExtended]
+        | list[ObjectStoreServiceCreateExtended],
+        new_services: list[BlockStorageServiceCreateExtended]
+        | list[ComputeServiceCreateExtended]
+        | list[NetworkServiceCreateExtended]
+        | list[ObjectStoreServiceCreateExtended],
+    ) -> (
+        list[BlockStorageServiceCreateExtended]
+        | list[ComputeServiceCreateExtended]
+        | list[NetworkServiceCreateExtended]
+        | list[ObjectStoreServiceCreateExtended]
+    ):
+        """Update Object store services.
+
+        If the service does not exist, add it; otherwise, add new quotas and resources.
+        """
+        for new_service in new_services:
+            for service in current_services:
+                if service.endpoint == new_service.endpoint:
+                    if isinstance(
+                        service,
+                        (
+                            BlockStorageServiceCreateExtended,
+                            ComputeServiceCreateExtended,
+                            NetworkServiceCreateExtended,
+                            ObjectStoreServiceCreateExtended,
+                        ),
+                    ):
+                        service.quotas += new_service.quotas
+                    if isinstance(service, ComputeServiceCreateExtended):
+                        service.flavors = self.get_updated_resources(
+                            current_resources=service.flavors,
+                            new_resources=new_service.flavors,
+                        )
+                        service.images = self.get_updated_resources(
+                            current_resources=service.images,
+                            new_resources=new_service.images,
+                        )
+                    if isinstance(service, NetworkServiceCreateExtended):
+                        service.networks = self.get_updated_resources(
+                            current_resources=service.networks,
+                            new_resources=new_service.networks,
+                        )
+                    break
+            else:
+                current_services.append(new_service)
+        return current_services
+
     def get_updated_region(
         self,
         *,
@@ -133,145 +210,27 @@ class ProviderThread:
         """Update region services."""
         if current_region is None:
             return new_region
-        current_region.block_storage_services = (
-            self.update_region_block_storage_services(
-                current_services=current_region.block_storage_services,
-                new_services=new_region.block_storage_services,
-            )
+        current_region.block_storage_services = self.get_updated_services(
+            current_services=current_region.block_storage_services,
+            new_services=new_region.block_storage_services,
         )
-        current_region.compute_services = self.update_region_compute_services(
+        current_region.compute_services = self.get_updated_services(
             current_services=current_region.compute_services,
             new_services=new_region.compute_services,
         )
-        current_region.identity_services = self.update_region_identity_services(
+        current_region.identity_services = self.get_updated_services(
             current_services=current_region.identity_services,
             new_services=new_region.identity_services,
         )
-        current_region.network_services = self.update_region_network_services(
+        current_region.network_services = self.get_updated_services(
             current_services=current_region.network_services,
             new_services=new_region.network_services,
         )
-        current_region.object_store_services = self.update_region_object_store_services(
+        current_region.object_store_services = self.get_updated_services(
             current_services=current_region.object_store_services,
             new_services=new_region.object_store_services,
         )
         return current_region
-
-    def update_region_block_storage_services(
-        self,
-        *,
-        current_services: list[BlockStorageServiceCreateExtended],
-        new_services: list[BlockStorageServiceCreateExtended],
-    ) -> list[BlockStorageServiceCreateExtended]:
-        """Update Block Storage services.
-
-        If the service does not exist, add it; otherwise, add new quotas.
-        """
-        for new_service in new_services:
-            for service in current_services:
-                if service.endpoint == new_service.endpoint:
-                    service.quotas += new_service.quotas
-                    break
-            else:
-                current_services.append(new_service)
-        return current_services
-
-    def update_region_compute_services(
-        self,
-        *,
-        current_services: list[ComputeServiceCreateExtended],
-        new_services: list[ComputeServiceCreateExtended],
-    ) -> list[ComputeServiceCreateExtended]:
-        """Update Compute services.
-
-        If the service does not exist, add it; otherwise, add new quotas, flavors and
-        images.
-        """
-        for new_service in new_services:
-            for service in current_services:
-                if service.endpoint == new_service.endpoint:
-                    curr_uuids = [i.uuid for i in service.flavors]
-                    service.flavors += list(
-                        filter(
-                            lambda x, uuids=curr_uuids: x.uuid not in uuids,
-                            new_service.flavors,
-                        )
-                    )
-                    curr_uuids = [i.uuid for i in service.images]
-                    service.images += list(
-                        filter(
-                            lambda x, uuids=curr_uuids: x.uuid not in uuids,
-                            new_service.images,
-                        )
-                    )
-                    service.quotas += new_service.quotas
-                    break
-            else:
-                current_services.append(new_service)
-        return current_services
-
-    def update_region_identity_services(
-        self,
-        *,
-        current_services: list[IdentityServiceCreate],
-        new_services: list[IdentityServiceCreate],
-    ) -> list[IdentityServiceCreate]:
-        """Update Identity services.
-
-        If the service does not exist, add it.
-        """
-        for new_service in new_services:
-            for service in current_services:
-                if service.endpoint == new_service.endpoint:
-                    break
-            else:
-                current_services.append(new_service)
-        return current_services
-
-    def update_region_network_services(
-        self,
-        *,
-        current_services: list[NetworkServiceCreateExtended],
-        new_services: list[NetworkServiceCreateExtended],
-    ) -> list[NetworkServiceCreateExtended]:
-        """Update Network services.
-
-        If the service does not exist, add it; otherwise, add new quotas and networks.
-        """
-        for new_service in new_services:
-            for service in current_services:
-                if service.endpoint == new_service.endpoint:
-                    curr_uuids = [i.uuid for i in service.networks]
-                    service.networks += list(
-                        filter(
-                            lambda x, uuids=curr_uuids: x.uuid not in uuids,
-                            new_service.networks,
-                        )
-                    )
-                    service.quotas += new_service.quotas
-                    break
-            else:
-                current_services.append(new_service)
-        return current_services
-
-    def update_region_object_store_services(
-        self,
-        *,
-        current_services: list[ObjectStoreServiceCreateExtended],
-        new_services: list[ObjectStoreServiceCreateExtended],
-    ) -> list[ObjectStoreServiceCreateExtended]:
-        """Update Object store services.
-
-        If the service does not exist, add it; otherwise, add new quotas and networks.
-        """
-        for new_service in new_services:
-            for service in current_services:
-                if service.endpoint == new_service.endpoint:
-                    service.quotas += new_service.quotas
-                    break
-            else:
-                current_services.append(new_service)
-        return current_services
 
     def filter_projects_on_compute_service(
         self, *, service: ComputeServiceCreateExtended, include_projects: list[str]
