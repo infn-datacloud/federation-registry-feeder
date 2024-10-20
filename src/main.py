@@ -47,9 +47,8 @@ def main(log_level: str) -> None:
         hostname=settings.KAFKA_HOSTNAME, topic=settings.KAFKA_TOPIC, logger=logger
     )
     if kafka_prod is not None:
-        for provider in providers:
-            # Send data to kafka
-            send_kafka_messages(kafka_prod=kafka_prod, provider=provider)
+        # Send data to kafka
+        send_kafka_messages(kafka_prod=kafka_prod, providers=providers)
 
     # Update the Federation-Registry
     token = site_configs[0].trusted_idps[0].token if len(site_configs) > 0 else ""

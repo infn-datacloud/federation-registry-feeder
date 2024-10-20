@@ -3,8 +3,13 @@ from logging import Logger
 from typing import Any
 
 from fed_reg.provider.schemas_extended import (
+    BlockStorageQuotaCreateExtended,
+    ComputeQuotaCreateExtended,
     IdentityProviderCreateExtended,
+    NetworkQuotaCreateExtended,
+    ObjectStoreQuotaCreateExtended,
     ProviderCreateExtended,
+    RegionCreateExtended,
 )
 from kafka import KafkaProducer
 from kafka.errors import NoBrokersAvailable
@@ -58,57 +63,63 @@ def find_issuer_and_user_group(
         for user_group in issuer.user_groups:
             if project == user_group.sla.project:
                 return str(issuer.endpoint), user_group.name
+    raise ValueError(f"No user group has an SLA matching project {project}")
 
 
-def send_kafka_messages(*, kafka_prod: Producer, provider: ProviderCreateExtended):
+def get_service_quotas(
+    quota: BlockStorageQuotaCreateExtended
+    | ComputeQuotaCreateExtended
+    | NetworkQuotaCreateExtended
+    | ObjectStoreQuotaCreateExtended,
+) -> dict[str, Any]:
+    data = {}
+    exclude_attr = {"description", "per_user", "project", "type", "usage"}
+    qtype = quota.type.replace("-", "_")
+    for k, v in quota.dict(exclude=exclude_attr).items():
+        if quota.usage:
+            data[f"{qtype}_usage_{k}"] = v
+        else:
+            data[f"{qtype}_limit_{k}"] = v
+    return data
+
+
+def group_project_quotas(region: RegionCreateExtended) -> dict[str, Any]:
+    project_quotas = {}
+    services = [
+        *region.block_storage_services,
+        *region.compute_services,
+        *region.network_services,
+        *region.object_store_services,
+    ]
+    for service in services:
+        service_type = service.type.replace("-", "_")
+        service_endpoint = str(service.endpoint)
+        service_data = {f"{service_type}_service": service_endpoint}
+        for quota in service.quotas:
+            qdata = get_service_quotas(quota)
+            project_quotas[quota.project] = project_quotas.get(quota.project, {})
+            project_quotas[quota.project].update(service_data)
+            project_quotas[quota.project].update(qdata)
+    return project_quotas
+
+
+def send_kafka_messages(
+    *, kafka_prod: Producer, providers: list[ProviderCreateExtended]
+):
     """Organize quotas data and send them to kafka."""
-    for region in provider.regions:
-        data_list = {}
-        for service in [
-            *region.block_storage_services,
-            *region.compute_services,
-            *region.network_services,
-            *region.object_store_services,
-        ]:
-            service_type = service.type.replace("-", "_")
-            service_endpoint = str(service.endpoint)
-            for quota in service.quotas:
-                data_list[quota.project] = data_list.get(quota.project, {})
-                data_list[quota.project][service_endpoint] = data_list[
-                    quota.project
-                ].get(
-                    service_endpoint,
-                    {f"{service_type}_service": service_endpoint},
+    for provider in providers:
+        for region in provider.regions:
+            project_quotas = group_project_quotas(region)
+            for project, values in project_quotas.items():
+                issuer, user_group = find_issuer_and_user_group(
+                    identity_providers=provider.identity_providers, project=project
                 )
-                for k, v in quota.dict(
-                    exclude={
-                        "description",
-                        "per_user",
-                        "project",
-                        "type",
-                        "usage",
-                    }
-                ).items():
-                    if quota.usage:
-                        data_list[quota.project][service_endpoint][
-                            f"{service_type}_usage_{k}"
-                        ] = v
-                    else:
-                        data_list[quota.project][service_endpoint][
-                            f"{service_type}_limit_{k}"
-                        ] = v
-
-        for project, value in data_list.items():
-            issuer, user_group = find_issuer_and_user_group(
-                identity_providers=provider.identity_providers, project=project
-            )
-            msg_data = {
-                "provider": provider.name,
-                "region": region.name,
-                "project": project,
-                "issuer": issuer,
-                "user_group": user_group,
-            }
-            for data in value.values():
-                msg_data = {**msg_data, **data}
-            kafka_prod.send(msg_data)
+                msg_data = {
+                    "provider": provider.name,
+                    "region": region.name,
+                    "project": project,
+                    "issuer": issuer,
+                    "user_group": user_group,
+                    **values,
+                }
+                kafka_prod.send(msg_data)
