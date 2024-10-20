@@ -1,4 +1,4 @@
-from logging import CRITICAL, DEBUG, ERROR, INFO, NOTSET, WARNING, Logger
+from logging import CRITICAL, DEBUG, ERROR, INFO, NOTSET, WARNING, Logger, getLevelName
 
 from pytest_cases import parametrize, parametrize_with_cases
 
@@ -8,7 +8,11 @@ from tests.utils import random_lower_string
 
 class CaseLevel:
     @parametrize(level=(NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL))
-    def case_level(self, level: int) -> int:
+    def case_level_int(self, level: int) -> int:
+        return level
+
+    @parametrize(level=("NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"))
+    def case_level_str(self, level: str) -> str:
         return level
 
 
@@ -24,9 +28,12 @@ def test_logger() -> None:
 
 
 @parametrize_with_cases("level", cases=CaseLevel)
-def test_level(level: int) -> None:
+def test_level(level: int | str) -> None:
     logger = create_logger(random_lower_string(), level)
-    assert logger.level == level
+    if isinstance(level, str):
+        assert getLevelName(logger.level) == level
+    else:
+        assert logger.level == level
 
 
 def test_invalid_level(caplog) -> None:
