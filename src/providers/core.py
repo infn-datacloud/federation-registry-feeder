@@ -84,9 +84,7 @@ class ProviderThread:
                                 }
                             ],
                         )
-        raise ValueError(
-            f"No SLA matches project's doc_uuid `{self.provider_conf.projects[0].sla}`"
-        )
+        raise ValueError(f"No SLA matches project's doc_uuid `{project_sla}`")
 
     def get_auth_method_matching_issuer(
         self, issuer_endpoint: AnyHttpUrl
