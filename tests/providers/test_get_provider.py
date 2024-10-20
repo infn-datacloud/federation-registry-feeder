@@ -76,7 +76,7 @@ class CaseThreadConnError:
 
 
 @parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
-@parametrize_with_cases("status", cases=CaseProviderStatus)
+@parametrize_with_cases("status", cases=CaseProviderStatus, has_tag="inactive")
 def test_get_non_active_provider(provider_thread_item: ProviderThread, status: str):
     """Provider is not Active or it has no project matching SLA in the issuer."""
     provider_thread_item.provider_conf.status = status
