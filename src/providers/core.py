@@ -354,7 +354,7 @@ class ProviderThread:
             type=self.provider_conf.type,
             is_public=self.provider_conf.is_public,
             support_emails=self.provider_conf.support_emails,
-            status=self.provider_conf.status,
+            status=ProviderStatus.LIMITED if self.error else self.provider_conf.status,
             identity_providers=identity_providers,
             projects=projects,
             regions=regions,
