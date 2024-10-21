@@ -1,36 +1,33 @@
-from typing import Dict, Literal, Optional, Tuple, Union
+from typing import Literal
 
 import pytest
 from pytest_cases import parametrize_with_cases
 
 from src.models.provider import Limits, PerRegionProps, PrivateNetProxy
-from tests.schemas.utils import random_lower_string
+from tests.schemas.utils import per_region_props_dict, private_net_proxy_dict
+from tests.utils import random_lower_string
 
 
 class CaseValidAttr:
+    def case_default_public_net(self) -> tuple[Literal["default_public_net"], str]:
+        return "default_public_net", random_lower_string()
+
+    def case_default_private_net(self) -> tuple[Literal["default_private_net"], str]:
+        return "default_private_net", random_lower_string()
+
     def case_private_net_proxy(
-        self, net_proxy: PrivateNetProxy
-    ) -> Tuple[Literal["private_net_proxy"], PrivateNetProxy]:
-        return "private_net_proxy", net_proxy
+        self,
+    ) -> tuple[Literal["private_net_proxy"], PrivateNetProxy]:
+        return "private_net_proxy", PrivateNetProxy(**private_net_proxy_dict())
 
-    def case_per_user_limits(
-        self, limits: Limits
-    ) -> Tuple[Literal["per_user_limits"], Limits]:
-        return "per_user_limits", limits
-
-
-def per_region_props_dict() -> Dict[str, str]:
-    return {
-        "region_name": random_lower_string(),
-        "default_public_net": random_lower_string(),
-        "default_private_net": random_lower_string(),
-    }
+    def case_per_user_limits(self) -> tuple[Literal["per_user_limits"], Limits]:
+        return "per_user_limits", Limits()
 
 
 @parametrize_with_cases("key, value", cases=CaseValidAttr)
 def test_net_proxy_schema(
     key: str,
-    value: Optional[Union[PrivateNetProxy, PerRegionProps]],
+    value: PrivateNetProxy | PerRegionProps | str,
 ) -> None:
     """Valid PerRegionProps schema."""
     d = per_region_props_dict()

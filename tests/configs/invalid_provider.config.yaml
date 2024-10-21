@@ -1,4 +1,0 @@
-# Miss required user groups. Invalid YAML
-trusted_idps:
-  - issuer: https://idp.test.com/
-    group_claim: groups

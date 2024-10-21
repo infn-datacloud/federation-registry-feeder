@@ -1,5 +1,4 @@
 import subprocess
-from typing import List
 
 from fed_reg.provider.schemas_extended import IdentityProviderCreate, find_duplicates
 from fed_reg.sla.schemas import SLABase
@@ -7,7 +6,7 @@ from fed_reg.user_group.schemas import UserGroupBase
 from liboidcagent import get_access_token_by_issuer_url
 from pydantic import AnyHttpUrl, Field, validator
 
-from src.config import get_settings
+from src.models.config import get_settings
 
 
 def retrieve_token(endpoint: str):
@@ -41,23 +40,23 @@ def retrieve_token(endpoint: str):
 
 
 class SLA(SLABase):
-    projects: List[str] = Field(
-        default_factory=list, description="List of projects UUID"
+    projects: list[str] = Field(
+        default_factory=list, description="list of projects UUID"
     )
 
     @validator("projects")
     @classmethod
-    def validate_projects(cls, v: List[str]) -> List[str]:
+    def validate_projects(cls, v: list[str]) -> list[str]:
         find_duplicates(v)
         return v
 
 
 class UserGroup(UserGroupBase):
-    slas: List[SLA] = Field(description="List of SLAs")
+    slas: list[SLA] = Field(description="list of SLAs")
 
     @validator("slas")
     @classmethod
-    def validate_slas(cls, v: List[SLA]) -> List[SLA]:
+    def validate_slas(cls, v: list[SLA]) -> list[SLA]:
         find_duplicates(v, "doc_uuid")
         return v
 
@@ -65,11 +64,11 @@ class UserGroup(UserGroupBase):
 class Issuer(IdentityProviderCreate):
     endpoint: AnyHttpUrl = Field(description="issuer url", alias="issuer")
     token: str = Field(default="", description="Access token")
-    user_groups: List[UserGroup] = Field(description="User groups")
+    user_groups: list[UserGroup] = Field(description="User groups")
 
     @validator("user_groups")
     @classmethod
-    def validate_user_groups(cls, v: List[UserGroup]) -> List[UserGroup]:
+    def validate_user_groups(cls, v: list[UserGroup]) -> list[UserGroup]:
         """Verify the list is not empty and there are no duplicates."""
         find_duplicates(v, "name")
         assert len(v), "Identity provider's user group list can't be empty"

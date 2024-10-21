@@ -1,49 +1,92 @@
-import logging
 import os
+from logging import getLogger
 from pathlib import Path
-from typing import List
+from typing import Any
 from unittest.mock import Mock, patch
 
-import pytest
-from pytest_cases import case, parametrize, parametrize_with_cases
+from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
+from pydantic import ValidationError
+from pytest_cases import parametrize_with_cases
 
-from src.config import Settings
-from src.models.config import SiteConfig
+from src.models.config import APIVersions, Settings
+from src.models.site_config import SiteConfig
 from src.utils import (
     get_conf_files,
-    get_read_write_headers,
     get_site_configs,
     infer_service_endpoints,
     load_config,
 )
-from tests.schemas.utils import random_lower_string
+from tests.schemas.utils import (
+    auth_method_dict,
+    issuer_dict,
+    kubernetes_dict,
+    openstack_dict,
+    project_dict,
+    sla_dict,
+    user_group_dict,
+)
+from tests.utils import random_lower_string
 
 
 class CaseYamlFiles:
-    @case(tags=["num-items"])
-    @parametrize(num_items=[0, 1])
-    def case_yaml_files(self, num_items: int) -> List[str]:
-        return [str(i) for i in range(num_items)]
+    def case_no_providers(self) -> dict[str, Any]:
+        sla = sla_dict()
+        issuer = issuer_dict()
+        issuer["user_groups"] = [{**user_group_dict(), "slas": [sla]}]
+        return {"trusted_idps": [issuer]}
 
-    @case(tags=["fname"])
-    @parametrize(fname=["valid_provider", "invalid_provider", "empty_provider"])
-    def case_conf_fname(self, fname: str) -> str:
-        return fname
+    def case_openstack(self) -> dict[str, Any]:
+        sla = sla_dict()
+        issuer = issuer_dict()
+        issuer["user_groups"] = [{**user_group_dict(), "slas": [sla]}]
+        auth_method = auth_method_dict()
+        auth_method["endpoint"] = issuer["issuer"]
+        project = project_dict()
+        project["sla"] = sla["doc_uuid"]
+        provider = openstack_dict()
+        provider["identity_providers"] = [auth_method]
+        provider["projects"] = [project]
+        return {"trusted_idps": [issuer], "openstack": [provider]}
+
+    def case_k8s(self) -> dict[str, Any]:
+        sla = sla_dict()
+        issuer = issuer_dict()
+        issuer["user_groups"] = [{**user_group_dict(), "slas": [sla]}]
+        auth_method = auth_method_dict()
+        auth_method["endpoint"] = issuer["issuer"]
+        project = project_dict()
+        project["sla"] = sla["doc_uuid"]
+        provider = kubernetes_dict()
+        provider["identity_providers"] = [auth_method]
+        provider["projects"] = [project]
+        return {"trusted_idps": [issuer], "kubernetes": [provider]}
 
 
-def test_infer_fed_reg_urls(settings: Settings) -> None:
+class CaseSiteConfigError:
+    def case_validation_error(self) -> type[ValidationError]:
+        return ValidationError([], SiteConfig)
+
+    def case_oidc_agent_conn_error(self) -> type[OidcAgentConnectError]:
+        return OidcAgentConnectError(random_lower_string())
+
+    def case_oidc_agent_error(self) -> type[OidcAgentError]:
+        return OidcAgentError(random_lower_string())
+
+
+def test_infer_fed_reg_urls() -> None:
     """Verify fed-reg endpoints detection.
 
     Inferred urls are made up combining the fed-reg base url, api version and target
     entity (lower case).
     """
-    endpoints = infer_service_endpoints(settings=settings, logger=logging.getLogger())
+    settings = Settings(api_ver=APIVersions())
+    endpoints = infer_service_endpoints(settings=settings, logger=getLogger())
     for k, v in endpoints.dict().items():
         version = settings.api_ver.__getattribute__(k.upper())
         assert v == os.path.join(settings.FED_REG_API_URL, f"{version}", f"{k}")
 
 
-def test_conf_file_retrieval(tmp_path: Path, settings: Settings) -> None:
+def test_conf_file_retrieval(tmp_path: Path) -> None:
     """Load yaml files from target folder.
 
     Discard files with wrong extension.
@@ -54,66 +97,94 @@ def test_conf_file_retrieval(tmp_path: Path, settings: Settings) -> None:
     for fname in fnames:
         f = d / fname
         f.write_text("")
+    settings = Settings(api_ver=APIVersions())
     settings.PROVIDERS_CONF_DIR = d
-    yaml_files = get_conf_files(settings=settings, logger=logging.getLogger())
+
+    yaml_files = get_conf_files(settings=settings, logger=getLogger())
     assert len(yaml_files) == 1
     assert yaml_files[0] == os.path.join(settings.PROVIDERS_CONF_DIR, fnames[0])
 
 
-def test_invalid_conf_dir(settings: Settings) -> None:
+@patch("src.utils.os.listdir")
+def test_invalid_conf_dir(mock_listdir: Mock) -> None:
     """Invalid conf dir."""
+    mock_listdir.side_effect = FileNotFoundError
+    settings = Settings(api_ver=APIVersions())
     settings.PROVIDERS_CONF_DIR = "invalid_path"
-    with pytest.raises(FileNotFoundError):
-        get_conf_files(settings=settings, logger=logging.getLogger())
+    yaml_files = get_conf_files(settings=settings, logger=getLogger())
+    assert len(yaml_files) == 0
 
 
-@patch(
-    "src.models.identity_provider.retrieve_token", return_value=random_lower_string()
-)
-@parametrize_with_cases("fname", cases=CaseYamlFiles, has_tag="fname")
-def test_load_config_yaml(mock_cmd: Mock, fname: str) -> None:
+@parametrize_with_cases("yaml_content", cases=CaseYamlFiles)
+@patch("src.models.identity_provider.retrieve_token")
+@patch("src.utils.open")
+@patch("src.utils.yaml.load")
+def test_load_yaml(
+    mock_yaml: Mock, mock_open: Mock, mock_token: Mock, yaml_content: dict[str, Any]
+) -> None:
     """Load provider configuration from yaml file."""
-    fpath = f"tests/configs/{fname}.config.yaml"
-    config = load_config(fname=fpath)
-    assert config if fname == "valid_provider" else not config
+    mock_yaml.return_value = yaml_content
+    mock_token.return_value = random_lower_string()
+
+    config = load_config(fname=random_lower_string())
+    assert config
 
 
-def test_load_config_yaml_invalid_path() -> None:
+@patch("src.utils.open")
+def test_load_yaml_invalid_path(mock_open: Mock) -> None:
     """Load provider configuration from yaml file."""
-    with pytest.raises(FileNotFoundError):
-        load_config(fname="invalid_path")
+    mock_open.side_effect = FileNotFoundError
+    assert not load_config(fname="invalid_path")
 
 
-def test_load_config_yaml_invalid_yaml(tmp_path: Path) -> None:
+@patch("src.models.identity_provider.retrieve_token")
+@patch("src.utils.open")
+@patch("src.utils.yaml.load")
+def test_load_yaml_empty(mock_yaml: Mock, mock_open: Mock, mock_token: Mock) -> None:
     """Load provider configuration from yaml file."""
-    fname = tmp_path / "test.config.yaml"
-    fname.write_text("")
-    assert not load_config(fname=fname)
+    mock_yaml.return_value = None
+    mock_token.return_value = random_lower_string()
+    assert not load_config(fname=random_lower_string())
+
+
+@parametrize_with_cases("error", cases=CaseSiteConfigError)
+@patch("src.models.site_config.SiteConfig.__init__")
+@patch("src.models.identity_provider.retrieve_token")
+@patch("src.utils.open")
+@patch("src.utils.yaml.load")
+def test_load_yaml_invalid_config(
+    mock_yaml: Mock, mock_open: Mock, mock_token: Mock, mock_class: Mock, error: Any
+) -> None:
+    """Load provider configuration from yaml file."""
+    sla = sla_dict()
+    issuer = issuer_dict()
+    issuer["user_groups"] = [{**user_group_dict(), "slas": [sla]}]
+    mock_yaml.return_value = {"trusted_idps": [issuer]}
+    mock_class.side_effect = error
+    mock_token.return_value = random_lower_string()
+    assert not load_config(fname=random_lower_string())
 
 
 @patch("src.utils.load_config")
-@parametrize_with_cases("yaml_files", cases=CaseYamlFiles, has_tag="num-items")
-def test_no_site_configs(mock_load_conf: Mock, yaml_files: List[str]) -> None:
+def test_no_site_configs(mock_load_conf: Mock) -> None:
+    """Error when loading site config.
+
+    Config with errors are not returned and error is True.
+    """
     mock_load_conf.return_value = None
-    site_configs = get_site_configs(yaml_files=yaml_files)
+    site_configs, error = get_site_configs(yaml_files=["test"])
     assert len(site_configs) == 0
+    assert error
 
 
+@parametrize_with_cases("yaml_content", cases=CaseYamlFiles)
+@patch("src.models.identity_provider.retrieve_token")
 @patch("src.utils.load_config")
-def test_get_site_configs(mock_load_conf: Mock, site_config: SiteConfig) -> None:
-    yaml_files = ["test"]
-    mock_load_conf.return_value = site_config
-    site_configs = get_site_configs(yaml_files=yaml_files)
-    assert len(site_configs) == len(yaml_files)
-
-
-def test_headers_creation() -> None:
-    token = "test"
-    (read, write) = get_read_write_headers(token=token)
-    assert read
-    assert write
-    assert "authorization" in read.keys()
-    assert read["authorization"] == f"Bearer {token}"
-    assert "authorization" in write.keys()
-    assert write["authorization"] == f"Bearer {token}"
-    assert write["content-type"] == "application/json"
+def test_get_site_configs(
+    mock_load_conf: Mock, mock_token: Mock, yaml_content: dict[str, Any]
+) -> None:
+    mock_token.return_value = random_lower_string()
+    mock_load_conf.return_value = SiteConfig(**yaml_content)
+    site_configs, error = get_site_configs(yaml_files=["test"])
+    assert len(site_configs) == 1
+    assert not error

@@ -1,6 +1,5 @@
 import os
 from logging import Logger
-from typing import List, Optional
 
 import requests
 from fastapi import status
@@ -11,8 +10,9 @@ from fed_reg.provider.schemas_extended import (
     ProviderReadExtended,
 )
 from pydantic import AnyHttpUrl
+from requests.exceptions import ConnectionError, HTTPError
 
-from src.config import get_settings
+from src.models.config import Settings, URLs
 
 
 class CRUD:
@@ -28,17 +28,23 @@ class CRUD:
         read_headers: dict[str, str],
         write_headers: dict[str, str],
         logger: Logger,
+        settings: Settings,
     ) -> None:
-        settings = get_settings()
         self.multi_url = url
         self.single_url = os.path.join(self.multi_url, "{uid}")
         self.read_headers = read_headers
         self.write_headers = write_headers
         self.logger = logger
-        self.error = False
         self.timeout = settings.FED_REG_TIMEOUT
+        self.error = False
 
-    def read(self) -> List[ProviderRead]:
+    def raise_error(self, resp: requests.Response) -> None:
+        self.error = True
+        self.logger.debug("Status code: %s", resp.status_code)
+        self.logger.debug("Message: %s", resp.text)
+        resp.raise_for_status()
+
+    def read(self) -> list[ProviderRead]:
         """Retrieve all providers from the Federation-Registry."""
         self.logger.info("Looking for all Providers")
         self.logger.debug("Url=%s", self.multi_url)
@@ -51,9 +57,7 @@ class CRUD:
             self.logger.debug(resp.json())
             return [ProviderRead(**i) for i in resp.json()]
 
-        self.logger.debug("Status code: %s", resp.status_code)
-        self.logger.debug("Message: %s", resp.text)
-        resp.raise_for_status()
+        self.raise_error(resp)
 
     def create(self, *, data: ProviderCreateExtended) -> ProviderReadExtended:
         """Create new instance."""
@@ -77,14 +81,12 @@ class CRUD:
             self.error = True
             return None
 
-        self.logger.debug("Status code: %s", resp.status_code)
-        self.logger.debug("Message: %s", resp.text)
-        resp.raise_for_status()
+        self.raise_error(resp)
 
     def remove(self, *, item: ProviderRead) -> None:
         """Remove item."""
         self.logger.info("Removing Provider=%s", item.name)
-        self.logger.debug("Url=%s", self.single_url.format(uid=item.uid))
+        self.logger.debug("Old Url=%s", self.single_url.format(uid=item.uid))
 
         resp = requests.delete(
             url=self.single_url.format(uid=item.uid),
@@ -95,16 +97,14 @@ class CRUD:
             self.logger.info("Provider=%s removed", item.name)
             return None
 
-        self.logger.debug("Status code: %s", resp.status_code)
-        self.logger.debug("Message: %s", resp.text)
-        resp.raise_for_status()
+        self.raise_error(resp)
 
     def update(
         self, *, new_data: ProviderCreateExtended, old_data: ProviderRead
-    ) -> Optional[ProviderReadExtended]:
+    ) -> ProviderReadExtended | None:
         """Update existing instance."""
         self.logger.info("Updating Provider=%s.", new_data.name)
-        self.logger.debug("Url=%s", self.single_url.format(uid=old_data.uid))
+        self.logger.debug("New Url=%s", self.single_url.format(uid=old_data.uid))
         self.logger.debug("New Data=%s", new_data)
 
         resp = requests.put(
@@ -128,6 +128,67 @@ class CRUD:
             self.error = True
             return None
 
-        self.logger.debug("Status code: %s", resp.status_code)
-        self.logger.debug("Message: %s", resp.text)
-        resp.raise_for_status()
+        self.raise_error(resp)
+
+
+def get_read_write_headers(*, token: str) -> tuple[dict[str, str], dict[str, str]]:
+    """From an access token, create the read and write headers."""
+    read_header = {"authorization": f"Bearer {token}"}
+    write_header = {
+        **read_header,
+        "accept": "application/json",
+        "content-type": "application/json",
+    }
+    return (read_header, write_header)
+
+
+def update_database(
+    *,
+    service_api_url: URLs,
+    items: list[ProviderCreateExtended],
+    token: str,
+    logger: Logger,
+    settings: Settings,
+) -> bool:
+    """Update the Federation-Registry data.
+
+    Create the read and write headers to use in requests.
+    Retrieve current providers.
+    For each current federated provider, if a provider with the same name and type
+    already exists, update it, otherwise create a new provider entry with the given
+    data. Once all the current federated providers have been added or updated, remove
+    the remaining providers retrieved from the Federation-Registry, they are no more
+    tracked.
+
+    Return True if no errors happened otherwise False.
+    """
+    if token == "":
+        logger.warning("No token found. Skipping communication with Fed-Reg.")
+        return False
+
+    read_header, write_header = get_read_write_headers(token=token)
+    crud = CRUD(
+        url=service_api_url.providers,
+        read_headers=read_header,
+        write_headers=write_header,
+        logger=logger,
+        settings=settings,
+    )
+
+    logger.info("Retrieving data from Federation-Registry")
+    try:
+        db_items = {db_item.name: db_item for db_item in crud.read()}
+        for item in items:
+            db_item = db_items.pop(item.name, None)
+            if db_item is None or db_item.type != item.type:
+                crud.create(data=item)
+            else:
+                crud.update(new_data=item, old_data=db_item)
+        for db_item in db_items.values():
+            crud.remove(item=db_item)
+    except (ConnectionError, HTTPError) as e:
+        logger.error("Can't connect to Federation Registry.")
+        logger.error(e)
+        return False
+
+    return not crud.error

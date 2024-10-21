@@ -1,12 +1,12 @@
 from random import randint
-from typing import Any, List, Literal, Tuple
+from typing import Literal
 
 import pytest
 from pydantic import AnyHttpUrl, ValidationError
 from pytest_cases import parametrize, parametrize_with_cases
 
-from src.config import APIVersions, Settings
-from tests.schemas.utils import random_url
+from src.models.config import APIVersions, Settings
+from tests.utils import random_url
 
 
 class CaseVersionKey:
@@ -16,44 +16,44 @@ class CaseVersionKey:
 
 
 class CaseSettings:
-    def case_fed_reg_url(self) -> Tuple[Literal["FED_REG_API_URL"], AnyHttpUrl]:
+    def case_fed_reg_url(self) -> tuple[Literal["FED_REG_API_URL"], AnyHttpUrl]:
         return "FED_REG_API_URL", random_url()
 
     def case_vol_labels_single(
         self,
-    ) -> Tuple[Literal["BLOCK_STORAGE_VOL_LABELS"], List[str]]:
+    ) -> tuple[Literal["BLOCK_STORAGE_VOL_LABELS"], list[str]]:
         return "BLOCK_STORAGE_VOL_LABELS", ["first"]
 
     def case_vol_labels_multiple(
         self,
-    ) -> Tuple[Literal["BLOCK_STORAGE_VOL_LABELS"], List[str]]:
+    ) -> tuple[Literal["BLOCK_STORAGE_VOL_LABELS"], list[str]]:
         return "BLOCK_STORAGE_VOL_LABELS", ["a", "b"]
 
     def case_conf_dir(
         self,
-    ) -> Tuple[Literal["PROVIDERS_CONF_DIR"], Literal["/test/path"]]:
+    ) -> tuple[Literal["PROVIDERS_CONF_DIR"], Literal["/test/path"]]:
         return "PROVIDERS_CONF_DIR", "/test/path"
 
     def case_oidc_agent_container(
         self,
-    ) -> Tuple[Literal["OIDC_AGENT_CONTAINER_NAME"], Literal["test-container-name"]]:
+    ) -> tuple[Literal["OIDC_AGENT_CONTAINER_NAME"], Literal["test-container-name"]]:
         return "OIDC_AGENT_CONTAINER_NAME", "test-container-name"
 
 
 class CaseInvalidSettings:
     def case_fed_reg_url_empty_string(
         self,
-    ) -> Tuple[Literal["FED_REG_API_URL"], Literal[""]]:
+    ) -> tuple[Literal["FED_REG_API_URL"], Literal[""]]:
         return "FED_REG_API_URL", ""
 
     def case_fed_reg_url_non_url(
         self,
-    ) -> Tuple[Literal["FED_REG_API_URL"], Literal["test.wrong.url.it"]]:
+    ) -> tuple[Literal["FED_REG_API_URL"], Literal["test.wrong.url.it"]]:
         return "FED_REG_API_URL", "test.wrong.url.it"
 
     def case_oidc_agent_container_empty_string(
         self,
-    ) -> Tuple[Literal["OIDC_AGENT_CONTAINER_NAME"], Literal[""]]:
+    ) -> tuple[Literal["OIDC_AGENT_CONTAINER_NAME"], Literal[""]]:
         return "OIDC_AGENT_CONTAINER_NAME", ""
 
 
@@ -81,42 +81,35 @@ def test_api_versions_invalid_attr(key: str) -> None:
         APIVersions(**d)
 
 
-def test_settings_defaults(api_ver: APIVersions) -> None:
+def test_settings_defaults() -> None:
     """Settings needs at least an APIVersions instance to work."""
+    api_ver = APIVersions()
     settings = Settings(api_ver=api_ver)
-    assert (
-        settings.FED_REG_API_URL == settings.__fields__.get("FED_REG_API_URL").default
-    )
-    assert (
-        settings.BLOCK_STORAGE_VOL_LABELS
-        == settings.__fields__.get("BLOCK_STORAGE_VOL_LABELS").default_factory()
-    )
-    assert (
-        settings.PROVIDERS_CONF_DIR
-        == settings.__fields__.get("PROVIDERS_CONF_DIR").default
-    )
-    assert (
-        settings.OIDC_AGENT_CONTAINER_NAME
-        == settings.__fields__.get("OIDC_AGENT_CONTAINER_NAME").default
-    )
+    assert settings.FED_REG_API_URL == "http://localhost:8000/api"
+    assert settings.BLOCK_STORAGE_VOL_LABELS == []
+    assert settings.PROVIDERS_CONF_DIR == "providers-conf"
+    assert settings.OIDC_AGENT_CONTAINER_NAME is None
+    assert settings.FED_REG_TIMEOUT == 30
+    assert settings.KAFKA_HOSTNAME is None
+    assert settings.KAFKA_TOPIC is None
     assert settings.api_ver == api_ver
 
 
 @parametrize_with_cases("key, value", cases=CaseSettings)
-def test_settings_single_attr(api_ver: APIVersions, key: str, value: Any) -> None:
+def test_settings_single_attr(key: str, value: str) -> None:
     d = {key: value}
-    settings = Settings(api_ver=api_ver, **d)
+    settings = Settings(api_ver=APIVersions(), **d)
     assert settings.__getattribute__(key) == value
 
 
-def test_settings_empty_conf_dir_path(api_ver: APIVersions) -> None:
-    settings = Settings(api_ver=api_ver, PROVIDERS_CONF_DIR="")
+def test_settings_empty_conf_dir_path() -> None:
+    settings = Settings(api_ver=APIVersions(), PROVIDERS_CONF_DIR="")
     assert settings.PROVIDERS_CONF_DIR == "."
 
 
 @parametrize_with_cases("key, value", cases=CaseInvalidSettings)
-def test_settings_invalid_attr(api_ver: APIVersions, key: str, value: Any) -> None:
+def test_settings_invalid_attr(key: str, value: str) -> None:
     """Check APIVersions is case sensitive."""
     d = {key: value}
     with pytest.raises(ValidationError):
-        Settings(api_ver=api_ver, **d)
+        Settings(api_ver=APIVersions(), **d)

@@ -1,50 +1,47 @@
-from typing import Any, Dict, List, Literal, Tuple
-from uuid import UUID, uuid4
+from typing import Any, Literal
 
 import pytest
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.provider import Limits, PerRegionProps, PrivateNetProxy, Project
-from tests.schemas.utils import random_lower_string
+from tests.schemas.utils import (
+    per_region_props_dict,
+    private_net_proxy_dict,
+    project_dict,
+)
+from tests.utils import random_lower_string
 
 
 class CaseValidAttr:
-    def case_default_public_net(self) -> Tuple[Literal["default_public_net"], str]:
+    def case_default_public_net(self) -> tuple[Literal["default_public_net"], str]:
         return "default_public_net", random_lower_string()
 
-    def case_default_private_net(self) -> Tuple[Literal["default_private_net"], str]:
+    def case_default_private_net(self) -> tuple[Literal["default_private_net"], str]:
         return "default_private_net", random_lower_string()
 
     def case_private_net_proxy(
-        self, net_proxy: PrivateNetProxy
-    ) -> Tuple[Literal["private_net_proxy"], PrivateNetProxy]:
-        return "private_net_proxy", net_proxy
+        self,
+    ) -> tuple[Literal["private_net_proxy"], PrivateNetProxy]:
+        return "private_net_proxy", PrivateNetProxy(**private_net_proxy_dict())
 
-    def case_per_user_limits(
-        self, limits: Limits
-    ) -> Tuple[Literal["per_user_limits"], Limits]:
-        return "per_user_limits", limits
+    def case_per_user_limits(self) -> tuple[Literal["per_user_limits"], Limits]:
+        return "per_user_limits", Limits()
 
     def case_per_region_props(
-        self, per_region_props: PerRegionProps
-    ) -> Tuple[Literal["per_region_props"], List[PerRegionProps]]:
-        return "per_region_props", [per_region_props]
+        self,
+    ) -> tuple[Literal["per_region_props"], list[PerRegionProps]]:
+        return "per_region_props", [PerRegionProps(**per_region_props_dict())]
 
 
 class CaseInvalidAttr:
     @parametrize(attr=["id", "sla", "per_user_limits", "per_region_props"])
-    def case_none(self, attr: str) -> Tuple[str, None]:
+    def case_none(self, attr: str) -> tuple[str, None]:
         return attr, None
 
     def case_single_per_region_props(
-        self, per_region_props: PerRegionProps
-    ) -> Tuple[Literal["per_region_props"], PerRegionProps]:
-        return "per_region_props", per_region_props
-
-
-def project_dict() -> Dict[str, UUID]:
-    """Dict with Project minimal attributes."""
-    return {"id": uuid4(), "sla": uuid4()}
+        self,
+    ) -> tuple[Literal["per_region_props"], PerRegionProps]:
+        return "per_region_props", PerRegionProps(**per_region_props_dict())
 
 
 @parametrize_with_cases("key, value", cases=CaseValidAttr)

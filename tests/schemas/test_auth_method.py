@@ -1,25 +1,14 @@
-from typing import Any, Dict
-
 import pytest
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.provider import AuthMethod
-from tests.schemas.utils import random_lower_string, random_url
+from tests.schemas.utils import auth_method_dict
 
 
 class CaseMissingAttr:
     @parametrize(attr=["name", "protocol", "endpoint"])
     def case_missing_attr(self, attr: str) -> str:
         return attr
-
-
-def auth_method_dict() -> Dict[str, Any]:
-    """Dict with AuthMethod minimal attributes."""
-    return {
-        "name": random_lower_string(),
-        "protocol": random_lower_string(),
-        "endpoint": random_url(),
-    }
 
 
 def test_auth_method_schema() -> None:
