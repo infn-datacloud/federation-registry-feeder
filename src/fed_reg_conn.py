@@ -38,6 +38,12 @@ class CRUD:
         self.timeout = settings.FED_REG_TIMEOUT
         self.error = False
 
+    def raise_error(self, resp: requests.Response) -> None:
+        self.error = True
+        self.logger.debug("Status code: %s", resp.status_code)
+        self.logger.debug("Message: %s", resp.text)
+        resp.raise_for_status()
+
     def read(self) -> list[ProviderRead]:
         """Retrieve all providers from the Federation-Registry."""
         self.logger.info("Looking for all Providers")
@@ -51,10 +57,7 @@ class CRUD:
             self.logger.debug(resp.json())
             return [ProviderRead(**i) for i in resp.json()]
 
-        self.error = True
-        self.logger.debug("Status code: %s", resp.status_code)
-        self.logger.debug("Message: %s", resp.text)
-        resp.raise_for_status()
+        self.raise_error(resp)
 
     def create(self, *, data: ProviderCreateExtended) -> ProviderReadExtended:
         """Create new instance."""
@@ -78,15 +81,12 @@ class CRUD:
             self.error = True
             return None
 
-        self.error = True
-        self.logger.debug("Status code: %s", resp.status_code)
-        self.logger.debug("Message: %s", resp.text)
-        resp.raise_for_status()
+        self.raise_error(resp)
 
     def remove(self, *, item: ProviderRead) -> None:
         """Remove item."""
         self.logger.info("Removing Provider=%s", item.name)
-        self.logger.debug("Url=%s", self.single_url.format(uid=item.uid))
+        self.logger.debug("Old Url=%s", self.single_url.format(uid=item.uid))
 
         resp = requests.delete(
             url=self.single_url.format(uid=item.uid),
@@ -97,17 +97,14 @@ class CRUD:
             self.logger.info("Provider=%s removed", item.name)
             return None
 
-        self.error = True
-        self.logger.debug("Status code: %s", resp.status_code)
-        self.logger.debug("Message: %s", resp.text)
-        resp.raise_for_status()
+        self.raise_error(resp)
 
     def update(
         self, *, new_data: ProviderCreateExtended, old_data: ProviderRead
     ) -> ProviderReadExtended | None:
         """Update existing instance."""
         self.logger.info("Updating Provider=%s.", new_data.name)
-        self.logger.debug("Url=%s", self.single_url.format(uid=old_data.uid))
+        self.logger.debug("New Url=%s", self.single_url.format(uid=old_data.uid))
         self.logger.debug("New Data=%s", new_data)
 
         resp = requests.put(
@@ -131,10 +128,7 @@ class CRUD:
             self.error = True
             return None
 
-        self.error = True
-        self.logger.debug("Status code: %s", resp.status_code)
-        self.logger.debug("Message: %s", resp.text)
-        resp.raise_for_status()
+        self.raise_error(resp)
 
 
 def get_read_write_headers(*, token: str) -> tuple[dict[str, str], dict[str, str]]:
