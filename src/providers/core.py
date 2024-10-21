@@ -20,7 +20,7 @@ from src.logger import create_logger
 from src.models.identity_provider import Issuer
 from src.models.provider import AuthMethod, Kubernetes, Openstack, Project
 from src.providers.conn_thread import ConnectionThread
-from src.providers.openstack import OpenstackProviderException
+from src.providers.openstack import OpenstackProviderError
 
 
 class ProviderThread:
@@ -331,7 +331,7 @@ class ProviderThread:
                         )
                     )
                 except (
-                    OpenstackProviderException,
+                    OpenstackProviderError,
                     NotImplementedError,
                     ValueError,
                     AssertionError,

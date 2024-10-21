@@ -8,7 +8,7 @@ from fed_reg.provider.schemas_extended import ProviderCreateExtended
 from src.main import main
 from src.models.config import APIVersions, Settings
 from src.models.site_config import SiteConfig
-from src.providers.openstack import OpenstackProviderException
+from src.providers.openstack import OpenstackProviderError
 from tests.fed_reg.utils import fed_reg_provider_dict, random_provider_status
 from tests.schemas.utils import (
     auth_method_dict,
@@ -117,7 +117,7 @@ def test_error_in_provider_thread(
     We mock call to get_conf_files to avoid to load invalid files in the developer
     filesystem.
     """
-    mock_conn_thread.side_effect = OpenstackProviderException()
+    mock_conn_thread.side_effect = OpenstackProviderError()
     with pytest.raises(SystemExit):
         main(log_level=logging.INFO)
 

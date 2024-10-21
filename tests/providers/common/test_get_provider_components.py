@@ -15,7 +15,7 @@ from fed_reg.provider.schemas_extended import (
 from src.models.identity_provider import Issuer
 from src.models.provider import Kubernetes, Openstack
 from src.providers.conn_thread import ConnectionThread
-from src.providers.openstack import OpenstackProviderException
+from src.providers.openstack import OpenstackProviderError
 from tests.schemas.utils import (
     auth_method_dict,
     issuer_dict,
@@ -133,9 +133,9 @@ def test_openstack_raise_error():
 
     with patch(
         "src.providers.conn_thread.OpenstackData",
-        side_effect=OpenstackProviderException,
+        side_effect=OpenstackProviderError,
     ):
-        with pytest.raises(OpenstackProviderException):
+        with pytest.raises(OpenstackProviderError):
             item.get_provider_components()
 
 

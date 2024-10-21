@@ -13,7 +13,7 @@ from pytest_cases import case, parametrize_with_cases
 from src.models.identity_provider import Issuer
 from src.models.provider import Kubernetes, Openstack
 from src.providers.core import ProviderThread
-from src.providers.openstack import OpenstackProviderException
+from src.providers.openstack import OpenstackProviderError
 from tests.schemas.utils import (
     auth_method_dict,
     issuer_dict,
@@ -71,8 +71,8 @@ class CaseThreadConnError:
     def case_not_implemented(self) -> NotImplementedError:
         return NotImplementedError()
 
-    def case_openstack_data(self) -> OpenstackProviderException:
-        return OpenstackProviderException()
+    def case_openstack_data(self) -> OpenstackProviderError:
+        return OpenstackProviderError()
 
 
 @parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
@@ -230,7 +230,7 @@ def test_no_issuer_and_auth_method_match(provider_thread_item: ProviderThread):
 def test_get_error_from_thread_connection(
     mock_conn_thread_init: Mock,
     provider_thread_item: ProviderThread,
-    error: AssertionError | NotImplementedError | OpenstackProviderException,
+    error: AssertionError | NotImplementedError | OpenstackProviderError,
 ):
     """Provider is Active or it has one project matching the SLA in the issuer."""
     provider_thread_item.provider_conf.projects[0].sla = (

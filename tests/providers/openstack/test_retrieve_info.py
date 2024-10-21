@@ -15,7 +15,7 @@ from keystoneauth1.exceptions.http import GatewayTimeout, NotFound, Unauthorized
 from openstack.exceptions import ForbiddenException, HttpException
 from pytest_cases import parametrize, parametrize_with_cases
 
-from src.providers.openstack import OpenstackData, OpenstackProviderException
+from src.providers.openstack import OpenstackData, OpenstackProviderError
 from tests.utils import random_lower_string
 
 
@@ -247,7 +247,7 @@ def test_project_connection_error(
     )
     openstack_item.get_s3_services = mock_openstack_data.get_s3_services
 
-    with pytest.raises(OpenstackProviderException):
+    with pytest.raises(OpenstackProviderError):
         openstack_item.retrieve_info()
 
     mock_openstack_data.get_project.assert_called()
@@ -301,7 +301,7 @@ def test_block_storage_connection_error(
     )
     openstack_item.get_s3_services = mock_openstack_data.get_s3_services
 
-    with pytest.raises(OpenstackProviderException):
+    with pytest.raises(OpenstackProviderError):
         openstack_item.retrieve_info()
 
     mock_openstack_data.get_project.assert_called()
@@ -357,7 +357,7 @@ def test_compute_connection_error(
     )
     openstack_item.get_s3_services = mock_openstack_data.get_s3_services
 
-    with pytest.raises(OpenstackProviderException):
+    with pytest.raises(OpenstackProviderError):
         openstack_item.retrieve_info()
 
     mock_openstack_data.get_project.assert_called()
@@ -414,7 +414,7 @@ def test_network_connection_error(
     )
     openstack_item.get_s3_services = mock_openstack_data.get_s3_services
 
-    with pytest.raises(OpenstackProviderException):
+    with pytest.raises(OpenstackProviderError):
         openstack_item.retrieve_info()
 
     mock_openstack_data.get_project.assert_called()
@@ -470,7 +470,7 @@ def test_network_connection_error(
 #     )
 #     openstack_item.get_s3_services = mock_openstack_data.get_s3_services
 
-#     with pytest.raises(OpenstackProviderException):
+#     with pytest.raises(OpenstackProviderError):
 #         openstack_item.retrieve_info()
 
 #     mock_openstack_data.get_project.assert_called()
@@ -525,7 +525,7 @@ def test_s3_connection_error(
     )
     openstack_item.get_s3_services = mock_openstack_data.get_s3_services
 
-    with pytest.raises(OpenstackProviderException):
+    with pytest.raises(OpenstackProviderError):
         openstack_item.retrieve_info()
 
     mock_openstack_data.get_project.assert_called()
