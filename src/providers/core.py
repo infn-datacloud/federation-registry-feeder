@@ -313,6 +313,17 @@ class ProviderThread:
             list(regions.values()),
         )
 
+    def retrieve_components(
+        self, item: ConnectionThread
+    ) -> tuple[IdentityProviderCreateExtended, ProjectCreate, RegionCreateExtended]:
+        try:
+            return item.get_provider_components()
+        except (OpenstackProviderError, NotImplementedError) as e:
+            self.error = True
+            self.logger.error(e)
+            self.logger.error("Skipping project")
+        return None
+
     def get_provider(self) -> ProviderCreateExtended:
         """Generate a list of generic providers.
 
@@ -352,18 +363,13 @@ class ProviderThread:
                             log_level=self.log_level,
                         )
                     )
-                except (
-                    OpenstackProviderError,
-                    NotImplementedError,
-                    ValueError,
-                    AssertionError,
-                ) as e:
+                except (ValueError, AssertionError) as e:
                     self.error = True
                     self.logger.error(e)
                     self.logger.error("Skipping project")
 
         with ThreadPoolExecutor() as executor:
-            siblings = executor.map(lambda x: x.get_provider_components(), connections)
+            siblings = executor.map(self.retrieve_components, connections)
         siblings = list(siblings)
         self.error |= any([x.error for x in connections])
 
