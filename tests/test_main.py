@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from fed_reg.provider.schemas_extended import ProviderCreateExtended
+from pytest_cases import parametrize_with_cases
 
 from src.main import main
 from src.models.config import APIVersions, Settings
@@ -19,6 +20,14 @@ from tests.schemas.utils import (
     user_group_dict,
 )
 from tests.utils import random_lower_string, random_url
+
+
+class CaseError:
+    def case_openstack_provider_error(self) -> OpenstackProviderError:
+        return OpenstackProviderError()
+
+    def case_not_implemented(self) -> NotImplementedError:
+        return NotImplementedError
 
 
 def site_config_dict() -> dict[str, Any]:
@@ -117,7 +126,36 @@ def test_error_in_provider_thread(
     We mock call to get_conf_files to avoid to load invalid files in the developer
     filesystem.
     """
-    mock_conn_thread.side_effect = OpenstackProviderError()
+    mock_conn_thread.side_effect = AssertionError
+    with pytest.raises(SystemExit):
+        main(log_level=logging.INFO)
+
+    mock_load_files.assert_called_once()
+    mock_get_configs.assert_called_once()
+    mock_edit_db.assert_called_once()
+
+
+@patch("src.main.update_database", return_value=True)
+@patch("src.main.get_conf_files", return_value=[])
+@patch(
+    "src.main.get_site_configs",
+    return_value=([SiteConfig(**site_config_dict())], False),
+)
+@patch("src.providers.conn_thread.ConnectionThread.get_provider_components")
+@parametrize_with_cases("error", cases=CaseError)
+def test_error_in_get_components(
+    mock_get_components: Mock,
+    mock_get_configs: Mock,
+    mock_load_files: Mock,
+    mock_edit_db: Mock,
+    error: OpenstackProviderError | NotImplementedError,
+) -> None:
+    """No active providers should not raise error.
+
+    We mock call to get_conf_files to avoid to load invalid files in the developer
+    filesystem.
+    """
+    mock_get_components.side_effect = error
     with pytest.raises(SystemExit):
         main(log_level=logging.INFO)
 
