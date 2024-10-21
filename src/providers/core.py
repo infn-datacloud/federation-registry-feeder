@@ -143,6 +143,49 @@ class ProviderThread:
         )
         return current_resources
 
+    def update_service(
+        self,
+        *,
+        curr_service: BlockStorageServiceCreateExtended
+        | ComputeServiceCreateExtended
+        | NetworkServiceCreateExtended
+        | ObjectStoreServiceCreateExtended,
+        new_service: BlockStorageServiceCreateExtended
+        | ComputeServiceCreateExtended
+        | NetworkServiceCreateExtended
+        | ObjectStoreServiceCreateExtended,
+    ) -> (
+        BlockStorageServiceCreateExtended
+        | ComputeServiceCreateExtended
+        | NetworkServiceCreateExtended
+        | ObjectStoreServiceCreateExtended
+    ):
+        if isinstance(
+            curr_service,
+            (
+                BlockStorageServiceCreateExtended,
+                ComputeServiceCreateExtended,
+                NetworkServiceCreateExtended,
+                ObjectStoreServiceCreateExtended,
+            ),
+        ):
+            curr_service.quotas += new_service.quotas
+        if isinstance(curr_service, ComputeServiceCreateExtended):
+            curr_service.flavors = self.get_updated_resources(
+                current_resources=curr_service.flavors,
+                new_resources=new_service.flavors,
+            )
+            curr_service.images = self.get_updated_resources(
+                current_resources=curr_service.images,
+                new_resources=new_service.images,
+            )
+        if isinstance(curr_service, NetworkServiceCreateExtended):
+            curr_service.networks = self.get_updated_resources(
+                current_resources=curr_service.networks,
+                new_resources=new_service.networks,
+            )
+        return curr_service
+
     def get_updated_services(
         self,
         *,
@@ -167,30 +210,9 @@ class ProviderThread:
         for new_service in new_services:
             for service in current_services:
                 if service.endpoint == new_service.endpoint:
-                    if isinstance(
-                        service,
-                        (
-                            BlockStorageServiceCreateExtended,
-                            ComputeServiceCreateExtended,
-                            NetworkServiceCreateExtended,
-                            ObjectStoreServiceCreateExtended,
-                        ),
-                    ):
-                        service.quotas += new_service.quotas
-                    if isinstance(service, ComputeServiceCreateExtended):
-                        service.flavors = self.get_updated_resources(
-                            current_resources=service.flavors,
-                            new_resources=new_service.flavors,
-                        )
-                        service.images = self.get_updated_resources(
-                            current_resources=service.images,
-                            new_resources=new_service.images,
-                        )
-                    if isinstance(service, NetworkServiceCreateExtended):
-                        service.networks = self.get_updated_resources(
-                            current_resources=service.networks,
-                            new_resources=new_service.networks,
-                        )
+                    service = self.update_service(
+                        curr_service=service, new_service=new_service
+                    )
                     break
             else:
                 current_services.append(new_service)
