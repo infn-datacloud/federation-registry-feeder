@@ -81,7 +81,7 @@ def test_provider_schema(region: Region) -> None:
         d["regions"] = region
     item = Provider(**d)
     assert item.name == d.get("name")
-    assert item.type == d.get("type").value
+    assert item.type == d.get("type")
     assert item.auth_url == d.get("auth_url")
     projects = d.get("projects", [])
     assert len(item.projects) == len(projects)

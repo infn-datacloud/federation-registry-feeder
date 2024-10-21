@@ -46,7 +46,7 @@ def test_do_nothing_to_db(
     service_endpoints = URLs(**service_endpoints_dict())
     mock_crud_read.return_value = []
 
-    update_database(
+    assert update_database(
         service_api_url=service_endpoints,
         items=[],
         token=random_lower_string(),
@@ -74,7 +74,7 @@ def test_add_provider_to_db(
     provider_create = ProviderCreateExtended(**fed_reg_provider_dict())
     mock_crud_read.return_value = []
 
-    update_database(
+    assert update_database(
         service_api_url=service_endpoints,
         items=[provider_create],
         token=random_lower_string(),
@@ -102,7 +102,7 @@ def test_delete_provider_from_db(
     provider_read = ProviderRead(uid=uuid4(), **fed_reg_provider_dict())
     mock_crud_read.return_value = [provider_read]
 
-    update_database(
+    assert update_database(
         service_api_url=service_endpoints,
         items=[],
         token=random_lower_string(),
@@ -130,7 +130,7 @@ def test_update_provider_in_db(
     provider_read = ProviderRead(uid=uuid4(), **provider_create.dict())
     mock_crud_read.return_value = [provider_read]
 
-    update_database(
+    assert update_database(
         service_api_url=service_endpoints,
         items=[provider_create],
         token=random_lower_string(),
@@ -159,7 +159,7 @@ def test_read_error(
     provider_create = ProviderCreateExtended(**fed_reg_provider_dict())
     mock_crud_read.side_effect = error
 
-    assert update_database(
+    assert not update_database(
         service_api_url=service_endpoints,
         items=[provider_create],
         token=random_lower_string(),
@@ -189,7 +189,7 @@ def test_create_error(
     mock_crud_read.return_value = []
     mock_crud_create.side_effect = error
 
-    assert update_database(
+    assert not update_database(
         service_api_url=service_endpoints,
         items=[provider_create],
         token=random_lower_string(),
@@ -219,7 +219,7 @@ def test_delete_error(
     mock_crud_read.return_value = [provider_read]
     mock_crud_remove.side_effect = error
 
-    assert update_database(
+    assert not update_database(
         service_api_url=service_endpoints,
         items=[],
         token=random_lower_string(),
@@ -250,7 +250,7 @@ def test_update_error(
     mock_crud_read.return_value = [provider_read]
     mock_crud_update.side_effect = error
 
-    assert update_database(
+    assert not update_database(
         service_api_url=service_endpoints,
         items=[provider_create],
         token=random_lower_string(),
@@ -274,7 +274,7 @@ def test_no_token(
     mock_crud_remove: Mock,
 ) -> None:
     service_endpoints = URLs(**service_endpoints_dict())
-    assert update_database(
+    assert not update_database(
         service_api_url=service_endpoints,
         items=[],
         token="",

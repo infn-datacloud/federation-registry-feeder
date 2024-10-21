@@ -5,7 +5,7 @@ from random import choice
 from typing import Any
 
 from fed_reg.image.enum import ImageOS
-from fed_reg.provider.enum import ProviderType
+from fed_reg.provider.enum import ProviderStatus, ProviderType
 from fed_reg.provider.schemas_extended import ProviderCreateExtended, ProviderRead
 from fed_reg.service.enum import (
     BlockStorageServiceName,
@@ -107,7 +107,15 @@ def random_provider_type(*, exclude: list[str] | None = None) -> str:
     """Return one of the possible provider types."""
     if exclude is None:
         exclude = []
-    choices = set([i for i in ProviderType]) - set(exclude)
+    choices = set([i.value for i in ProviderType]) - set(exclude)
+    return choice(list(choices))
+
+
+def random_provider_status(*, exclude: list[str] | None = None) -> str:
+    """Return one of the possible provider types."""
+    if exclude is None:
+        exclude = []
+    choices = set([i.value for i in ProviderStatus]) - set(exclude)
     return choice(list(choices))
 
 

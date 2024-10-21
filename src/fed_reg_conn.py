@@ -170,7 +170,7 @@ def update_database(
     """
     if token == "":
         logger.warning("No token found. Skipping communication with Fed-Reg.")
-        return True
+        return False
 
     read_header, write_header = get_read_write_headers(token=token)
     crud = CRUD(
@@ -195,6 +195,6 @@ def update_database(
     except (ConnectionError, HTTPError) as e:
         logger.error("Can't connect to Federation Registry.")
         logger.error(e)
-        return True
+        return False
 
-    return crud.error
+    return not crud.error
