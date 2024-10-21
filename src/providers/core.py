@@ -18,7 +18,7 @@ from pydantic import AnyHttpUrl
 
 from src.logger import create_logger
 from src.models.identity_provider import Issuer
-from src.models.provider import AuthMethod, Kubernetes, Openstack, Project
+from src.models.provider import AuthMethod, Kubernetes, Openstack, Project, Region
 from src.providers.conn_thread import ConnectionThread
 from src.providers.openstack import OpenstackProviderError
 
@@ -327,6 +327,30 @@ class ProviderThread:
             self.logger.error("Skipping project")
         return None
 
+    def get_connection_thread(
+        self, *, project: Project, region: Region
+    ) -> ConnectionThread | None:
+        try:
+            project_conf = self.prepare_project_conf(
+                project=project, region_name=region.name
+            )
+            issuer = self.get_issuer_matching_project(project_conf.sla)
+            auth_method = self.get_auth_method_matching_issuer(issuer.endpoint)
+            provider_conf = copy.deepcopy(self.provider_conf)
+            provider_conf.regions = [region]
+            provider_conf.projects = [project_conf]
+            provider_conf.identity_providers = [auth_method]
+            return ConnectionThread(
+                provider_conf=provider_conf,
+                issuer=issuer,
+                log_level=self.log_level,
+            )
+        except (ValueError, AssertionError) as e:
+            self.error = True
+            self.logger.error(e)
+            self.logger.error("Skipping project")
+        return None
+
     def get_provider(self) -> ProviderCreateExtended:
         """Generate a list of generic providers.
 
@@ -349,27 +373,9 @@ class ProviderThread:
         connections: list[ConnectionThread] = []
         for region in self.provider_conf.regions:
             for project in self.provider_conf.projects:
-                try:
-                    project_conf = self.prepare_project_conf(
-                        project=project, region_name=region.name
-                    )
-                    issuer = self.get_issuer_matching_project(project_conf.sla)
-                    auth_method = self.get_auth_method_matching_issuer(issuer.endpoint)
-                    provider_conf = copy.deepcopy(self.provider_conf)
-                    provider_conf.regions = [region]
-                    provider_conf.projects = [project_conf]
-                    provider_conf.identity_providers = [auth_method]
-                    connections.append(
-                        ConnectionThread(
-                            provider_conf=provider_conf,
-                            issuer=issuer,
-                            log_level=self.log_level,
-                        )
-                    )
-                except (ValueError, AssertionError) as e:
-                    self.error = True
-                    self.logger.error(e)
-                    self.logger.error("Skipping project")
+                conn_thread = self.get_connection_thread(project=project, region=region)
+                if conn_thread is not None:
+                    connections.append(conn_thread)
 
         with ThreadPoolExecutor() as executor:
             siblings = executor.map(self.retrieve_components, connections)
