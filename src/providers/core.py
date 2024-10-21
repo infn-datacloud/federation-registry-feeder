@@ -315,7 +315,10 @@ class ProviderThread:
 
     def retrieve_components(
         self, item: ConnectionThread
-    ) -> tuple[IdentityProviderCreateExtended, ProjectCreate, RegionCreateExtended]:
+    ) -> (
+        tuple[IdentityProviderCreateExtended, ProjectCreate, RegionCreateExtended]
+        | None
+    ):
         try:
             return item.get_provider_components()
         except (OpenstackProviderError, NotImplementedError) as e:
@@ -371,6 +374,7 @@ class ProviderThread:
         with ThreadPoolExecutor() as executor:
             siblings = executor.map(self.retrieve_components, connections)
         siblings = list(siblings)
+        siblings = list(filter(lambda x: x is not None, siblings))
         self.error |= any([x.error for x in connections])
 
         # Merge regions, identity providers and projects retrieved from previous
