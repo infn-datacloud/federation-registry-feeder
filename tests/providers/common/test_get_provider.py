@@ -65,12 +65,15 @@ class CaseProviderThread:
 
 
 class CaseThreadConnError:
+    @case(tags="init")
     def case_assertion(self) -> AssertionError:
         return AssertionError()
 
+    @case(tags="get_components")
     def case_not_implemented(self) -> NotImplementedError:
         return NotImplementedError()
 
+    @case(tags="get_components")
     def case_openstack_data(self) -> OpenstackProviderError:
         return OpenstackProviderError()
 
@@ -226,11 +229,11 @@ def test_no_issuer_and_auth_method_match(provider_thread_item: ProviderThread):
 
 @patch("src.providers.core.ConnectionThread.__init__")
 @parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
-@parametrize_with_cases("error", cases=CaseThreadConnError)
+@parametrize_with_cases("error", cases=CaseThreadConnError, has_tag="init")
 def test_get_error_from_thread_connection(
     mock_conn_thread_init: Mock,
     provider_thread_item: ProviderThread,
-    error: AssertionError | NotImplementedError | OpenstackProviderError,
+    error: AssertionError,
 ):
     """Provider is Active or it has one project matching the SLA in the issuer."""
     provider_thread_item.provider_conf.projects[0].sla = (
@@ -240,6 +243,38 @@ def test_get_error_from_thread_connection(
         0
     ].endpoint = provider_thread_item.issuers[0].endpoint
     mock_conn_thread_init.side_effect = error
+
+    item = provider_thread_item.get_provider()
+
+    assert item is not None
+    assert isinstance(item, ProviderCreateExtended)
+    assert item.description == provider_thread_item.provider_conf.description
+    assert item.name == provider_thread_item.provider_conf.name
+    assert item.type == provider_thread_item.provider_conf.type
+    assert item.status == ProviderStatus.LIMITED
+    assert item.is_public == provider_thread_item.provider_conf.is_public
+    assert item.support_emails == provider_thread_item.provider_conf.support_emails
+    assert len(item.regions) == 0
+    assert len(item.projects) == 0
+    assert len(item.identity_providers) == 0
+
+
+@patch("src.providers.core.ConnectionThread.get_provider_components")
+@parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
+@parametrize_with_cases("error", cases=CaseThreadConnError, has_tag="get_components")
+def test_get_error_from_get_provider_components(
+    mock_get_components: Mock,
+    provider_thread_item: ProviderThread,
+    error: NotImplementedError | OpenstackProviderError,
+):
+    """Provider is Active or it has one project matching the SLA in the issuer."""
+    provider_thread_item.provider_conf.projects[0].sla = (
+        provider_thread_item.issuers[0].user_groups[0].slas[0].doc_uuid
+    )
+    provider_thread_item.provider_conf.identity_providers[
+        0
+    ].endpoint = provider_thread_item.issuers[0].endpoint
+    mock_get_components.side_effect = error
 
     item = provider_thread_item.get_provider()
 

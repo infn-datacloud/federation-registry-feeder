@@ -5,6 +5,7 @@ import pytest
 from fed_reg.provider.schemas_extended import (
     ProjectCreate,
 )
+from keystoneauth1.exceptions.connection import ConnectFailure
 from openstack.identity.v3.project import Project as OpenstackProject
 from pytest_cases import parametrize, parametrize_with_cases
 
@@ -54,3 +55,23 @@ def test_retrieve_project(
     assert item.name == openstack_project.name
 
     mock_conn.identity.get_project.assert_called_once()
+
+
+@patch("src.providers.openstack.Connection")
+def test_name_resolution_error(
+    mock_conn: Mock,
+    openstack_project: OpenstackProject,
+    openstack_item: OpenstackData,
+) -> None:
+    """Successful retrieval of a project.
+
+    Project retrieval fail is not tested here. It is tested where the exception is
+    caught: get_data_from_openstack function.
+    """
+    openstack_item.project_conf.id = openstack_project.id
+    mock_conn.identity.get_project.side_effect = ConnectFailure()
+    type(mock_conn).current_project_id = PropertyMock(return_value=openstack_project.id)
+    openstack_item.conn = mock_conn
+
+    with pytest.raises(ConnectFailure):
+        openstack_item.get_project()
