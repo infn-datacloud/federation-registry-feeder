@@ -11,6 +11,8 @@ from fed_reg.provider.schemas_extended import (
     ProjectCreate,
     RegionCreateExtended,
 )
+from keystoneauth1.exceptions.connection import ConnectFailure
+from pytest_cases import parametrize_with_cases
 
 from src.models.identity_provider import Issuer
 from src.models.provider import Kubernetes, Openstack
@@ -26,6 +28,14 @@ from tests.schemas.utils import (
     user_group_dict,
 )
 from tests.utils import random_lower_string
+
+
+class CaseError:
+    def case_openstack_provider_error(self) -> OpenstackProviderError:
+        return OpenstackProviderError()
+
+    def case_connect_failure(self) -> ConnectFailure:
+        return ConnectFailure()
 
 
 @patch("src.providers.conn_thread.OpenstackData")
@@ -112,7 +122,8 @@ def test_get_openstack_components(
     assert region.object_store_services == [s3_service_create]
 
 
-def test_openstack_raise_error():
+@parametrize_with_cases("error", cases=CaseError)
+def test_openstack_raise_error(error: OpenstackProviderError | ConnectFailure):
     provider_conf = Openstack(
         **openstack_dict(),
         identity_providers=[auth_method_dict()],
@@ -133,9 +144,9 @@ def test_openstack_raise_error():
 
     with patch(
         "src.providers.conn_thread.OpenstackData",
-        side_effect=OpenstackProviderError,
+        side_effect=error,
     ):
-        with pytest.raises(OpenstackProviderError):
+        with pytest.raises(type(error)):
             item.get_provider_components()
 
 
