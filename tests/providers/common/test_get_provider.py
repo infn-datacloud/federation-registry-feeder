@@ -1,12 +1,15 @@
 from typing import Literal
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, PropertyMock, patch
 
 from fed_reg.provider.enum import ProviderStatus
 from fed_reg.provider.schemas_extended import (
-    IdentityProviderCreateExtended,
+    BlockStorageServiceCreateExtended,
+    ComputeServiceCreateExtended,
+    IdentityServiceCreate,
+    NetworkServiceCreateExtended,
+    ObjectStoreServiceCreateExtended,
     ProjectCreate,
     ProviderCreateExtended,
-    RegionCreateExtended,
 )
 from pytest_cases import case, parametrize_with_cases
 
@@ -95,47 +98,46 @@ def test_get_non_active_provider(provider_thread_item: ProviderThread, status: s
     assert len(item.identity_providers) == 0
 
 
-@patch("src.providers.core.ConnectionThread.get_provider_components")
+@patch("src.providers.core.ConnectionThread.get_provider_data")
 @parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
-def test_get_provider(mock_siblings: Mock, provider_thread_item: ProviderThread):
+def test_get_provider(
+    mock_openstack_data: Mock,
+    provider_thread_item: ProviderThread,
+    project_create: ProjectCreate,
+    block_storage_service_create: BlockStorageServiceCreateExtended,
+    compute_service_create: ComputeServiceCreateExtended,
+    identity_service_create: IdentityServiceCreate,
+    network_service_create: NetworkServiceCreateExtended,
+    s3_service_create: ObjectStoreServiceCreateExtended,
+):
     """Provider is Active or it has one project matching the SLA in the issuer."""
+    project_create.uuid = provider_thread_item.provider_conf.projects[0].id
     provider_thread_item.provider_conf.projects[0].sla = (
         provider_thread_item.issuers[0].user_groups[0].slas[0].doc_uuid
     )
     provider_thread_item.provider_conf.identity_providers[
         0
     ].endpoint = provider_thread_item.issuers[0].endpoint
-    mock_siblings.return_value = (
-        IdentityProviderCreateExtended(
-            endpoint=provider_thread_item.issuers[0].endpoint,
-            group_claim=provider_thread_item.issuers[0].group_claim,
-            relationship={
-                "protocol": provider_thread_item.provider_conf.identity_providers[
-                    0
-                ].protocol,
-                "idp_name": provider_thread_item.provider_conf.identity_providers[
-                    0
-                ].idp_name,
-            },
-            user_groups=[
-                {
-                    "name": provider_thread_item.issuers[0].user_groups[0].name,
-                    "sla": {
-                        **provider_thread_item.issuers[0].user_groups[0].slas[0].dict(),
-                        "project": provider_thread_item.provider_conf.projects[0].id,
-                    },
-                }
-            ],
-        ),
-        ProjectCreate(
-            name=random_lower_string(),
-            uuid=provider_thread_item.provider_conf.projects[0].id,
-        ),
-        RegionCreateExtended(name=provider_thread_item.provider_conf.regions[0].name),
+
+    type(mock_openstack_data()).project = PropertyMock(return_value=project_create)
+    type(mock_openstack_data()).block_storage_services = PropertyMock(
+        return_value=[block_storage_service_create]
     )
+    type(mock_openstack_data()).compute_services = PropertyMock(
+        return_value=[compute_service_create]
+    )
+    type(mock_openstack_data()).identity_services = PropertyMock(
+        return_value=[identity_service_create]
+    )
+    type(mock_openstack_data()).network_services = PropertyMock(
+        return_value=[network_service_create]
+    )
+    type(mock_openstack_data()).object_store_services = PropertyMock(
+        return_value=[s3_service_create]
+    )
+
     item = provider_thread_item.get_provider()
 
-    mock_siblings.assert_called_once()
     assert not provider_thread_item.error
 
     assert isinstance(item, ProviderCreateExtended)
@@ -250,7 +252,7 @@ def test_get_error_from_thread_connection(
     assert len(item.identity_providers) == 0
 
 
-@patch("src.providers.core.ConnectionThread.get_provider_components")
+@patch("src.providers.core.ConnectionThread.get_provider_data")
 @parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
 @parametrize_with_cases("error", cases=CaseThreadConnError)
 def test_get_error_from_get_provider_components(

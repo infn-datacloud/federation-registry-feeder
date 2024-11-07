@@ -141,7 +141,7 @@ def test_error_in_provider_thread(
     "src.main.get_site_configs",
     return_value=([SiteConfig(**site_config_dict())], False),
 )
-@patch("src.providers.conn_thread.ConnectionThread.get_provider_components")
+@patch("src.providers.conn_thread.ConnectionThread.get_provider_data")
 @parametrize_with_cases("error", cases=CaseError)
 def test_error_in_get_components(
     mock_get_components: Mock,
