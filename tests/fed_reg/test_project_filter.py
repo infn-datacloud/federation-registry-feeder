@@ -8,17 +8,7 @@ from fed_reg.provider.schemas_extended import (
 )
 from pytest_cases import parametrize, parametrize_with_cases
 
-from src.models.identity_provider import Issuer
-from src.models.provider import Kubernetes, Openstack
-from src.providers.core import ProviderThread
-from tests.schemas.utils import (
-    auth_method_dict,
-    issuer_dict,
-    openstack_dict,
-    project_dict,
-    sla_dict,
-    user_group_dict,
-)
+from src.utils import filter_compute_resources_projects
 from tests.utils import random_lower_string
 
 
@@ -57,40 +47,10 @@ class CaseResource:
             return ImageCreateExtended(**d)
 
 
-class CaseProviderThread:
-    def case_openstack(self) -> ProviderThread:
-        provider = Openstack(
-            **openstack_dict(),
-            identity_providers=[auth_method_dict()],
-            projects=[project_dict()],
-        )
-        issuer = Issuer(
-            **issuer_dict(),
-            token=random_lower_string(),
-            user_groups=[{**user_group_dict(), "slas": [sla_dict()]}],
-        )
-        return ProviderThread(provider_conf=provider, issuers=[issuer])
-
-    def case_k8s(self) -> ProviderThread:
-        provider = Kubernetes(
-            **openstack_dict(),
-            identity_providers=[auth_method_dict()],
-            projects=[project_dict()],
-        )
-        issuer = Issuer(
-            **issuer_dict(),
-            token=random_lower_string(),
-            user_groups=[{**user_group_dict(), "slas": [sla_dict()]}],
-        )
-        return ProviderThread(provider_conf=provider, issuers=[issuer])
-
-
-@parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
 @parametrize_with_cases("resource", cases=CaseResource)
 def test_filter_projects(
     compute_service_create: ComputeServiceCreateExtended,
     project_create: ProjectCreate,
-    provider_thread_item: ProviderThread,
     resource: FlavorCreateExtended | ImageCreateExtended,
 ) -> None:
     """
@@ -101,12 +61,12 @@ def test_filter_projects(
     target_projects = [project_create.uuid]
     if isinstance(resource, FlavorCreateExtended):
         compute_service_create.flavors = [resource]
-        updated_items = provider_thread_item.filter_compute_resources_projects(
+        updated_items = filter_compute_resources_projects(
             items=compute_service_create.flavors, projects=target_projects
         )
     elif isinstance(resource, ImageCreateExtended):
         compute_service_create.images = [resource]
-        updated_items = provider_thread_item.filter_compute_resources_projects(
+        updated_items = filter_compute_resources_projects(
             items=compute_service_create.images, projects=target_projects
         )
 
