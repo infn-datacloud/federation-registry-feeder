@@ -53,8 +53,6 @@ class ConnectionThread:
         """
         if isinstance(self.provider_conf, Openstack):
             return OpenstackData(
-                provider_conf=self.provider_conf,
-                token=self.issuer.token,
-                logger=self.logger,
+                provider_conf=self.provider_conf, issuer=self.issuer, logger=self.logger
             )
         raise NotImplementedError("Not yet implemented")
