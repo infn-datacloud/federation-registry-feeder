@@ -320,7 +320,31 @@ class ProviderThread:
         | None
     ):
         try:
-            return item.get_provider_components()
+            data = item.get_provider_data()
+            region = RegionCreateExtended(
+                **item.provider_conf.regions[0].dict(),
+                block_storage_services=data.block_storage_services,
+                compute_services=data.compute_services,
+                identity_services=data.identity_services,
+                network_services=data.network_services,
+                object_store_services=data.object_store_services,
+            )
+            identity_provider = IdentityProviderCreateExtended(
+                description=item.issuer.description,
+                group_claim=item.issuer.group_claim,
+                endpoint=item.issuer.endpoint,
+                relationship=item.provider_conf.identity_providers[0],
+                user_groups=[
+                    {
+                        **item.issuer.user_groups[0].dict(exclude={"slas"}),
+                        "sla": {
+                            **item.issuer.user_groups[0].slas[0].dict(),
+                            "project": item.provider_conf.projects[0].id,
+                        },
+                    }
+                ],
+            )
+            return identity_provider, data.project, region
         except (OpenstackProviderError, NotImplementedError) as e:
             self.error = True
             self.logger.error(e)
