@@ -1,29 +1,60 @@
+import json
 from logging import getLogger
 from unittest.mock import Mock, patch
-from uuid import uuid4
 
 import pytest
 from fed_reg.provider.schemas_extended import (
-    BlockStorageQuotaCreateExtended,
-    ComputeQuotaCreateExtended,
-    IdentityProviderCreateExtended,
-    NetworkQuotaCreateExtended,
-    ObjectStoreQuotaCreateExtended,
-    ProviderCreateExtended,
-    RegionCreateExtended,
+    BlockStorageServiceCreateExtended,
+    ComputeServiceCreateExtended,
+    IdentityServiceCreate,
+    NetworkServiceCreateExtended,
+    ObjectStoreServiceCreateExtended,
+    ProjectCreate,
 )
 from kafka.errors import NoBrokersAvailable
-from pytest_cases import parametrize, parametrize_with_cases
+from pytest_cases import parametrize_with_cases
 
-from src.kafka_conn import (
-    Producer,
-    find_issuer_and_user_group,
-    get_kafka_prod,
-    get_service_quotas,
-    group_project_quotas,
-    send_kafka_messages,
+from src.kafka_conn import Producer, get_kafka_prod, send_kafka_messages
+from src.models.identity_provider import Issuer
+from src.models.provider import Kubernetes, Openstack
+from tests.schemas.utils import (
+    auth_method_dict,
+    issuer_dict,
+    kubernetes_dict,
+    openstack_dict,
+    project_dict,
+    sla_dict,
+    user_group_dict,
 )
 from tests.utils import random_lower_string, random_url
+
+
+class CaseProviderIssuer:
+    def case_openstack(self) -> tuple[Openstack, Issuer]:
+        provider = Openstack(
+            **openstack_dict(),
+            identity_providers=[auth_method_dict()],
+            projects=[project_dict()],
+        )
+        issuer = Issuer(
+            **issuer_dict(),
+            token=random_lower_string(),
+            user_groups=[{**user_group_dict(), "slas": [sla_dict()]}],
+        )
+        return provider, issuer
+
+    def case_k8s(self) -> tuple[Kubernetes, Issuer]:
+        provider = Kubernetes(
+            **kubernetes_dict(),
+            identity_providers=[auth_method_dict()],
+            projects=[project_dict()],
+        )
+        issuer = Issuer(
+            **issuer_dict(),
+            token=random_lower_string(),
+            user_groups=[{**user_group_dict(), "slas": [sla_dict()]}],
+        )
+        return provider, issuer
 
 
 class CaseHostname:
@@ -37,24 +68,6 @@ class CaseHostname:
     def case_url(self) -> str:
         """Should raise ValueError"""
         return random_url()
-
-
-class CaseQuota:
-    @parametrize(usage=(True, False))
-    def case_block_storage(self, usage: bool) -> BlockStorageQuotaCreateExtended:
-        return BlockStorageQuotaCreateExtended(usage=usage, project=uuid4())
-
-    @parametrize(usage=(True, False))
-    def case_compute(self, usage: bool) -> ComputeQuotaCreateExtended:
-        return ComputeQuotaCreateExtended(usage=usage, project=uuid4())
-
-    @parametrize(usage=(True, False))
-    def case_network(self, usage: bool) -> NetworkQuotaCreateExtended:
-        return NetworkQuotaCreateExtended(usage=usage, project=uuid4())
-
-    @parametrize(usage=(True, False))
-    def case_object_store(self, usage: bool) -> ObjectStoreQuotaCreateExtended:
-        return ObjectStoreQuotaCreateExtended(usage=usage, project=uuid4())
 
 
 def test_kafka_producer() -> None:
@@ -119,221 +132,53 @@ def test_send() -> None:
         assert value is not None
 
 
-def test_find_issuer_and_user_group(
-    identity_provider_create: IdentityProviderCreateExtended,
-):
-    project = identity_provider_create.user_groups[0].sla.project
-    issuer, user_group = find_issuer_and_user_group(
-        identity_providers=[identity_provider_create], project=project
-    )
-    assert issuer == str(identity_provider_create.endpoint)
-    assert user_group == identity_provider_create.user_groups[0].name
-
-
-def test_fail_to_find_issuer_and_user_group(
-    identity_provider_create: IdentityProviderCreateExtended,
-):
-    project = uuid4()
-    with pytest.raises(
-        ValueError, match=f"No user group has an SLA matching project {project}"
-    ):
-        find_issuer_and_user_group(
-            identity_providers=[identity_provider_create], project=project
-        )
-
-
-@parametrize_with_cases("quota", cases=CaseQuota)
-def test_get_service_quota(
-    quota: BlockStorageQuotaCreateExtended
-    | ComputeQuotaCreateExtended
-    | NetworkQuotaCreateExtended
-    | ObjectStoreQuotaCreateExtended,
-):
-    exclude_attr = {"description", "per_user", "project", "type", "usage"}
-    usage_limit = "usage" if quota.usage else "limit"
-    qtype = quota.type.replace("-", "_")
-    item = get_service_quotas(quota)
-    for k in exclude_attr:
-        assert f"{qtype}_{usage_limit}_{k}" not in item.keys()
-    for k, v in quota.dict(exclude=exclude_attr).items():
-        assert item[f"{qtype}_{usage_limit}_{k}"] == v
-
-
-def test_group_project_quotas_no_project(region_create: RegionCreateExtended):
-    project_quotas = group_project_quotas(region_create)
-    assert project_quotas == {}
-
-
-def test_group_project_quotas_single_project(region_create: RegionCreateExtended):
-    project = uuid4()
-    region_create.block_storage_services[0].quotas = [
-        BlockStorageQuotaCreateExtended(usage=False, project=project),
-        BlockStorageQuotaCreateExtended(usage=True, project=project),
-    ]
-    region_create.compute_services[0].quotas = [
-        ComputeQuotaCreateExtended(usage=False, project=project),
-        ComputeQuotaCreateExtended(usage=True, project=project),
-    ]
-    region_create.network_services[0].quotas = [
-        NetworkQuotaCreateExtended(usage=False, project=project),
-        NetworkQuotaCreateExtended(usage=True, project=project),
-    ]
-    region_create.object_store_services[0].quotas = [
-        ObjectStoreQuotaCreateExtended(usage=False, project=project),
-        ObjectStoreQuotaCreateExtended(usage=True, project=project),
-    ]
-    project_quotas = group_project_quotas(region_create)
-    assert len(project_quotas.keys()) == 1
-    data = project_quotas[project.hex]
-    assert data is not None
-    assert data["block_storage_service"] == str(
-        region_create.block_storage_services[0].endpoint
-    )
-    assert data["compute_service"] == str(region_create.compute_services[0].endpoint)
-    assert data["network_service"] == str(region_create.network_services[0].endpoint)
-    assert data["object_store_service"] == str(
-        region_create.object_store_services[0].endpoint
-    )
-    assert len(list(filter(lambda x: "block_storage_usage_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "compute_usage_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "network_usage_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "object_store_usage_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "block_storage_limit_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "compute_limit_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "network_limit_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "object_store_limit_" in x, data.keys()))) > 0
-
-
-def test_group_project_quotas_multi_project(region_create: RegionCreateExtended):
-    project1 = uuid4()
-    project2 = uuid4()
-    region_create.block_storage_services[0].quotas = [
-        BlockStorageQuotaCreateExtended(usage=False, project=project1),
-        BlockStorageQuotaCreateExtended(usage=True, project=project1),
-    ]
-    region_create.compute_services[0].quotas = [
-        ComputeQuotaCreateExtended(usage=False, project=project1),
-        ComputeQuotaCreateExtended(usage=True, project=project1),
-    ]
-    region_create.network_services[0].quotas = [
-        NetworkQuotaCreateExtended(usage=False, project=project2),
-        NetworkQuotaCreateExtended(usage=True, project=project2),
-    ]
-    region_create.object_store_services[0].quotas = [
-        ObjectStoreQuotaCreateExtended(usage=False, project=project2),
-        ObjectStoreQuotaCreateExtended(usage=True, project=project2),
-    ]
-    project_quotas = group_project_quotas(region_create)
-    assert len(project_quotas.keys()) == 2
-    data = project_quotas[project1.hex]
-    assert data is not None
-    assert data["block_storage_service"] == str(
-        region_create.block_storage_services[0].endpoint
-    )
-    assert data["compute_service"] == str(region_create.compute_services[0].endpoint)
-    assert data.get("network_service") is None
-    assert data.get("object_store_service") is None
-    assert len(list(filter(lambda x: "block_storage_usage_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "compute_usage_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "network_usage_" in x, data.keys()))) == 0
-    assert len(list(filter(lambda x: "object_store_usage_" in x, data.keys()))) == 0
-    assert len(list(filter(lambda x: "block_storage_limit_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "compute_limit_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "network_limit_" in x, data.keys()))) == 0
-    assert len(list(filter(lambda x: "object_store_limit_" in x, data.keys()))) == 0
-    data = project_quotas[project2.hex]
-    assert data is not None
-    assert data.get("block_storage_service") is None
-    assert data.get("compute_service") is None
-    assert data["network_service"] == str(region_create.network_services[0].endpoint)
-    assert data["object_store_service"] == str(
-        region_create.object_store_services[0].endpoint
-    )
-    assert len(list(filter(lambda x: "block_storage_usage_" in x, data.keys()))) == 0
-    assert len(list(filter(lambda x: "compute_usage_" in x, data.keys()))) == 0
-    assert len(list(filter(lambda x: "network_usage_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "object_store_usage_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "block_storage_limit_" in x, data.keys()))) == 0
-    assert len(list(filter(lambda x: "compute_limit_" in x, data.keys()))) == 0
-    assert len(list(filter(lambda x: "network_limit_" in x, data.keys()))) > 0
-    assert len(list(filter(lambda x: "object_store_limit_" in x, data.keys()))) > 0
-
-
 @patch("src.kafka_conn.Producer")
-def test_no_message_sent(mock_prod: Mock, provider_create: ProviderCreateExtended):
-    send_kafka_messages(kafka_prod=mock_prod, providers=[provider_create])
+def test_no_message_sent(mock_prod: Mock):
+    send_kafka_messages(kafka_prod=mock_prod, connections_data=[])
     mock_prod.send.assert_not_called()
 
 
 @patch("src.kafka_conn.Producer")
-def test_send_messages(mock_prod: Mock, provider_create: ProviderCreateExtended):
-    provider_create.regions[0].block_storage_services[0].quotas = [
-        BlockStorageQuotaCreateExtended(
-            usage=False, project=provider_create.projects[0].uuid
-        ),
-        BlockStorageQuotaCreateExtended(
-            usage=True, project=provider_create.projects[0].uuid
-        ),
-    ]
-    provider_create.regions[0].compute_services[0].quotas = [
-        ComputeQuotaCreateExtended(
-            usage=False, project=provider_create.projects[0].uuid
-        ),
-        ComputeQuotaCreateExtended(
-            usage=True, project=provider_create.projects[0].uuid
-        ),
-    ]
-    provider_create.regions[0].network_services[0].quotas = [
-        NetworkQuotaCreateExtended(
-            usage=False, project=provider_create.projects[0].uuid
-        ),
-        NetworkQuotaCreateExtended(
-            usage=True, project=provider_create.projects[0].uuid
-        ),
-    ]
-    provider_create.regions[0].object_store_services[0].quotas = [
-        ObjectStoreQuotaCreateExtended(
-            usage=False, project=provider_create.projects[0].uuid
-        ),
-        ObjectStoreQuotaCreateExtended(
-            usage=True, project=provider_create.projects[0].uuid
-        ),
-    ]
+@parametrize_with_cases("provider_conf, issuer", cases=CaseProviderIssuer)
+def test_send_messages(
+    mock_prod: Mock,
+    provider_conf: Openstack | Kubernetes,
+    issuer: Issuer,
+    project_create: ProjectCreate,
+    block_storage_service_create: BlockStorageServiceCreateExtended,
+    compute_service_create: ComputeServiceCreateExtended,
+    identity_service_create: IdentityServiceCreate,
+    network_service_create: NetworkServiceCreateExtended,
+    s3_service_create: ObjectStoreServiceCreateExtended,
+):
+    connection_data = {
+        "provider_conf": provider_conf.dict(),
+        "issuer": issuer.dict(),
+        "project": project_create.dict(),
+        "block_storage_services": [block_storage_service_create.dict()],
+        "compute_services": [compute_service_create.dict()],
+        "identity_services": [identity_service_create.dict()],
+        "network_services": [network_service_create.dict()],
+        "object_store_services": [s3_service_create.dict()],
+    }
 
-    send_kafka_messages(kafka_prod=mock_prod, providers=[provider_create])
-
-    block_storage_service = provider_create.regions[0].block_storage_services[0]
-    compute_service = provider_create.regions[0].compute_services[0]
-    network_service = provider_create.regions[0].network_services[0]
-    object_store_service = provider_create.regions[0].object_store_services[0]
-
-    exclude_attr = {"description", "per_user", "project", "type", "usage"}
-    quotas = [
-        *block_storage_service.quotas,
-        *compute_service.quotas,
-        *network_service.quotas,
-        *object_store_service.quotas,
-    ]
-    data = {}
-    for quota in quotas:
-        qtype = quota.type.replace("-", "_")
-        for k, v in quota.dict(exclude=exclude_attr).items():
-            if quota.usage:
-                data[f"{qtype}_usage_{k}"] = v
-            else:
-                data[f"{qtype}_limit_{k}"] = v
+    send_kafka_messages(kafka_prod=mock_prod, connections_data=[{**connection_data}])
 
     mock_prod.send.assert_called_with(
-        {
-            "provider": provider_create.name,
-            "region": provider_create.regions[0].name,
-            "project": provider_create.projects[0].uuid,
-            "issuer": str(provider_create.identity_providers[0].endpoint),
-            "user_group": provider_create.identity_providers[0].user_groups[0].name,
-            "block_storage_service": str(block_storage_service.endpoint),
-            "compute_service": str(compute_service.endpoint),
-            "network_service": str(network_service.endpoint),
-            "object_store_service": str(object_store_service.endpoint),
-            **data,
-        }
+        json.dumps(
+            {
+                "msg_version": "1.0.0",
+                "provider_name": connection_data["provider_conf"]["name"],
+                "provider_type": connection_data["provider_conf"]["type"],
+                "region_name": connection_data["provider_conf"]["regions"][0]["name"],
+                "issuer_endpoint": connection_data["issuer"]["endpoint"],
+                "user_group": connection_data["issuer"]["user_groups"][0]["name"],
+                "project_id": connection_data["project"]["uuid"],
+                "block_storage_services": connection_data["block_storage_services"],
+                "compute_services": connection_data["compute_services"],
+                "identity_services": connection_data["identity_services"],
+                "network_services": connection_data["network_services"],
+                "object_store_services": connection_data["object_store_services"],
+            }
+        )
     )
