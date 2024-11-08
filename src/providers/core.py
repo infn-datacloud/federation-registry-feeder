@@ -131,7 +131,7 @@ class ProviderThread:
         """
         if self.provider_conf.status != ProviderStatus.ACTIVE.value:
             self.logger.info("Provider not active: %s", self.provider_conf.status)
-            return self.provider_conf, []
+            return self.provider_conf, [], False
 
         # For each couple (region-project), create a separated thread and try to connect
         # to the provider
