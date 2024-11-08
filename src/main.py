@@ -50,11 +50,11 @@ def main(log_level: str) -> None:
     providers = []
     kafka_data = []
     for provider_conf, connections_data, error in providers_data:
+        kafka_data += [i.to_dict() for i in connections_data]
         provider = create_provider(
             provider_conf=provider_conf, connections_data=connections_data, error=error
         )
         providers.append(provider)
-        kafka_data += [i.to_dict() for i in connections_data]
 
     # Create kafka producer if needed
     kafka_prod = get_kafka_prod(
