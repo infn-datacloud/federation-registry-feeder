@@ -1,16 +1,8 @@
 from typing import Literal
-from unittest.mock import Mock, PropertyMock, patch
+from unittest.mock import Mock, patch
 
 from fed_reg.provider.enum import ProviderStatus
-from fed_reg.provider.schemas_extended import (
-    BlockStorageServiceCreateExtended,
-    ComputeServiceCreateExtended,
-    IdentityServiceCreate,
-    NetworkServiceCreateExtended,
-    ObjectStoreServiceCreateExtended,
-    ProjectCreate,
-    ProviderCreateExtended,
-)
+from fed_reg.provider.schemas_extended import ProjectCreate
 from pytest_cases import case, parametrize_with_cases
 
 from src.models.identity_provider import Issuer
@@ -86,29 +78,18 @@ def test_get_non_active_provider(provider_thread_item: ProviderThread, status: s
     assert not provider_thread_item.error
 
     assert item is not None
-    assert isinstance(item, ProviderCreateExtended)
-    assert item.description == provider_thread_item.provider_conf.description
-    assert item.name == provider_thread_item.provider_conf.name
-    assert item.type == provider_thread_item.provider_conf.type
-    assert item.status == provider_thread_item.provider_conf.status
-    assert item.is_public == provider_thread_item.provider_conf.is_public
-    assert item.support_emails == provider_thread_item.provider_conf.support_emails
-    assert len(item.regions) == 0
-    assert len(item.projects) == 0
-    assert len(item.identity_providers) == 0
+    assert isinstance(item, tuple)
+    assert len(item) == 3
+    provider_conf = item[0]
+    assert provider_conf == provider_thread_item.provider_conf
+    connections_data = item[1]
+    assert len(connections_data) == 0
+    assert not item[2]
 
 
-@patch("src.providers.core.ConnectionThread.get_provider_data")
 @parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
 def test_get_provider(
-    mock_openstack_data: Mock,
-    provider_thread_item: ProviderThread,
-    project_create: ProjectCreate,
-    block_storage_service_create: BlockStorageServiceCreateExtended,
-    compute_service_create: ComputeServiceCreateExtended,
-    identity_service_create: IdentityServiceCreate,
-    network_service_create: NetworkServiceCreateExtended,
-    s3_service_create: ObjectStoreServiceCreateExtended,
+    provider_thread_item: ProviderThread, project_create: ProjectCreate
 ):
     """Provider is Active or it has one project matching the SLA in the issuer."""
     project_create.uuid = provider_thread_item.provider_conf.projects[0].id
@@ -119,62 +100,19 @@ def test_get_provider(
         0
     ].endpoint = provider_thread_item.issuers[0].endpoint
 
-    type(mock_openstack_data()).project = PropertyMock(return_value=project_create)
-    type(mock_openstack_data()).block_storage_services = PropertyMock(
-        return_value=[block_storage_service_create]
-    )
-    type(mock_openstack_data()).compute_services = PropertyMock(
-        return_value=[compute_service_create]
-    )
-    type(mock_openstack_data()).identity_services = PropertyMock(
-        return_value=[identity_service_create]
-    )
-    type(mock_openstack_data()).network_services = PropertyMock(
-        return_value=[network_service_create]
-    )
-    type(mock_openstack_data()).object_store_services = PropertyMock(
-        return_value=[s3_service_create]
-    )
-
-    item = provider_thread_item.get_provider()
+    with patch("src.providers.core.ConnectionThread.get_provider_data"):
+        item = provider_thread_item.get_provider()
 
     assert not provider_thread_item.error
 
-    assert isinstance(item, ProviderCreateExtended)
-    assert item.description == provider_thread_item.provider_conf.description
-    assert item.name == provider_thread_item.provider_conf.name
-    assert item.type == provider_thread_item.provider_conf.type
-    assert item.status == provider_thread_item.provider_conf.status
-    assert item.is_public == provider_thread_item.provider_conf.is_public
-    assert item.support_emails == provider_thread_item.provider_conf.support_emails
-    assert len(item.regions) == 1
-    assert item.regions[0].name == provider_thread_item.provider_conf.regions[0].name
-    assert len(item.projects) == 1
-    assert item.projects[0].uuid == provider_thread_item.provider_conf.projects[0].id
-    assert len(item.identity_providers) == 1
-    assert (
-        item.identity_providers[0].endpoint == provider_thread_item.issuers[0].endpoint
-    )
-    assert (
-        item.identity_providers[0].group_claim
-        == provider_thread_item.issuers[0].group_claim
-    )
-    user_groups = item.identity_providers[0].user_groups
-    assert len(user_groups) == 1
-    assert user_groups[0].name == provider_thread_item.issuers[0].user_groups[0].name
-    sla = user_groups[0].sla
-    assert sla is not None
-    assert (
-        sla.doc_uuid == provider_thread_item.issuers[0].user_groups[0].slas[0].doc_uuid
-    )
-    assert (
-        sla.start_date
-        == provider_thread_item.issuers[0].user_groups[0].slas[0].start_date
-    )
-    assert (
-        sla.end_date == provider_thread_item.issuers[0].user_groups[0].slas[0].end_date
-    )
-    assert sla.project == provider_thread_item.provider_conf.projects[0].id
+    assert item is not None
+    assert isinstance(item, tuple)
+    assert len(item) == 3
+    provider_conf = item[0]
+    assert provider_conf == provider_thread_item.provider_conf
+    connections_data = item[1]
+    assert len(connections_data) == 1
+    assert not item[2]
 
 
 @parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
@@ -185,19 +123,14 @@ def test_no_sla_match(provider_thread_item: ProviderThread):
     ].endpoint = provider_thread_item.issuers[0].endpoint
     item = provider_thread_item.get_provider()
 
-    assert provider_thread_item.error
-
     assert item is not None
-    assert isinstance(item, ProviderCreateExtended)
-    assert item.description == provider_thread_item.provider_conf.description
-    assert item.name == provider_thread_item.provider_conf.name
-    assert item.type == provider_thread_item.provider_conf.type
-    assert item.status == ProviderStatus.LIMITED
-    assert item.is_public == provider_thread_item.provider_conf.is_public
-    assert item.support_emails == provider_thread_item.provider_conf.support_emails
-    assert len(item.regions) == 0
-    assert len(item.projects) == 0
-    assert len(item.identity_providers) == 0
+    assert isinstance(item, tuple)
+    assert len(item) == 3
+    provider_conf = item[0]
+    assert provider_conf == provider_thread_item.provider_conf
+    connections_data = item[1]
+    assert len(connections_data) == 0
+    assert item[2]
 
 
 @parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
@@ -208,19 +141,14 @@ def test_no_issuer_and_auth_method_match(provider_thread_item: ProviderThread):
     )
     item = provider_thread_item.get_provider()
 
-    assert provider_thread_item.error
-
     assert item is not None
-    assert isinstance(item, ProviderCreateExtended)
-    assert item.description == provider_thread_item.provider_conf.description
-    assert item.name == provider_thread_item.provider_conf.name
-    assert item.type == provider_thread_item.provider_conf.type
-    assert item.status == ProviderStatus.LIMITED
-    assert item.is_public == provider_thread_item.provider_conf.is_public
-    assert item.support_emails == provider_thread_item.provider_conf.support_emails
-    assert len(item.regions) == 0
-    assert len(item.projects) == 0
-    assert len(item.identity_providers) == 0
+    assert isinstance(item, tuple)
+    assert len(item) == 3
+    provider_conf = item[0]
+    assert provider_conf == provider_thread_item.provider_conf
+    connections_data = item[1]
+    assert len(connections_data) == 0
+    assert item[2]
 
 
 @patch("src.providers.core.ConnectionThread.__init__")
@@ -240,16 +168,13 @@ def test_get_error_from_thread_connection(
     item = provider_thread_item.get_provider()
 
     assert item is not None
-    assert isinstance(item, ProviderCreateExtended)
-    assert item.description == provider_thread_item.provider_conf.description
-    assert item.name == provider_thread_item.provider_conf.name
-    assert item.type == provider_thread_item.provider_conf.type
-    assert item.status == ProviderStatus.LIMITED
-    assert item.is_public == provider_thread_item.provider_conf.is_public
-    assert item.support_emails == provider_thread_item.provider_conf.support_emails
-    assert len(item.regions) == 0
-    assert len(item.projects) == 0
-    assert len(item.identity_providers) == 0
+    assert isinstance(item, tuple)
+    assert len(item) == 3
+    provider_conf = item[0]
+    assert provider_conf == provider_thread_item.provider_conf
+    connections_data = item[1]
+    assert len(connections_data) == 0
+    assert item[2]
 
 
 @patch("src.providers.core.ConnectionThread.get_provider_data")
@@ -272,13 +197,10 @@ def test_get_error_from_get_provider_components(
     item = provider_thread_item.get_provider()
 
     assert item is not None
-    assert isinstance(item, ProviderCreateExtended)
-    assert item.description == provider_thread_item.provider_conf.description
-    assert item.name == provider_thread_item.provider_conf.name
-    assert item.type == provider_thread_item.provider_conf.type
-    assert item.status == ProviderStatus.LIMITED
-    assert item.is_public == provider_thread_item.provider_conf.is_public
-    assert item.support_emails == provider_thread_item.provider_conf.support_emails
-    assert len(item.regions) == 0
-    assert len(item.projects) == 0
-    assert len(item.identity_providers) == 0
+    assert isinstance(item, tuple)
+    assert len(item) == 3
+    provider_conf = item[0]
+    assert provider_conf == provider_thread_item.provider_conf
+    connections_data = item[1]
+    assert len(connections_data) == 0
+    assert item[2]
