@@ -3,14 +3,13 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
-from fed_reg.provider.schemas_extended import ProviderCreateExtended
 from pytest_cases import parametrize_with_cases
 
 from src.main import main
 from src.models.config import APIVersions, Settings
+from src.models.provider import Openstack
 from src.models.site_config import SiteConfig
 from src.providers.openstack import OpenstackProviderError
-from tests.fed_reg.utils import fed_reg_provider_dict, random_provider_status
 from tests.schemas.utils import (
     auth_method_dict,
     issuer_dict,
@@ -85,8 +84,14 @@ def test_invalid_site_configs(
 )
 @patch(
     "src.main.ProviderThread.get_provider",
-    return_value=ProviderCreateExtended(
-        **fed_reg_provider_dict(), status=random_provider_status(exclude="active")
+    return_value=(
+        Openstack(
+            **openstack_dict(),
+            identity_providers=[auth_method_dict()],
+            projects=[project_dict()],
+        ),
+        [],
+        False,
     ),
 )
 def test_no_active_providers(
@@ -126,7 +131,7 @@ def test_error_in_provider_thread(
     We mock call to get_conf_files to avoid to load invalid files in the developer
     filesystem.
     """
-    mock_conn_thread.side_effect = AssertionError
+    mock_conn_thread.side_effect = AssertionError()
     with pytest.raises(SystemExit):
         main(log_level=logging.INFO)
 
@@ -172,7 +177,15 @@ def test_error_in_get_components(
 )
 @patch(
     "src.main.ProviderThread.get_provider",
-    return_value=ProviderCreateExtended(**fed_reg_provider_dict(), status="active"),
+    return_value=(
+        Openstack(
+            **openstack_dict(),
+            identity_providers=[auth_method_dict()],
+            projects=[project_dict()],
+        ),
+        [],
+        False,
+    ),
 )
 def test_db_update_error(
     mock_get_provider: Mock,
@@ -203,7 +216,15 @@ def test_db_update_error(
 )
 @patch(
     "src.main.ProviderThread.get_provider",
-    return_value=ProviderCreateExtended(**fed_reg_provider_dict(), status="active"),
+    return_value=(
+        Openstack(
+            **openstack_dict(),
+            identity_providers=[auth_method_dict()],
+            projects=[project_dict()],
+        ),
+        [],
+        False,
+    ),
 )
 def test_main_success(
     mock_get_provider: Mock,
@@ -233,7 +254,15 @@ def test_main_success(
 )
 @patch(
     "src.main.ProviderThread.get_provider",
-    return_value=ProviderCreateExtended(**fed_reg_provider_dict(), status="active"),
+    return_value=(
+        Openstack(
+            **openstack_dict(),
+            identity_providers=[auth_method_dict()],
+            projects=[project_dict()],
+        ),
+        [],
+        False,
+    ),
 )
 @patch("src.main.send_kafka_messages")
 def test_send_kafka_msg(
