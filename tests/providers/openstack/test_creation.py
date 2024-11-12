@@ -5,13 +5,17 @@ from unittest.mock import Mock, patch
 import pytest
 from pytest_cases import parametrize_with_cases
 
+from src.models.identity_provider import Issuer
 from src.models.provider import AuthMethod, Openstack, Project, Region
 from src.providers.openstack import OpenstackData, OpenstackProviderError
 from tests.schemas.utils import (
     auth_method_dict,
+    issuer_dict,
     openstack_dict,
     project_dict,
     region_dict,
+    sla_dict,
+    user_group_dict,
 )
 from tests.utils import random_lower_string
 
@@ -32,9 +36,13 @@ def test_creation(mock_retrieve_info: Mock, mock_create_connection: Mock) -> Non
         identity_providers=[auth_method_dict()],
         projects=[project_dict()],
     )
-    token = random_lower_string()
+    issuer = Issuer(
+        **issuer_dict(),
+        token=random_lower_string(),
+        user_groups=[{**user_group_dict(), "slas": [{**sla_dict()}]}],
+    )
     logger = getLogger("test")
-    item = OpenstackData(provider_conf=provider_conf, token=token, logger=logger)
+    item = OpenstackData(provider_conf=provider_conf, issuer=issuer, logger=logger)
     assert item is not None
     assert item.provider_conf == provider_conf
     assert item.project_conf == provider_conf.projects[0]
@@ -43,7 +51,7 @@ def test_creation(mock_retrieve_info: Mock, mock_create_connection: Mock) -> Non
     assert item.logger == logger
     assert item.conn is not None
 
-    mock_create_connection.assert_called_once_with(token=token)
+    mock_create_connection.assert_called_once_with(token=issuer.token)
     mock_retrieve_info.assert_called_once()
 
 
@@ -54,12 +62,16 @@ def test_connection() -> None:
         identity_providers=[auth_method_dict()],
         projects=[project_dict()],
     )
-    token = random_lower_string()
+    issuer = Issuer(
+        **issuer_dict(),
+        token=random_lower_string(),
+        user_groups=[{**user_group_dict(), "slas": [{**sla_dict()}]}],
+    )
     logger = getLogger("test")
     with patch("src.providers.openstack.OpenstackData.retrieve_info"):
         item = OpenstackData(
             provider_conf=provider_conf,
-            token=token,
+            issuer=issuer,
             logger=logger,
         )
 
@@ -71,7 +83,7 @@ def test_connection() -> None:
     assert (
         item.conn.auth.get("protocol") == provider_conf.identity_providers[0].protocol
     )
-    assert item.conn.auth.get("access_token") == token
+    assert item.conn.auth.get("access_token") == issuer.token
     assert item.conn.auth.get("project_id") == provider_conf.projects[0].id
     assert item.conn._compute_region == provider_conf.regions[0].name
 
@@ -88,13 +100,17 @@ def test_failed_creation_because_regions(num: int) -> None:
         provider_conf.regions.clear()
     else:
         provider_conf.regions.append(Region(**region_dict()))
-    token = random_lower_string()
+    issuer = Issuer(
+        **issuer_dict(),
+        token=random_lower_string(),
+        user_groups=[{**user_group_dict(), "slas": [{**sla_dict()}]}],
+    )
     logger = getLogger("test")
     with patch("src.providers.openstack.OpenstackData.retrieve_info"):
         with pytest.raises(OpenstackProviderError):
             OpenstackData(
                 provider_conf=provider_conf,
-                token=token,
+                issuer=issuer,
                 logger=logger,
             )
 
@@ -111,13 +127,17 @@ def test_failed_creation_because_projects(num: int) -> None:
         provider_conf.projects.clear()
     else:
         provider_conf.projects.append(Project(**project_dict()))
-    token = random_lower_string()
+    issuer = Issuer(
+        **issuer_dict(),
+        token=random_lower_string(),
+        user_groups=[{**user_group_dict(), "slas": [{**sla_dict()}]}],
+    )
     logger = getLogger("test")
     with patch("src.providers.openstack.OpenstackData.retrieve_info"):
         with pytest.raises(OpenstackProviderError):
             OpenstackData(
                 provider_conf=provider_conf,
-                token=token,
+                issuer=issuer,
                 logger=logger,
             )
 
@@ -134,12 +154,16 @@ def test_failed_creation_because_idps(num: int) -> None:
         provider_conf.identity_providers.clear()
     else:
         provider_conf.identity_providers.append(AuthMethod(**auth_method_dict()))
-    token = random_lower_string()
+    issuer = Issuer(
+        **issuer_dict(),
+        token=random_lower_string(),
+        user_groups=[{**user_group_dict(), "slas": [{**sla_dict()}]}],
+    )
     logger = getLogger("test")
     with patch("src.providers.openstack.OpenstackData.retrieve_info"):
         with pytest.raises(OpenstackProviderError):
             OpenstackData(
                 provider_conf=provider_conf,
-                token=token,
+                issuer=issuer,
                 logger=logger,
             )

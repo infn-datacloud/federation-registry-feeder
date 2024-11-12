@@ -6,7 +6,12 @@ from src.logger import create_logger
 from src.models.config import get_settings
 from src.parser import parser
 from src.providers.core import ProviderThread
-from src.utils import get_conf_files, get_site_configs, infer_service_endpoints
+from src.utils import (
+    create_provider,
+    get_conf_files,
+    get_site_configs,
+    infer_service_endpoints,
+)
 
 
 def main(log_level: str) -> None:
@@ -37,10 +42,19 @@ def main(log_level: str) -> None:
     # Multithreading read
     providers = []
     with ThreadPoolExecutor() as executor:
-        providers = executor.map(lambda x: x.get_provider(), pthreads)
-    providers = list(providers)
-    providers = list(filter(lambda x: x, providers))
+        providers_data = executor.map(lambda x: x.get_provider(), pthreads)
+    providers_data = list(providers_data)
+    providers_data = list(filter(lambda x: x, providers_data))
     error |= any([x.error for x in pthreads])
+
+    providers = []
+    kafka_data = []
+    for provider_conf, connections_data, error in providers_data:
+        kafka_data += [i.to_dict() for i in connections_data]
+        provider = create_provider(
+            provider_conf=provider_conf, connections_data=connections_data, error=error
+        )
+        providers.append(provider)
 
     # Create kafka producer if needed
     kafka_prod = get_kafka_prod(
@@ -48,7 +62,7 @@ def main(log_level: str) -> None:
     )
     if kafka_prod is not None:
         # Send data to kafka
-        send_kafka_messages(kafka_prod=kafka_prod, providers=providers)
+        send_kafka_messages(kafka_prod=kafka_prod, connections_data=kafka_data)
 
     # Update the Federation-Registry
     token = site_configs[0].trusted_idps[0].token if len(site_configs) > 0 else ""

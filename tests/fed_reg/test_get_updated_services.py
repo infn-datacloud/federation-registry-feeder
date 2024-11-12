@@ -10,9 +10,7 @@ from fed_reg.provider.schemas_extended import (
 )
 from pytest_cases import case, parametrize_with_cases
 
-from src.models.identity_provider import Issuer
-from src.models.provider import Kubernetes, Openstack
-from src.providers.core import ProviderThread
+from src.utils import get_updated_services
 from tests.fed_reg.utils import (
     random_block_storage_service_name,
     random_compute_service_name,
@@ -20,43 +18,7 @@ from tests.fed_reg.utils import (
     random_network_service_name,
     random_object_store_service_name,
 )
-from tests.schemas.utils import (
-    auth_method_dict,
-    issuer_dict,
-    openstack_dict,
-    project_dict,
-    sla_dict,
-    user_group_dict,
-)
 from tests.utils import random_lower_string, random_url
-
-
-class CaseProviderThread:
-    def case_openstack(self) -> ProviderThread:
-        provider = Openstack(
-            **openstack_dict(),
-            identity_providers=[auth_method_dict()],
-            projects=[project_dict()],
-        )
-        issuer = Issuer(
-            **issuer_dict(),
-            token=random_lower_string(),
-            user_groups=[{**user_group_dict(), "slas": [sla_dict()]}],
-        )
-        return ProviderThread(provider_conf=provider, issuers=[issuer])
-
-    def case_k8s(self) -> ProviderThread:
-        provider = Kubernetes(
-            **openstack_dict(),
-            identity_providers=[auth_method_dict()],
-            projects=[project_dict()],
-        )
-        issuer = Issuer(
-            **issuer_dict(),
-            token=random_lower_string(),
-            user_groups=[{**user_group_dict(), "slas": [sla_dict()]}],
-        )
-        return ProviderThread(provider_conf=provider, issuers=[issuer])
 
 
 class CaseService:
@@ -137,10 +99,8 @@ class CaseService:
         ]
 
 
-@parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
 @parametrize_with_cases("services", cases=CaseService)
 def test_add_new_service(
-    provider_thread_item: ProviderThread,
     services: list[BlockStorageServiceCreateExtended]
     | list[ComputeServiceCreateExtended]
     | list[NetworkServiceCreateExtended]
@@ -148,16 +108,14 @@ def test_add_new_service(
 ) -> None:
     curr_srv = services[:1]
     new_srv = services[1:]
-    update_services = provider_thread_item.get_updated_services(
+    update_services = get_updated_services(
         current_services=curr_srv, new_services=new_srv
     )
     assert len(update_services) == 2
 
 
-@parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
 @parametrize_with_cases("services", cases=CaseService, has_tag="quota")
 def test_update_existing_service_quotas(
-    provider_thread_item: ProviderThread,
     services: list[BlockStorageServiceCreateExtended]
     | list[ComputeServiceCreateExtended]
     | list[NetworkServiceCreateExtended]
@@ -166,17 +124,15 @@ def test_update_existing_service_quotas(
     curr_srv = services[:1]
     new_srv = copy.deepcopy(services[:1])
     new_srv[0].quotas[0].project = services[1].quotas[0].project
-    update_services = provider_thread_item.get_updated_services(
+    update_services = get_updated_services(
         current_services=curr_srv, new_services=new_srv
     )
     assert len(update_services) == 1
     assert len(update_services[0].quotas) == 2
 
 
-@parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
 @parametrize_with_cases("services", cases=CaseService, has_tag="flavor")
 def test_update_existing_service_flavors(
-    provider_thread_item: ProviderThread,
     services: list[BlockStorageServiceCreateExtended]
     | list[ComputeServiceCreateExtended]
     | list[NetworkServiceCreateExtended]
@@ -186,17 +142,15 @@ def test_update_existing_service_flavors(
     new_srv = copy.deepcopy(services[:1])
     new_srv[0].quotas[0].project = services[1].quotas[0].project
     new_srv[0].flavors[0] = services[1].flavors[0]
-    update_services = provider_thread_item.get_updated_services(
+    update_services = get_updated_services(
         current_services=curr_srv, new_services=new_srv
     )
     assert len(update_services) == 1
     assert len(update_services[0].flavors) == 2
 
 
-@parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
 @parametrize_with_cases("services", cases=CaseService, has_tag="image")
 def test_update_existing_service_images(
-    provider_thread_item: ProviderThread,
     services: list[BlockStorageServiceCreateExtended]
     | list[ComputeServiceCreateExtended]
     | list[NetworkServiceCreateExtended]
@@ -206,17 +160,15 @@ def test_update_existing_service_images(
     new_srv = copy.deepcopy(services[:1])
     new_srv[0].quotas[0].project = services[1].quotas[0].project
     new_srv[0].images[0] = services[1].images[0]
-    update_services = provider_thread_item.get_updated_services(
+    update_services = get_updated_services(
         current_services=curr_srv, new_services=new_srv
     )
     assert len(update_services) == 1
     assert len(update_services[0].images) == 2
 
 
-@parametrize_with_cases("provider_thread_item", cases=CaseProviderThread)
 @parametrize_with_cases("services", cases=CaseService, has_tag="network")
 def test_update_existing_service_networks(
-    provider_thread_item: ProviderThread,
     services: list[BlockStorageServiceCreateExtended]
     | list[ComputeServiceCreateExtended]
     | list[NetworkServiceCreateExtended]
@@ -226,7 +178,7 @@ def test_update_existing_service_networks(
     new_srv = copy.deepcopy(services[:1])
     new_srv[0].quotas[0].project = services[1].quotas[0].project
     new_srv[0].networks[0] = services[1].networks[0]
-    update_services = provider_thread_item.get_updated_services(
+    update_services = get_updated_services(
         current_services=curr_srv, new_services=new_srv
     )
     assert len(update_services) == 1

@@ -1,9 +1,3 @@
-from fed_reg.provider.schemas_extended import (
-    IdentityProviderCreateExtended,
-    ProjectCreate,
-    RegionCreateExtended,
-)
-
 from src.logger import create_logger
 from src.models.identity_provider import Issuer
 from src.models.provider import Kubernetes, Openstack
@@ -49,9 +43,7 @@ class ConnectionThread:
         logger_name += f"Project {provider_conf.projects[0].id}"
         self.logger = create_logger(logger_name, level=log_level)
 
-    def get_provider_components(
-        self,
-    ) -> tuple[IdentityProviderCreateExtended, ProjectCreate, RegionCreateExtended]:
+    def get_provider_data(self) -> OpenstackData:
         """Retrieve the provider region, project and identity provider.
 
         From the current configuration, connect to the correct provider and retrieve the
@@ -60,35 +52,7 @@ class ConnectionThread:
         Return an object with 3 main entities: region, project and identity provider.
         """
         if isinstance(self.provider_conf, Openstack):
-            data = OpenstackData(
-                provider_conf=self.provider_conf,
-                token=self.issuer.token,
-                logger=self.logger,
+            return OpenstackData(
+                provider_conf=self.provider_conf, issuer=self.issuer, logger=self.logger
             )
-        elif isinstance(self.provider_conf, Kubernetes):
-            raise NotImplementedError("Not yet implemented")
-
-        region = RegionCreateExtended(
-            **self.provider_conf.regions[0].dict(),
-            block_storage_services=data.block_storage_services,
-            compute_services=data.compute_services,
-            identity_services=data.identity_services,
-            network_services=data.network_services,
-            object_store_services=data.object_store_services,
-        )
-        identity_provider = IdentityProviderCreateExtended(
-            description=self.issuer.description,
-            group_claim=self.issuer.group_claim,
-            endpoint=self.issuer.endpoint,
-            relationship=self.provider_conf.identity_providers[0],
-            user_groups=[
-                {
-                    **self.issuer.user_groups[0].dict(exclude={"slas"}),
-                    "sla": {
-                        **self.issuer.user_groups[0].slas[0].dict(),
-                        "project": self.provider_conf.projects[0].id,
-                    },
-                }
-            ],
-        )
-        return identity_provider, data.project, region
+        raise NotImplementedError("Not yet implemented")

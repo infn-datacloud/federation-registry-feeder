@@ -36,6 +36,7 @@ from openstack.image.v2.image import Image
 from openstack.network.v2.network import Network
 from requests import Response
 
+from src.models.identity_provider import Issuer
 from src.models.provider import PrivateNetProxy
 from src.models.site_config import Openstack
 
@@ -49,7 +50,9 @@ class OpenstackProviderError(Exception):
 class OpenstackData:
     """Class to organize data retrieved from and Openstack instance."""
 
-    def __init__(self, *, provider_conf: Openstack, token: str, logger: Logger) -> None:
+    def __init__(
+        self, *, provider_conf: Openstack, issuer: Issuer, logger: Logger
+    ) -> None:
         self.error = False
         self.logger = logger
         try:
@@ -67,6 +70,7 @@ class OpenstackData:
             self.project_conf = provider_conf.projects[0]
             self.auth_method = provider_conf.identity_providers[0]
             self.region_name = provider_conf.regions[0].name
+            self.issuer = issuer
 
             self.project = None
             self.block_storage_services = []
@@ -76,7 +80,7 @@ class OpenstackData:
             self.object_store_services = []
 
             # Connection is only defined, not yet opened
-            self.conn = self.create_connection(token=token)
+            self.conn = self.create_connection(token=self.issuer.token)
 
             # Retrieve information
             self.retrieve_info()
@@ -130,6 +134,18 @@ class OpenstackData:
             raise OpenstackProviderError from e
         self.conn.close()
         self.logger.info("Connection closed")
+
+    def to_dict(self) -> dict:
+        return {
+            "provider_conf": self.provider_conf.dict(),
+            "issuer": self.issuer.dict(),
+            "project": self.project.dict(),
+            "block_storage_services": [i.dict() for i in self.block_storage_services],
+            "compute_services": [i.dict() for i in self.compute_services],
+            "identity_services": [i.dict() for i in self.identity_services],
+            "network_services": [i.dict() for i in self.network_services],
+            "object_store_services": [i.dict() for i in self.object_store_services],
+        }
 
     def create_connection(self, *, token: str) -> Connection:
         """Connect to Openstack provider"""
