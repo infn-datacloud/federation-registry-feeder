@@ -1,4 +1,3 @@
-import json
 from logging import getLogger
 from unittest.mock import Mock, patch
 
@@ -165,20 +164,18 @@ def test_send_messages(
     send_kafka_messages(kafka_prod=mock_prod, connections_data=[{**connection_data}])
 
     mock_prod.send.assert_called_with(
-        json.dumps(
-            {
-                "msg_version": "1.0.0",
-                "provider_name": connection_data["provider_conf"]["name"],
-                "provider_type": connection_data["provider_conf"]["type"],
-                "region_name": connection_data["provider_conf"]["regions"][0]["name"],
-                "issuer_endpoint": connection_data["issuer"]["endpoint"],
-                "user_group": connection_data["issuer"]["user_groups"][0]["name"],
-                "project_id": connection_data["project"]["uuid"],
-                "block_storage_services": connection_data["block_storage_services"],
-                "compute_services": connection_data["compute_services"],
-                "identity_services": connection_data["identity_services"],
-                "network_services": connection_data["network_services"],
-                "object_store_services": connection_data["object_store_services"],
-            }
-        )
+        {
+            "msg_version": "1.0.0",
+            "provider_name": connection_data["provider_conf"]["name"],
+            "provider_type": connection_data["provider_conf"]["type"],
+            "region_name": connection_data["provider_conf"]["regions"][0]["name"],
+            "issuer_endpoint": connection_data["issuer"]["endpoint"],
+            "user_group": connection_data["issuer"]["user_groups"][0]["name"],
+            "project_id": connection_data["project"]["uuid"],
+            "block_storage_services": connection_data["block_storage_services"],
+            "compute_services": connection_data["compute_services"],
+            "identity_services": connection_data["identity_services"],
+            "network_services": connection_data["network_services"],
+            "object_store_services": connection_data["object_store_services"],
+        }
     )
