@@ -65,5 +65,5 @@ def send_kafka_messages(
             "project_id": project["uuid"],
             **data,
         }
-        message = json.loads(json.dumps(message))
+        message = json.loads(json.dumps(message, default=str))
         kafka_prod.send(message)
