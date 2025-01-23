@@ -130,7 +130,7 @@ class OpenstackData:
         ) as e:
             self.error = True
             self.logger.error(e)
-            self.logger.error("Connection aborted")
+            self.logger.error("Connection aborted. Skipping project")
             raise OpenstackProviderError from e
         self.conn.close()
         self.logger.info("Connection closed")

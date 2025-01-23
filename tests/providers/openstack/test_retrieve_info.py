@@ -264,7 +264,7 @@ def test_project_connection_error(
     assert len(openstack_item.network_services) == 0
     assert len(openstack_item.object_store_services) == 0
 
-    assert caplog.text.strip("\n").endswith("Connection aborted")
+    assert caplog.text.strip("\n").endswith("Connection aborted. Skipping project")
 
 
 @patch("src.providers.openstack.OpenstackData")
@@ -318,7 +318,7 @@ def test_block_storage_connection_error(
     assert len(openstack_item.network_services) == 0
     assert len(openstack_item.object_store_services) == 0
 
-    assert caplog.text.strip("\n").endswith("Connection aborted")
+    assert caplog.text.strip("\n").endswith("Connection aborted. Skipping project")
 
 
 @patch("src.providers.openstack.OpenstackData")
@@ -375,7 +375,7 @@ def test_compute_connection_error(
     assert len(openstack_item.network_services) == 0
     assert len(openstack_item.object_store_services) == 0
 
-    assert caplog.text.strip("\n").endswith("Connection aborted")
+    assert caplog.text.strip("\n").endswith("Connection aborted. Skipping project")
 
 
 @patch("src.providers.openstack.OpenstackData")
@@ -433,7 +433,7 @@ def test_network_connection_error(
     assert len(openstack_item.network_services) == 0
     assert len(openstack_item.object_store_services) == 0
 
-    assert caplog.text.strip("\n").endswith("Connection aborted")
+    assert caplog.text.strip("\n").endswith("Connection aborted. Skipping project")
 
 
 # @patch("src.providers.openstack.OpenstackData")
@@ -486,7 +486,7 @@ def test_network_connection_error(
 # assert openstack_item.network_service == network_service_create
 # assert len(openstack_item.object_store_services) == 0
 
-#     assert caplog.text.strip("\n").endswith("Connection aborted")
+#     assert caplog.text.strip("\n").endswith("Connection aborted. Skipping project")
 
 
 @patch("src.providers.openstack.OpenstackData")
@@ -545,4 +545,4 @@ def test_s3_connection_error(
     assert openstack_item.network_services[0] == network_service_create
     assert len(openstack_item.object_store_services) == 0
 
-    assert caplog.text.strip("\n").endswith("Connection aborted")
+    assert caplog.text.strip("\n").endswith("Connection aborted. Skipping project")

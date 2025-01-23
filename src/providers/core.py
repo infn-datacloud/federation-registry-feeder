@@ -54,10 +54,11 @@ class ProviderThread:
         """Get provider data"""
         try:
             return item.get_provider_data()
-        except (OpenstackProviderError, NotImplementedError) as e:
+        except OpenstackProviderError:
+            self.error = True
+        except NotImplementedError as e:
             self.error = True
             self.logger.error(e)
-            self.logger.error("Skipping project")
         return None
 
     def get_issuer_matching_project(self, project_sla: str) -> Issuer:
