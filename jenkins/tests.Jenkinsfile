@@ -2,7 +2,7 @@
 @Library('jenkins-libraries') _
 
 pipeline {
-    agent { label 'jenkinsworker00' }
+    agent { label 'jenkins-node-label-1' }
 
     environment {
         COVERAGE_DIR = 'coverage-reports'
