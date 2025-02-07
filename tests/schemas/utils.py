@@ -32,6 +32,10 @@ def location_dict() -> dict[str, Any]:
     return {"site": random_lower_string(), "country": random_country()}
 
 
+def network_dict() -> dict[str, Any]:
+    return {"name": random_lower_string(), "uuid": uuid4()}
+
+
 def openstack_dict() -> dict[str, Any]:
     """Dict with openstack provider minimal attributes."""
     return {"name": random_lower_string(), "auth_url": random_url()}
