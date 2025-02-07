@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "https://json-schema.org/draft-07/schema#",
   "$id": "provider-config-schema.json",
   "title": "Federation Registry population script's configuration schema for providers",
   "description": "Configuration file with manual information about Federation Registry providers",
@@ -54,19 +54,30 @@
                         "format": "date"
                       }
                     },
-                    "required": ["start_date", "end_date", "doc_uuid"]
+                    "required": [
+                      "start_date",
+                      "end_date",
+                      "doc_uuid"
+                    ]
                   },
                   "minItems": 1,
                   "uniqueItems": true
                 }
               },
-              "required": ["name", "slas"]
+              "required": [
+                "name",
+                "slas"
+              ]
             },
             "minItems": 1,
             "uniqueItems": true
           }
         },
-        "required": ["issuer", "group_claim", "user_groups"]
+        "required": [
+          "issuer",
+          "group_claim",
+          "user_groups"
+        ]
       },
       "minItems": 1,
       "uniqueItems": true
@@ -95,6 +106,18 @@
           "network_tags": {
             "$ref": "#/$defs/network_tags"
           },
+          "overbooking_cpu": {
+            "$ref": "#/$defs/overbooking_cpu"
+          },
+          "overbooking_ram": {
+            "$ref": "#/$defs/overbooking_ram"
+          },
+          "bandwidth_in": {
+            "$ref": "#/$defs/bandwidth_in"
+          },
+          "bandwidth_out": {
+            "$ref": "#/$defs/bandwidth_out"
+          },
           "block_storage_vol_types": {
             "$ref": "#/$defs/block_storage_vol_types"
           },
@@ -111,7 +134,12 @@
             "$ref": "#/$defs/projects"
           }
         },
-        "required": ["name", "auth_url", "identity_providers", "projects"]
+        "required": [
+          "name",
+          "auth_url",
+          "identity_providers",
+          "projects"
+        ]
       },
       "minItems": 1,
       "uniqueItems": true
@@ -134,9 +162,6 @@
           "support_emails": {
             "$ref": "#/$defs/support_emails"
           },
-          "image_tags": {
-            "$ref": "#/$defs/image_tags"
-          },
           "block_storage_vol_types": {
             "$ref": "#/$defs/block_storage_vol_types"
           },
@@ -153,14 +178,20 @@
             "$ref": "#/$defs/projects"
           }
         },
-        "required": ["name", "auth_url", "identity_providers", "projects"]
+        "required": [
+          "name",
+          "auth_url",
+          "identity_providers",
+          "projects"
+        ]
       },
       "minItems": 1,
       "uniqueItems": true
     }
   },
-  "required": ["trusted_idps"],
-
+  "required": [
+    "trusted_idps"
+  ],
   "$defs": {
     "default_public_net": {
       "description": "Name of the default public network to use when multiple public networks are available for this project",
@@ -260,7 +291,11 @@
     "status": {
       "description": "Provider status",
       "type": "string",
-      "enum": ["active", "maintenance", "deprecate"],
+      "enum": [
+        "active",
+        "maintenance",
+        "deprecate"
+      ],
       "default": "active"
     },
     "is_public": {
@@ -296,6 +331,22 @@
       },
       "minItems": 1
     },
+    "overbooking_cpu": {
+      "description": "CPU overbooking value",
+      "type": "number"
+    },
+    "overbooking_ram": {
+      "description": "RAM overbooking value",
+      "type": "number"
+    },
+    "bandwidth_in": {
+      "description": "Incoming bandwidth",
+      "type": "number"
+    },
+    "bandwidth_out": {
+      "description": "Outgoing bandwidth",
+      "type": "number"
+    },
     "block_storage_vol_types": {
       "description": "Mapping of custom block storage volume types into standardized types",
       "type": "object",
@@ -327,7 +378,11 @@
             "type": "string"
           }
         },
-        "required": ["name", "protocol", "endpoint"]
+        "required": [
+          "name",
+          "protocol",
+          "endpoint"
+        ]
       },
       "minItems": 1,
       "uniqueItems": true
@@ -368,10 +423,15 @@
                 "maximum": 180
               }
             },
-            "required": ["site", "country"]
+            "required": [
+              "site",
+              "country"
+            ]
           }
         },
-        "required": ["name"]
+        "required": [
+          "name"
+        ]
       },
       "minItems": 1
     },
@@ -428,12 +488,17 @@
                   "$ref": "#/$defs/per_user_limits"
                 }
               },
-              "required": ["region_name"]
+              "required": [
+                "region_name"
+              ]
             },
             "minItems": 2
           }
         },
-        "required": ["id", "sla"]
+        "required": [
+          "id",
+          "sla"
+        ]
       },
       "minItems": 1,
       "uniqueItems": true
