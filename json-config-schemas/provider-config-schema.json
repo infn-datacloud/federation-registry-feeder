@@ -106,18 +106,6 @@
           "network_tags": {
             "$ref": "#/$defs/network_tags"
           },
-          "overbooking_cpu": {
-            "$ref": "#/$defs/overbooking_cpu"
-          },
-          "overbooking_ram": {
-            "$ref": "#/$defs/overbooking_ram"
-          },
-          "bandwidth_in": {
-            "$ref": "#/$defs/bandwidth_in"
-          },
-          "bandwidth_out": {
-            "$ref": "#/$defs/bandwidth_out"
-          },
           "block_storage_vol_types": {
             "$ref": "#/$defs/block_storage_vol_types"
           },
