@@ -83,8 +83,7 @@ class AuthMethod(AuthMethodBase):
     endpoint: AnyHttpUrl = Field(description="Identity Provider URL")
 
 
-class BlockStorageVolMap(BaseModel):
-    ...
+class BlockStorageVolMap(BaseModel): ...
 
 
 class Project(BaseNode):

@@ -67,7 +67,7 @@ def test_api_versions_defaults() -> None:
 @parametrize_with_cases("key", cases=CaseVersionKey)
 def test_api_versions_single_attr(key: str) -> None:
     """Each APIVersions key works correctly."""
-    d = {key: f"v{randint(2,10)}"}
+    d = {key: f"v{randint(2, 10)}"}
     api_ver = APIVersions(**d)
     for k, v in api_ver.dict().items():
         assert v == d[key] if k == key else v == "v1"
@@ -76,7 +76,7 @@ def test_api_versions_single_attr(key: str) -> None:
 @parametrize_with_cases("key", cases=CaseVersionKey)
 def test_api_versions_invalid_attr(key: str) -> None:
     """Check APIVersions is case sensitive."""
-    d = {key.lower(): f"v{randint(2,10)}"}
+    d = {key.lower(): f"v{randint(2, 10)}"}
     with pytest.raises(ValidationError):
         APIVersions(**d)
 
