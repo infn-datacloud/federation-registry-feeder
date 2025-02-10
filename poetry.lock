@@ -617,7 +617,7 @@ uvicorn = "^0.22.0"
 type = "git"
 url = "https://github.com/infn-datacloud/federation-registry.git"
 reference = "add-overbooking"
-resolved_reference = "2c5d5024932043dae590d45cce9534fcf660578a"
+resolved_reference = "03f21dd87c62474799f9d3f764eb7331df17b87c"
 
 [[package]]
 name = "filelock"

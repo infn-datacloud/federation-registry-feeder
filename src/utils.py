@@ -70,6 +70,22 @@ def load_config(*, fname: str, log_level: str | int | None = None) -> SiteConfig
         return None
 
     if config:
+        # For each region, set overbooking factors and bandwidths equal to the
+        # provider's ones if not specified
+        for provider in config.get("openstack", []):
+            for region in provider.get("regions", []):
+                region["overbooking_cpu"] = region.get(
+                    "overbooking_cpu", provider.get("overbooking_cpu", None)
+                )
+                region["overbooking_ram"] = region.get(
+                    "overbooking_ram", provider.get("overbooking_ram", None)
+                )
+                region["bandwidth_in"] = region.get(
+                    "bandwidth_in", provider.get("bandwidth_in", None)
+                )
+                region["bandwidth_out"] = region.get(
+                    "bandwidth_out", provider.get("bandwidth_out", None)
+                )
         try:
             config = SiteConfig(**config)
             logger.info("Configuration loaded")

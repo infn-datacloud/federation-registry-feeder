@@ -398,6 +398,18 @@
             "description": "Openstack region name",
             "type": "string"
           },
+          "overbooking_cpu": {
+            "$ref": "#/$defs/overbooking_cpu"
+          },
+          "overbooking_ram": {
+            "$ref": "#/$defs/overbooking_ram"
+          },
+          "bandwidth_in": {
+            "$ref": "#/$defs/bandwidth_in"
+          },
+          "bandwidth_out": {
+            "$ref": "#/$defs/bandwidth_out"
+          },
           "location": {
             "description": "Provider geographical location",
             "type": "object",
