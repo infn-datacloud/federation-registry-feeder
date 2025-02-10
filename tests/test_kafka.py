@@ -165,7 +165,7 @@ def test_send_messages(
 
     mock_prod.send.assert_called_with(
         {
-            "msg_version": "1.0.0",
+            "msg_version": "1.1.0",
             "provider_name": connection_data["provider_conf"]["name"],
             "provider_type": connection_data["provider_conf"]["type"],
             "region_name": connection_data["provider_conf"]["regions"][0]["name"],

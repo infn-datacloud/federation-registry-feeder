@@ -50,7 +50,7 @@ def send_kafka_messages(
     *, kafka_prod: Producer, connections_data: list[dict[str, Any]]
 ):
     """Organize quotas data and send them to kafka."""
-    msg_version = "1.0.0"
+    msg_version = "1.1.0"
     for data in connections_data:
         provider_conf = data.pop("provider_conf")
         issuer = data.pop("issuer")
