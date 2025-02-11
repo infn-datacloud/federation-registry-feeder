@@ -616,8 +616,8 @@ uvicorn = "^0.22.0"
 [package.source]
 type = "git"
 url = "https://github.com/infn-datacloud/federation-registry.git"
-reference = "add-overbooking"
-resolved_reference = "03f21dd87c62474799f9d3f764eb7331df17b87c"
+reference = "v1.1.0"
+resolved_reference = "b228baa586f5ce1541b49168102d22582b946a23"
 
 [[package]]
 name = "filelock"
@@ -2370,4 +2370,4 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-it
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0.0"
-content-hash = "df801f78ba2d04d7ba4680bbf3baf4d72d014f399f0ad11b064550468a10289d"
+content-hash = "d7c8614a4a88a80e141e18b171bed884c10ac86498a4af1d6cb0ecfc9933e9a3"

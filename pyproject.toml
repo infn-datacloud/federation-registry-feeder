@@ -9,7 +9,7 @@ packages = [{ include = "src" }]
 python = ">=3.9,<4.0.0"
 python-openstackclient = "^6.2.0"
 python-glanceclient = "^4.4.0"
-federation-registry = {git = "https://github.com/infn-datacloud/federation-registry.git", branch = "add-overbooking"}
+federation-registry = {git = "https://github.com/infn-datacloud/federation-registry.git", tag = "v1.1.0"}
 liboidcagent = "^0.6" # {git = "https://github.com/giosava94/liboidc-agent-py.git", branch = "local-and-remote" }
 kafka-python = "^2.0.2"
 
