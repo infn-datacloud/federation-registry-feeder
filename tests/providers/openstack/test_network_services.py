@@ -176,10 +176,7 @@ def test_retrieve_network_service_networks_tags(
     assert item is not None
 
     mock_networks.assert_called_once_with(
-        default_private_net=None,
-        default_public_net=None,
-        proxy=None,
-        tags=openstack_item.provider_conf.network_tags,
+        proxy=None, tags=openstack_item.provider_conf.network_tags
     )
 
 
@@ -213,8 +210,5 @@ def test_retrieve_network_service_default_net(
     assert item is not None
 
     mock_networks.assert_called_once_with(
-        default_private_net=openstack_item.project_conf.default_private_net,
-        default_public_net=openstack_item.project_conf.default_public_net,
-        proxy=openstack_item.project_conf.private_net_proxy,
-        tags=[],
+        proxy=openstack_item.project_conf.private_net_proxy, tags=[]
     )
