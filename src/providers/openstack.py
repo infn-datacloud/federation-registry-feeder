@@ -56,12 +56,12 @@ class OpenstackData:
         self.error = False
         self.logger = logger
         try:
-            assert (
-                len(provider_conf.regions) == 1
-            ), f"Invalid number or regions: {len(provider_conf.regions)}"
-            assert (
-                len(provider_conf.projects) == 1
-            ), f"Invalid number or projects: {len(provider_conf.projects)}"
+            assert len(provider_conf.regions) == 1, (
+                f"Invalid number or regions: {len(provider_conf.regions)}"
+            )
+            assert len(provider_conf.projects) == 1, (
+                f"Invalid number or projects: {len(provider_conf.projects)}"
+            )
             msg = "Invalid number or trusted identity providers: "
             msg += f"{len(provider_conf.identity_providers)}"
             assert len(provider_conf.identity_providers) == 1, msg

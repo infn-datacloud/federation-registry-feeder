@@ -83,8 +83,7 @@ class AuthMethod(AuthMethodBase):
     endpoint: AnyHttpUrl = Field(description="Identity Provider URL")
 
 
-class BlockStorageVolMap(BaseModel):
-    ...
+class BlockStorageVolMap(BaseModel): ...
 
 
 class Project(BaseNode):
@@ -162,10 +161,10 @@ class Openstack(Provider):
 
     @validator("regions", always=True)
     @classmethod
-    def default_region(cls, v: list[Region]) -> list[Region]:
-        if len(v) == 0:
-            v.append(Region(name="RegionOne"))
-        return v
+    def default_region(cls, regions: list[Region]) -> list[Region]:
+        if len(regions) == 0:
+            regions.append(Region(name="RegionOne"))
+        return regions
 
 
 class Kubernetes(Provider):
@@ -175,7 +174,7 @@ class Kubernetes(Provider):
 
     @validator("regions", always=True)
     @classmethod
-    def default_region(cls, v: list[Region]) -> list[Region]:
-        if len(v) == 0:
-            v.append(Region(name="default"))
-        return v
+    def default_region(cls, regions: list[Region]) -> list[Region]:
+        if len(regions) == 0:
+            regions.append(Region(name="default"))
+        return regions
