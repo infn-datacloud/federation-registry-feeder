@@ -1,6 +1,6 @@
 import copy
 
-from fed_reg.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
     IdentityServiceCreate,

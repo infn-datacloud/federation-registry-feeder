@@ -2,13 +2,13 @@ from typing import Literal
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
-from fed_reg.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     ComputeQuotaCreateExtended,
     ComputeServiceCreateExtended,
     FlavorCreateExtended,
     ImageCreateExtended,
 )
-from fed_reg.service.enum import ComputeServiceName, ServiceType
+from fedreg.service.enum import ComputeServiceName, ServiceType
 from keystoneauth1.exceptions.catalog import EndpointNotFound
 from pytest_cases import parametrize_with_cases
 

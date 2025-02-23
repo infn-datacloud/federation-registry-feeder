@@ -73,7 +73,7 @@ class CaseSiteConfigError:
         return OidcAgentError(random_lower_string())
 
 
-def test_infer_fed_reg_urls() -> None:
+def test_infer_fedreg_urls() -> None:
     """Verify fed-reg endpoints detection.
 
     Inferred urls are made up combining the fed-reg base url, api version and target

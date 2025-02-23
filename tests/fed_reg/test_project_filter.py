@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from fed_reg.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     ComputeServiceCreateExtended,
     FlavorCreateExtended,
     ImageCreateExtended,

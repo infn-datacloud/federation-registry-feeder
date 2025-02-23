@@ -1,7 +1,7 @@
 from typing import Any
 
 import pytest
-from fed_reg.provider.enum import ProviderType
+from fedreg.provider.enum import ProviderType
 from pytest_cases import parametrize_with_cases
 
 from src.models.identity_provider import SLA, Issuer, UserGroup

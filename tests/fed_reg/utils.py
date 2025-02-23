@@ -4,10 +4,10 @@ from logging import getLogger
 from random import choice
 from typing import Any
 
-from fed_reg.image.enum import ImageOS
-from fed_reg.provider.enum import ProviderStatus, ProviderType
-from fed_reg.provider.schemas_extended import ProviderCreateExtended, ProviderRead
-from fed_reg.service.enum import (
+from fedreg.image.enum import ImageOS
+from fedreg.provider.enum import ProviderStatus, ProviderType
+from fedreg.provider.schemas_extended import ProviderCreateExtended, ProviderRead
+from fedreg.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
     IdentityServiceName,
@@ -134,5 +134,5 @@ def random_start_end_dates() -> tuple[date, date]:
     return start_date, end_date
 
 
-def fed_reg_provider_dict() -> dict[str, Any]:
+def fedreg_provider_dict() -> dict[str, Any]:
     return {"name": random_lower_string(), "type": random_provider_type()}

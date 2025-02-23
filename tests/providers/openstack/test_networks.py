@@ -1,6 +1,6 @@
 from unittest.mock import Mock, PropertyMock, patch
 
-from fed_reg.provider.schemas_extended import NetworkCreateExtended
+from fedreg.provider.schemas_extended import NetworkCreateExtended
 from openstack.network.v2.network import Network
 from pytest_cases import case, parametrize, parametrize_with_cases
 
