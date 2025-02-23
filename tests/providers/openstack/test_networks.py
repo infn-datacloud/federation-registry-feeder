@@ -11,7 +11,7 @@ from tests.providers.openstack.utils import (
     openstack_network_dict,
     random_network_status,
 )
-from tests.schemas.utils import private_net_proxy_dict
+from tests.schemas.utils import network_dict, private_net_proxy_dict
 from tests.utils import random_lower_string
 
 
@@ -37,6 +37,15 @@ class CaseDefaultNet:
     @parametrize(default_net=["default_private_net", "default_public_net"])
     def case_default_attr(self, default_net: str) -> str:
         return default_net
+
+
+class CaseNetwork:
+    @parametrize(is_shared=[True, False])
+    def case_network(self, is_shared: bool) -> NetworkCreateExtended:
+        """Fixture with network."""
+        d = network_dict()
+        d["is_shared"] = is_shared
+        return NetworkCreateExtended(**d)
 
 
 class CaseOpenstackNetwork:
@@ -213,48 +222,30 @@ def test_retrieve_networks_with_proxy(
     assert data[0].proxy_user == net_proxy.user
 
 
-@patch("src.providers.openstack.Connection")
-@parametrize_with_cases("openstack_network", cases=CaseOpenstackNetwork, has_tag="base")
-@parametrize_with_cases("default_net", cases=CaseDefaultNet)
-def test_retrieve_networks_with_default_net(
-    mock_conn: Mock,
-    openstack_network: Network,
-    default_net: str,
-    openstack_item: OpenstackData,
-) -> None:
-    """Test how the is_default attribute in NetworkCreateExtended is built."""
-    args = {default_net: openstack_network.name}
-    openstack_network.project_id = openstack_item.project_conf.id
-    mock_conn.network.networks.return_value = [openstack_network]
-    type(mock_conn).current_project_id = PropertyMock(
-        return_value=openstack_item.project_conf.id
-    )
-    openstack_item.conn = mock_conn
+@parametrize_with_cases("network", cases=CaseNetwork, has_tag="base")
+def test_is_default_network(
+    network: NetworkCreateExtended, openstack_item: OpenstackData
+):
+    assert not openstack_item.is_default_network(network=network)
 
-    data = openstack_item.get_networks(**args)
-    assert len(data) == 1
-    item = data[0]
-    if (openstack_network.is_shared and default_net == "default_public_net") or (
-        not openstack_network.is_shared and default_net == "default_private_net"
-    ):
-        assert item.is_default
-
-
-@parametrize_with_cases("openstack_network", cases=CaseOpenstackNetwork, has_tag="base")
-def test_is_default_network(openstack_network: Network, openstack_item: OpenstackData):
-    assert not openstack_item.is_default_network(network=openstack_network)
-
-    if openstack_network.is_shared:
-        args = {"default_private_net": openstack_network.name}
+    if network.is_shared:
+        args = {"default_private_net": network.name}
     else:
-        args = {"default_public_net": openstack_network.name}
-    assert not openstack_item.is_default_network(network=openstack_network, **args)
+        args = {"default_public_net": network.name}
+    assert not openstack_item.is_default_network(network=network, **args)
 
-    if openstack_network.is_shared:
-        args = {"default_public_net": openstack_network.name}
+    if network.is_shared:
+        args = {"default_public_net": network.name}
     else:
-        args = {"default_private_net": openstack_network.name}
-    assert openstack_item.is_default_network(network=openstack_network, **args)
+        args = {"default_private_net": network.name}
+    assert openstack_item.is_default_network(network=network, **args)
 
-    openstack_network.is_default = True
-    assert openstack_item.is_default_network(network=openstack_network)
+    assert openstack_item.is_default_network(network=network, is_unique=True)
+    if network.is_shared:
+        args = {"default_private_net": network.name, "is_unique": True}
+    else:
+        args = {"default_public_net": network.name, "is_unique": True}
+    assert openstack_item.is_default_network(network=network, **args)
+
+    network.is_default = True
+    assert openstack_item.is_default_network(network=network)

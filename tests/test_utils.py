@@ -22,10 +22,11 @@ from tests.schemas.utils import (
     kubernetes_dict,
     openstack_dict,
     project_dict,
+    region_dict,
     sla_dict,
     user_group_dict,
 )
-from tests.utils import random_lower_string
+from tests.utils import random_float, random_lower_string
 
 
 class CaseYamlFiles:
@@ -73,7 +74,31 @@ class CaseSiteConfigError:
         return OidcAgentError(random_lower_string())
 
 
-def test_infer_fedreg_urls() -> None:
+class CaseOverbookingBandwidth:
+    def case_overbooking_and_bandwidth(self) -> dict[str, Any]:
+        sla = sla_dict()
+        issuer = issuer_dict()
+        issuer["user_groups"] = [{**user_group_dict(), "slas": [sla]}]
+        auth_method = auth_method_dict()
+        auth_method["endpoint"] = issuer["issuer"]
+        project = project_dict()
+        project["sla"] = sla["doc_uuid"]
+        provider = openstack_dict()
+        provider["identity_providers"] = [auth_method]
+        provider["projects"] = [project]
+        provider["regions"] = [region_dict()]
+        provider["overbooking_cpu"] = random_float(0, 10)
+        provider["overbooking_ram"] = random_float(0, 10)
+        provider["bandwidth_in"] = random_float(0, 10)
+        provider["bandwidth_out"] = random_float(0, 10)
+        provider["regions"][0]["bandwidth_in"] = random_float(0, 10)
+        provider["regions"][0]["bandwidth_out"] = random_float(0, 10)
+        provider["regions"][0]["bandwidth_in"] = random_float(0, 10)
+        provider["regions"][0]["bandwidth_out"] = random_float(0, 10)
+        return {"trusted_idps": [issuer], "openstack": [provider]}
+
+
+def test_infer_fed_reg_urls() -> None:
     """Verify fed-reg endpoints detection.
 
     Inferred urls are made up combining the fed-reg base url, api version and target
@@ -128,6 +153,39 @@ def test_load_yaml(
 
     config = load_config(fname=random_lower_string())
     assert config
+
+
+@parametrize_with_cases(
+    "yaml_content", cases=CaseOverbookingBandwidth, has_tag="region"
+)
+@patch("src.models.identity_provider.retrieve_token")
+@patch("src.utils.open")
+@patch("src.utils.yaml.load")
+def test_load_region_with_overbooking_and_bandwidth(
+    mock_yaml: Mock, mock_open: Mock, mock_token: Mock, yaml_content: dict[str, Any]
+) -> None:
+    """Load provider configuration from yaml file."""
+    mock_yaml.return_value = yaml_content
+    mock_token.return_value = random_lower_string()
+
+    config = load_config(fname=random_lower_string())
+    assert config
+    assert (
+        config.openstack[0].regions[0].overbooking_cpu
+        == yaml_content["openstack"][0]["regions"][0]["overbooking_cpu"]
+    )
+    assert (
+        config.openstack[0].regions[0].overbooking_ram
+        == yaml_content["openstack"][0]["regions"][0]["overbooking_ram"]
+    )
+    assert (
+        config.openstack[0].regions[0].bandwidth_in
+        == yaml_content["openstack"][0]["regions"][0]["bandwidth_in"]
+    )
+    assert (
+        config.openstack[0].regions[0].bandwidth_out
+        == yaml_content["openstack"][0]["regions"][0]["bandwidth_out"]
+    )
 
 
 @patch("src.utils.open")

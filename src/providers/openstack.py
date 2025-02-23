@@ -33,7 +33,6 @@ from openstack.compute.v2.flavor import Flavor
 from openstack.connection import Connection
 from openstack.exceptions import ForbiddenException, HttpException
 from openstack.image.v2.image import Image
-from openstack.network.v2.network import Network
 from requests import Response
 
 from src.models.identity_provider import Issuer
@@ -362,24 +361,22 @@ class OpenstackData:
     def is_default_network(
         self,
         *,
-        network: Network,
+        network: NetworkCreateExtended,
         default_private_net: str | None = None,
         default_public_net: str | None = None,
+        is_unique: bool = False,
     ) -> bool:
         """Detect if this network is the default one."""
         return bool(
-            (network.is_shared and default_public_net == network.name)
+            (is_unique and network.is_shared and default_public_net is None)
+            or (is_unique and not network.is_shared and default_private_net is None)
+            or (network.is_shared and default_public_net == network.name)
             or (not network.is_shared and default_private_net == network.name)
             or network.is_default
         )
 
     def get_networks(
-        self,
-        *,
-        default_private_net: str | None = None,
-        default_public_net: str | None = None,
-        proxy: PrivateNetProxy | None = None,
-        tags: list[str] | None = None,
+        self, *, proxy: PrivateNetProxy | None = None, tags: list[str] | None = None
     ) -> list[NetworkCreateExtended]:
         """Map Openstack network instance in NetworkCreateExtended instance."""
         if tags is None:
@@ -401,11 +398,6 @@ class OpenstackData:
             data["uuid"] = data.pop("id")
             if data.get("description") is None:
                 data["description"] = ""
-            data["is_default"] = self.is_default_network(
-                network=network,
-                default_private_net=default_private_net,
-                default_public_net=default_public_net,
-            )
             if proxy:
                 data["proxy_host"] = str(proxy.host)
                 data["proxy_user"] = proxy.user
@@ -502,11 +494,23 @@ class OpenstackData:
             endpoint=endpoint, name=NetworkServiceName.OPENSTACK_NEUTRON
         )
         network_service.networks = self.get_networks(
-            default_private_net=self.project_conf.default_private_net,
-            default_public_net=self.project_conf.default_public_net,
             proxy=self.project_conf.private_net_proxy,
             tags=self.provider_conf.network_tags,
         )
+        # If only one private network or only one public network, set it as default
+        # Set default network when user specifies it in the configuration file
+        tot_pub_nets = len([x for x in network_service.networks if x.is_shared])
+        tot_priv_nets = len([x for x in network_service.networks if not x.is_shared])
+        for network in network_service.networks:
+            is_unique = (network.is_shared and tot_pub_nets == 1) or (
+                not network.is_shared and tot_priv_nets == 1
+            )
+            network.is_default = self.is_default_network(
+                network=network,
+                default_private_net=self.project_conf.default_private_net,
+                default_public_net=self.project_conf.default_public_net,
+                is_unique=is_unique,
+            )
         network_service.quotas = [*self.get_network_quotas()]
         if self.project_conf.per_user_limits.network:
             network_service.quotas.append(
