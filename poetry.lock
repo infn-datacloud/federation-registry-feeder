@@ -560,8 +560,8 @@ pydantic = {version = ">=1.10.9,<2.0.0", extras = ["email"]}
 [package.source]
 type = "git"
 url = "https://github.com/infn-datacloud/federation-registry-lib.git"
-reference = "main"
-resolved_reference = "fd89c80ab61b151cc320ec8ff2682b187997efc5"
+reference = "v1.0.0"
+resolved_reference = "5d347399688f0f76529597b4c6e3f757c44c19ab"
 
 [[package]]
 name = "filelock"
@@ -2136,4 +2136,4 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-it
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0.0"
-content-hash = "afee36aa540e4eb73a20a444958ad67fc5870cfb72ebdb35ead1027c48c3db45"
+content-hash = "87e17e00829f0cc15fc06022b81343a6632826cf52cb003cfa33bff02b511113"
