@@ -4,7 +4,7 @@ from logging import Logger
 import requests
 from fastapi import status
 from fastapi.encoders import jsonable_encoder
-from fed_reg.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     ProviderCreateExtended,
     ProviderRead,
     ProviderReadExtended,

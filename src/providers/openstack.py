@@ -2,7 +2,7 @@ import os
 from logging import Logger
 from typing import Any
 
-from fed_reg.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     BlockStorageQuotaCreateExtended,
     BlockStorageServiceCreateExtended,
     ComputeQuotaCreateExtended,
@@ -17,7 +17,7 @@ from fed_reg.provider.schemas_extended import (
     ObjectStoreServiceCreateExtended,
     ProjectCreate,
 )
-from fed_reg.service.enum import (
+from fedreg.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
     IdentityServiceName,

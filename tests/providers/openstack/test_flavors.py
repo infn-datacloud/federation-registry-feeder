@@ -2,7 +2,7 @@ from random import getrandbits, randint
 from typing import Any
 from unittest.mock import Mock, PropertyMock, patch
 
-from fed_reg.provider.schemas_extended import FlavorCreateExtended
+from fedreg.provider.schemas_extended import FlavorCreateExtended
 from openstack.compute.v2.flavor import Flavor
 from openstack.exceptions import ForbiddenException
 from pytest_cases import case, parametrize, parametrize_with_cases

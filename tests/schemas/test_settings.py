@@ -16,7 +16,7 @@ class CaseVersionKey:
 
 
 class CaseSettings:
-    def case_fed_reg_url(self) -> tuple[Literal["FED_REG_API_URL"], AnyHttpUrl]:
+    def case_fedreg_url(self) -> tuple[Literal["FED_REG_API_URL"], AnyHttpUrl]:
         return "FED_REG_API_URL", random_url()
 
     def case_vol_labels_single(
@@ -41,12 +41,12 @@ class CaseSettings:
 
 
 class CaseInvalidSettings:
-    def case_fed_reg_url_empty_string(
+    def case_fedreg_url_empty_string(
         self,
     ) -> tuple[Literal["FED_REG_API_URL"], Literal[""]]:
         return "FED_REG_API_URL", ""
 
-    def case_fed_reg_url_non_url(
+    def case_fedreg_url_non_url(
         self,
     ) -> tuple[Literal["FED_REG_API_URL"], Literal["test.wrong.url.it"]]:
         return "FED_REG_API_URL", "test.wrong.url.it"

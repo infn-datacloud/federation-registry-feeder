@@ -1,7 +1,7 @@
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
-from fed_reg.provider.schemas_extended import ImageCreateExtended
+from fedreg.provider.schemas_extended import ImageCreateExtended
 from openstack.image.v2.image import Image
 from openstack.image.v2.member import Member
 from pytest_cases import case, parametrize, parametrize_with_cases

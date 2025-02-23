@@ -2,13 +2,13 @@ from logging import getLogger
 from unittest.mock import Mock, patch
 from uuid import uuid4
 
-from fed_reg.provider.schemas_extended import ProviderCreateExtended, ProviderRead
+from fedreg.provider.schemas_extended import ProviderCreateExtended, ProviderRead
 from pytest_cases import parametrize_with_cases
 from requests.exceptions import ConnectionError, HTTPError
 
 from src.fed_reg_conn import get_read_write_headers, update_database
 from src.models.config import APIVersions, Settings, URLs
-from tests.fed_reg.utils import fed_reg_provider_dict, service_endpoints_dict
+from tests.fed_reg.utils import fedreg_provider_dict, service_endpoints_dict
 from tests.utils import random_lower_string
 
 
@@ -71,7 +71,7 @@ def test_add_provider_to_db(
 ) -> None:
     """No entries in the database and a new providers to add."""
     service_endpoints = URLs(**service_endpoints_dict())
-    provider_create = ProviderCreateExtended(**fed_reg_provider_dict())
+    provider_create = ProviderCreateExtended(**fedreg_provider_dict())
     mock_crud_read.return_value = []
 
     assert update_database(
@@ -99,7 +99,7 @@ def test_delete_provider_from_db(
 ) -> None:
     """One entry in the database and no tracked providers."""
     service_endpoints = URLs(**service_endpoints_dict())
-    provider_read = ProviderRead(uid=uuid4(), **fed_reg_provider_dict())
+    provider_read = ProviderRead(uid=uuid4(), **fedreg_provider_dict())
     mock_crud_read.return_value = [provider_read]
 
     assert update_database(
@@ -126,7 +126,7 @@ def test_update_provider_in_db(
     mock_crud_remove: Mock,
 ) -> None:
     service_endpoints = URLs(**service_endpoints_dict())
-    provider_create = ProviderCreateExtended(**fed_reg_provider_dict())
+    provider_create = ProviderCreateExtended(**fedreg_provider_dict())
     provider_read = ProviderRead(uid=uuid4(), **provider_create.dict())
     mock_crud_read.return_value = [provider_read]
 
@@ -156,7 +156,7 @@ def test_read_error(
     error: ConnectionError | HTTPError,
 ) -> None:
     service_endpoints = URLs(**service_endpoints_dict())
-    provider_create = ProviderCreateExtended(**fed_reg_provider_dict())
+    provider_create = ProviderCreateExtended(**fedreg_provider_dict())
     mock_crud_read.side_effect = error
 
     assert not update_database(
@@ -185,7 +185,7 @@ def test_create_error(
     error: ConnectionError | HTTPError,
 ) -> None:
     service_endpoints = URLs(**service_endpoints_dict())
-    provider_create = ProviderCreateExtended(**fed_reg_provider_dict())
+    provider_create = ProviderCreateExtended(**fedreg_provider_dict())
     mock_crud_read.return_value = []
     mock_crud_create.side_effect = error
 
@@ -215,7 +215,7 @@ def test_delete_error(
     error: ConnectionError | HTTPError,
 ) -> None:
     service_endpoints = URLs(**service_endpoints_dict())
-    provider_read = ProviderRead(uid=uuid4(), **fed_reg_provider_dict())
+    provider_read = ProviderRead(uid=uuid4(), **fedreg_provider_dict())
     mock_crud_read.return_value = [provider_read]
     mock_crud_remove.side_effect = error
 
@@ -245,7 +245,7 @@ def test_update_error(
     error: ConnectionError | HTTPError,
 ) -> None:
     service_endpoints = URLs(**service_endpoints_dict())
-    provider_create = ProviderCreateExtended(**fed_reg_provider_dict())
+    provider_create = ProviderCreateExtended(**fedreg_provider_dict())
     provider_read = ProviderRead(uid=uuid4(), **provider_create.dict())
     mock_crud_read.return_value = [provider_read]
     mock_crud_update.side_effect = error

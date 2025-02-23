@@ -1,18 +1,18 @@
 from typing import Literal
 
-from fed_reg.auth_method.schemas import AuthMethodBase
-from fed_reg.location.schemas import LocationBase
-from fed_reg.models import BaseNode
-from fed_reg.provider.enum import ProviderType
-from fed_reg.provider.schemas import ProviderBase
-from fed_reg.provider.schemas_extended import find_duplicates
-from fed_reg.quota.schemas import (
+from fedreg.auth_method.schemas import AuthMethodBase
+from fedreg.core import BaseNode
+from fedreg.location.schemas import LocationBase
+from fedreg.provider.enum import ProviderType
+from fedreg.provider.schemas import ProviderBase
+from fedreg.provider.schemas_extended import find_duplicates
+from fedreg.quota.schemas import (
     BlockStorageQuotaBase,
     ComputeQuotaBase,
     NetworkQuotaBase,
     ObjectStoreQuotaBase,
 )
-from fed_reg.region.schemas import RegionBase
+from fedreg.region.schemas import RegionBase
 from pydantic import AnyHttpUrl, BaseModel, Field, IPvAnyAddress, validator
 
 

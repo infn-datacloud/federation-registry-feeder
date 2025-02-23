@@ -2,7 +2,7 @@ import os
 from uuid import uuid4
 
 import pytest
-from fed_reg.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
     IdentityProviderCreateExtended,
@@ -13,10 +13,10 @@ from fed_reg.provider.schemas_extended import (
     ProviderCreateExtended,
     RegionCreateExtended,
 )
-from fed_reg.service.enum import ObjectStoreServiceName
+from fedreg.service.enum import ObjectStoreServiceName
 
 from tests.fed_reg.utils import (
-    fed_reg_provider_dict,
+    fedreg_provider_dict,
     random_block_storage_service_name,
     random_compute_service_name,
     random_identity_service_name,
@@ -133,7 +133,7 @@ def provider_create(
 ):
     identity_provider_create.user_groups[0].sla.project = project_create.uuid
     return ProviderCreateExtended(
-        **fed_reg_provider_dict(),
+        **fedreg_provider_dict(),
         identity_providers=[identity_provider_create],
         regions=[region_create],
         projects=[project_create],

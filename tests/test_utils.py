@@ -91,8 +91,8 @@ class CaseOverbookingBandwidth:
         provider["overbooking_ram"] = random_float(0, 10)
         provider["bandwidth_in"] = random_float(0, 10)
         provider["bandwidth_out"] = random_float(0, 10)
-        provider["regions"][0]["bandwidth_in"] = random_float(0, 10)
-        provider["regions"][0]["bandwidth_out"] = random_float(0, 10)
+        provider["regions"][0]["overbooking_cpu"] = random_float(0, 10)
+        provider["regions"][0]["overbooking_ram"] = random_float(0, 10)
         provider["regions"][0]["bandwidth_in"] = random_float(0, 10)
         provider["regions"][0]["bandwidth_out"] = random_float(0, 10)
         return {"trusted_idps": [issuer], "openstack": [provider]}
@@ -155,9 +155,7 @@ def test_load_yaml(
     assert config
 
 
-@parametrize_with_cases(
-    "yaml_content", cases=CaseOverbookingBandwidth, has_tag="region"
-)
+@parametrize_with_cases("yaml_content", cases=CaseOverbookingBandwidth)
 @patch("src.models.identity_provider.retrieve_token")
 @patch("src.utils.open")
 @patch("src.utils.yaml.load")

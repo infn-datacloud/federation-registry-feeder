@@ -9,17 +9,18 @@ packages = [{ include = "src" }]
 python = ">=3.9,<4.0.0"
 python-openstackclient = "^6.2.0"
 python-glanceclient = "^4.4.0"
-federation-registry = {git = "https://github.com/infn-datacloud/federation-registry.git", tag = "v1.1.0"}
-liboidcagent = "^0.6" # {git = "https://github.com/giosava94/liboidc-agent-py.git", branch = "local-and-remote" }
 kafka-python = "^2.0.2"
+fastapi = "^0.115.8"
+fedreg = {git = "https://github.com/infn-datacloud/federation-registry-lib.git", tag = "v1.0.0"}
+liboidcagent = "^0.6"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.5.0"
 pytest = "^7.4.4"
 pytest-cases = "^3.8.2"
-pytest-cov = "^4.1.0"
+pytest-cov = {extras = ["toml"], version = "^6.0.0"}
 pytest-mock = "^3.12.0"
-ruff = "^0.9"
+ruff = "^0.9.6"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -43,6 +44,7 @@ convention = "google"
 relative_files = true
 source = ["src/"]
 branch = true
+omit = ["tests/**"]
 
 [tool.coverage.report]
 exclude_lines = ["if __name__ == .__main__.:"]
