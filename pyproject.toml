@@ -9,9 +9,10 @@ packages = [{ include = "src" }]
 python = ">=3.9,<4.0.0"
 python-openstackclient = "^6.2.0"
 python-glanceclient = "^4.4.0"
-federation-registry = {git = "https://github.com/infn-datacloud/federation-registry.git", tag = "v1.0.1"}
+fedreg = {git = "https://github.com/infn-datacloud/federation-registry-lib.git", branch = "main"}
 liboidcagent = "^0.6" # {git = "https://github.com/giosava94/liboidc-agent-py.git", branch = "local-and-remote" }
 kafka-python = "^2.0.2"
+fastapi = "^0.115.8"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.5.0"
