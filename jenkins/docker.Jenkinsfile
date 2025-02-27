@@ -2,6 +2,10 @@
 @Library('jenkins-libraries') _
 
 pipeline {
+    triggers {
+        cron(BRANCH_NAME == "periodic-jenkins" ? "@every 5m" : "")
+    }
+
     agent {
         node { label 'jenkins-node-label-1' }
     }
