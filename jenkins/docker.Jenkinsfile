@@ -3,7 +3,7 @@
 
 pipeline {
     triggers {
-        cron(env.BRANCH_NAME == "periodic-jenkins" ? "@hourly" : "")
+        cron(env.BRANCH_NAME == 'periodic-jenkins' ? '@weekly' : '')
     }
 
     agent {
