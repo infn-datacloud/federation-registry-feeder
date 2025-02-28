@@ -4,7 +4,7 @@
 pipeline {
     triggers {
         String pattern = /^v/
-        cron(env.BRANCH_NAME.find(pattern) ? '@weekly' : '')
+        cron(env.BRANCH_NAME.find(pattern) ? '@hourly' : '')
     }
 
     agent {
