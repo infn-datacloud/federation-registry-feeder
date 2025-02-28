@@ -3,7 +3,7 @@
 
 pipeline {
     triggers {
-        cron(env.BRANCH_NAME.find(/^v/) ? '@hourly' : '')
+        dockerRepository.periodicTrigger('@hourly')
     }
 
     agent {
