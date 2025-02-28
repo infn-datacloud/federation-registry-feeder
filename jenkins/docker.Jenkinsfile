@@ -3,8 +3,7 @@
 
 pipeline {
     triggers {
-        def pattern = /^v/
-        cron(env.BRANCH_NAME.find(pattern) ? '@hourly' : '')
+        cron(env.BRANCH_NAME.find(/^v/) ? '@hourly' : '')
     }
 
     agent {
