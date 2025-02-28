@@ -3,7 +3,8 @@
 
 pipeline {
     triggers {
-        cron(env.BRANCH_NAME == 'periodic-jenkins' ? '@weekly' : '')
+        String pattern = /^v/
+        cron(env.BRANCH_NAME.find(pattern) ? '@weekly' : '')
     }
 
     agent {
