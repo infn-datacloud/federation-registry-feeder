@@ -3,7 +3,7 @@
 
 pipeline {
     triggers {
-        String pattern = /^v/
+        def pattern = /^v/
         cron(env.BRANCH_NAME.find(pattern) ? '@hourly' : '')
     }
 
