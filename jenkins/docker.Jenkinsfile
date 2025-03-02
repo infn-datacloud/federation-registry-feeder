@@ -1,9 +1,11 @@
 #!groovy
 @Library('jenkins-libraries') _
 
+CRON_SETTINGS = dockerRepository.periodicTrigger(env.BRANCH_NAME, '*/5 * * * *')
+
 pipeline {
     triggers {
-        cron(dockerRepository.periodicTrigger(env.BRANCH_NAME, '*/5 * * * *'))
+        cron(CRON_SETTINGS)
     }
 
     agent {
