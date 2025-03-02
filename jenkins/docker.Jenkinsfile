@@ -1,7 +1,7 @@
 #!groovy
 @Library('jenkins-libraries') _
 
-CRON_SETTINGS = dockerRepository.periodicTrigger(env.BRANCH_NAME, period = '*/5 * * * *', pattern = /^periodic/)
+CRON_SETTINGS = dockerRepository.periodicTrigger(env.BRANCH_NAME)
 
 pipeline {
     triggers {
