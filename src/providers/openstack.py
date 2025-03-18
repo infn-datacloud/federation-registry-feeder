@@ -7,15 +7,18 @@ from fedreg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeQuotaCreateExtended,
     ComputeServiceCreateExtended,
-    FlavorCreateExtended,
     IdentityServiceCreate,
-    ImageCreateExtended,
-    NetworkCreateExtended,
     NetworkQuotaCreateExtended,
     NetworkServiceCreateExtended,
     ObjectStoreQuotaCreateExtended,
     ObjectStoreServiceCreateExtended,
+    PrivateFlavorCreateExtended,
+    PrivateImageCreateExtended,
+    PrivateNetworkCreateExtended,
     ProjectCreate,
+    SharedFlavorCreate,
+    SharedImageCreate,
+    SharedNetworkCreate,
 )
 from fedreg.service.enum import (
     BlockStorageServiceName,
@@ -297,24 +300,27 @@ class OpenstackData:
             self.error = True
         return list(projects)
 
-    def get_flavors(self) -> list[FlavorCreateExtended]:
+    def get_flavors(self) -> list[PrivateFlavorCreateExtended | SharedFlavorCreate]:
         """Map Openstack flavor instance into FlavorCreateExtended instance."""
         self.logger.info("Retrieve current project accessible flavors")
         flavors = []
         for flavor in self.conn.compute.flavors(is_disabled=False):
             self.logger.debug("Flavor received data=%r", flavor)
-            projects = []
-            if not flavor.is_public:
-                projects = self.get_flavor_projects(flavor)
             data = flavor.to_dict()
             data["uuid"] = data.pop("id")
             if data.get("description") is None:
                 data["description"] = ""
+            data["is_shared"] = data.pop("is_public")
+            if not data["is_shared"]:
+                data["projects"] = self.get_flavor_projects(flavor)
             extra = data.pop("extra_specs")
             if extra:
                 data = {**self.get_flavor_extra_specs(extra), **data}
+            if data["is_shared"]:
+                flavors.append(SharedFlavorCreate(**data))
+            else:
+                flavors.append(PrivateFlavorCreateExtended(**data))
             self.logger.debug("Flavor manipulated data=%s", data)
-            flavors.append(FlavorCreateExtended(**data, projects=list(projects)))
         return flavors
 
     def get_image_projects(self, image: Image) -> list[str]:
@@ -329,7 +335,9 @@ class OpenstackData:
                 projects.add(member.id)
         return list(projects)
 
-    def get_images(self, *, tags: list[str] | None = None) -> list[ImageCreateExtended]:
+    def get_images(
+        self, *, tags: list[str] | None = None
+    ) -> list[PrivateImageCreateExtended | SharedImageCreate]:
         """Map Openstack image istance into ImageCreateExtended instance."""
         if tags is None:
             tags = []
@@ -339,29 +347,31 @@ class OpenstackData:
             status="active", tag=None if len(tags) == 0 else tags
         ):
             self.logger.debug("Image received data=%r", image)
-            is_public = True
-            # At least one project is present since the image is visible from the
-            # current project.
-            projects = []
-            if image.visibility == "private":
-                is_public = False
-                projects = [image.owner_id]
-            elif image.visibility == "shared":
-                is_public = False
-                projects = self.get_image_projects(image)
             data = image.to_dict()
             data["uuid"] = data.pop("id")
             # Openstack image object does not have `description` field
             data["description"] = ""
-            data["is_public"] = is_public
+            # At least one project is present since the image is visible from the
+            # current project.
+            if image.visibility == "private":
+                data["is_shared"] = False
+                data["projects"] = [image.owner_id]
+            elif image.visibility == "shared":
+                data["is_shared"] = False
+                data["projects"] = self.get_image_projects(image)
+            else:
+                data["is_shared"] = True
+            if data["is_shared"]:
+                images.append(SharedImageCreate(**data))
+            else:
+                images.append(PrivateImageCreateExtended(**data))
             self.logger.debug("Image manipulated data=%s", data)
-            images.append(ImageCreateExtended(**data, projects=projects))
         return images
 
     def is_default_network(
         self,
         *,
-        network: NetworkCreateExtended,
+        network: PrivateNetworkCreateExtended | SharedNetworkCreate,
         default_private_net: str | None = None,
         default_public_net: str | None = None,
         is_unique: bool = False,
@@ -377,7 +387,7 @@ class OpenstackData:
 
     def get_networks(
         self, *, proxy: PrivateNetProxy | None = None, tags: list[str] | None = None
-    ) -> list[NetworkCreateExtended]:
+    ) -> list[PrivateNetworkCreateExtended | SharedNetworkCreate]:
         """Map Openstack network instance in NetworkCreateExtended instance."""
         if tags is None:
             tags = []
@@ -387,22 +397,25 @@ class OpenstackData:
             status="active", tag=None if len(tags) == 0 else tags
         ):
             self.logger.debug("Network received data=%r", network)
-            project = None
-            # A project can find not owned networks. Discard them.
-            if not network.is_shared:
-                if self.conn.current_project_id != network.project_id:
-                    continue
-                else:
-                    project = network.project_id
             data = network.to_dict()
             data["uuid"] = data.pop("id")
             if data.get("description") is None:
                 data["description"] = ""
+            # A project can find not owned networks. Discard them.
+            if not data["is_shared"]:
+                if self.conn.current_project_id != network.project_id:
+                    self.logger.warning(
+                        "Not shared and not owned network, but still usable"
+                    )
+                data["projects"] = [self.conn.current_project_id]
             if proxy:
                 data["proxy_host"] = str(proxy.host)
                 data["proxy_user"] = proxy.user
             self.logger.debug("Network manipulated data=%s", data)
-            networks.append(NetworkCreateExtended(**data, project=project))
+            if data["is_shared"]:
+                networks.append(SharedNetworkCreate(**data))
+            else:
+                networks.append(PrivateNetworkCreateExtended(**data))
         return networks
 
     def get_project(self) -> ProjectCreate:
