@@ -549,8 +549,8 @@ standard = ["email-validator (>=2.0.0)", "fastapi-cli[standard] (>=0.0.5)", "htt
 
 [[package]]
 name = "fedreg"
-version = "0.1.0"
-description = "Python web application providing public REST API to inspect the configurations of the providers registered into the DataCloud project"
+version = "1.0.1"
+description = "Python library with the Object Models used in the federation-registry app."
 optional = false
 python-versions = ">=3.9,<4.0.0"
 files = []
@@ -564,8 +564,8 @@ pydantic = {version = ">=1.10.9,<2.0.0", extras = ["email"]}
 [package.source]
 type = "git"
 url = "https://github.com/infn-datacloud/federation-registry-lib.git"
-reference = "v1.0.0"
-resolved_reference = "5d347399688f0f76529597b4c6e3f757c44c19ab"
+reference = "networks-multi-projects"
+resolved_reference = "9d7203320233319d4ecd7215c03bbf83d8766f81"
 
 [[package]]
 name = "filelock"
@@ -2141,4 +2141,4 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-it
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9.2,<4.0.0"
-content-hash = "ad84514032a4a31ff5ac37836689a6d3291c7b27419ec0fb7f87121759e18064"
+content-hash = "547e1ed424e917e0e8c8666bf93176ca6be0a41cd7bd70cccb7b6f37e0eddd85"
