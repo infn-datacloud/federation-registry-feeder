@@ -1,6 +1,9 @@
 from unittest.mock import Mock, PropertyMock, patch
 
-from fedreg.provider.schemas_extended import NetworkCreateExtended
+from fedreg.provider.schemas_extended import (
+    PrivateNetworkCreateExtended,
+    SharedNetworkCreate,
+)
 from openstack.network.v2.network import Network
 from pytest_cases import case, parametrize, parametrize_with_cases
 
@@ -41,11 +44,15 @@ class CaseDefaultNet:
 
 class CaseNetwork:
     @parametrize(is_shared=[True, False])
-    def case_network(self, is_shared: bool) -> NetworkCreateExtended:
+    def case_network(
+        self, is_shared: bool
+    ) -> PrivateNetworkCreateExtended | SharedNetworkCreate:
         """Fixture with network."""
         d = network_dict()
-        d["is_shared"] = is_shared
-        return NetworkCreateExtended(**d)
+        if is_shared:
+            return SharedNetworkCreate(**d)
+        else:
+            return PrivateNetworkCreateExtended(**d)
 
 
 class CaseOpenstackNetwork:
@@ -114,7 +121,7 @@ def test_retrieve_networks(
     assert len(data) == len(networks)
     if len(data) > 0:
         item = data[0]
-        assert isinstance(item, NetworkCreateExtended)
+        assert isinstance(item, (PrivateNetworkCreateExtended, SharedNetworkCreate))
         if openstack_network.description:
             assert item.description == openstack_network.description
         else:
@@ -128,11 +135,11 @@ def test_retrieve_networks(
         assert not item.proxy_host
         assert not item.proxy_user
         assert item.tags == openstack_network.tags
-        if item.is_shared:
-            assert not item.project
+        if isinstance(item, SharedNetworkCreate):
+            assert not hasattr(item, "projects")
         else:
-            assert item.project
-            assert item.project == openstack_network.project_id
+            assert item.projects
+            assert openstack_network.project_id in item.projects
 
 
 @patch("src.providers.openstack.Connection")
@@ -184,7 +191,10 @@ def test_not_owned_private_net(
     openstack_network: Network,
     openstack_item: OpenstackData,
 ) -> None:
-    """Networks owned by another project are not returned."""
+    """Networks owned by another project are returned.
+
+    These networks are private and the current project is linked to that network.
+    """
     networks = [openstack_network]
     mock_conn.network.networks.return_value = networks
     type(mock_conn).current_project_id = PropertyMock(
@@ -193,7 +203,10 @@ def test_not_owned_private_net(
     openstack_item.conn = mock_conn
 
     data = openstack_item.get_networks()
-    assert len(data) == 0
+    assert len(data) == 1
+    assert isinstance(data[0], PrivateNetworkCreateExtended)
+    assert len(data[0].projects) == 1
+    assert data[0].projects[0] == openstack_item.project_conf.id
 
 
 @patch("src.providers.openstack.Connection")
@@ -224,7 +237,8 @@ def test_retrieve_networks_with_proxy(
 
 @parametrize_with_cases("network", cases=CaseNetwork, has_tag="base")
 def test_is_default_network(
-    network: NetworkCreateExtended, openstack_item: OpenstackData
+    network: PrivateNetworkCreateExtended | SharedNetworkCreate,
+    openstack_item: OpenstackData,
 ):
     assert not openstack_item.is_default_network(network=network)
 

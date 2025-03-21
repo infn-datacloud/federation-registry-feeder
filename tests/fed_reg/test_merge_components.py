@@ -2,9 +2,9 @@ import copy
 from uuid import uuid4
 
 from fedreg.provider.schemas_extended import (
-    FlavorCreateExtended,
     IdentityProviderCreateExtended,
-    ImageCreateExtended,
+    PrivateFlavorCreateExtended,
+    PrivateImageCreateExtended,
     ProjectCreate,
     RegionCreateExtended,
 )
@@ -73,7 +73,7 @@ def test_merge_components_multi_entries_filter_projects(
     region_create: RegionCreateExtended,
 ):
     region_create.compute_services[0].flavors.append(
-        FlavorCreateExtended(
+        PrivateFlavorCreateExtended(
             name=random_lower_string(),
             uuid=uuid4(),
             is_public=False,
@@ -81,7 +81,7 @@ def test_merge_components_multi_entries_filter_projects(
         )
     )
     region_create.compute_services[0].images.append(
-        ImageCreateExtended(
+        PrivateImageCreateExtended(
             name=random_lower_string(),
             uuid=uuid4(),
             is_public=False,

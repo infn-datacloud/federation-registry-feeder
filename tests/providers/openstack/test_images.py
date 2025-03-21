@@ -1,7 +1,10 @@
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
-from fedreg.provider.schemas_extended import ImageCreateExtended
+from fedreg.provider.schemas_extended import (
+    PrivateImageCreateExtended,
+    SharedImageCreate,
+)
 from openstack.image.v2.image import Image
 from openstack.image.v2.member import Member
 from pytest_cases import case, parametrize, parametrize_with_cases
@@ -105,7 +108,7 @@ def test_retrieve_public_images(
     assert len(data) == 1
     if len(data) > 0:
         item = data[0]
-        assert isinstance(item, ImageCreateExtended)
+        assert isinstance(item, SharedImageCreate)
         assert item.description == ""
         assert item.uuid == openstack_image.id
         assert item.name == openstack_image.name
@@ -117,8 +120,7 @@ def test_retrieve_public_images(
         assert not item.cuda_support
         assert not item.gpu_driver
         assert item.tags == openstack_image.tags
-        assert item.is_public
-        assert len(item.projects) == 0
+        assert item.is_shared
 
 
 @patch("src.providers.openstack.Connection")
@@ -216,6 +218,5 @@ def test_retrieve_private_images(
     data = openstack_item.get_images()
     assert len(data) == 1
     item = data[0]
-    assert isinstance(item, ImageCreateExtended)
-    assert not item.is_public
+    assert isinstance(item, PrivateImageCreateExtended)
     assert item.projects[0] == openstack_item.project_conf.id

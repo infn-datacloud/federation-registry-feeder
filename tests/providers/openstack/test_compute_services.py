@@ -5,8 +5,10 @@ from uuid import uuid4
 from fedreg.provider.schemas_extended import (
     ComputeQuotaCreateExtended,
     ComputeServiceCreateExtended,
-    FlavorCreateExtended,
-    ImageCreateExtended,
+    PrivateFlavorCreateExtended,
+    PrivateImageCreateExtended,
+    SharedFlavorCreate,
+    SharedImageCreate,
 )
 from fedreg.service.enum import ComputeServiceName, ServiceType
 from keystoneauth1.exceptions.catalog import EndpointNotFound
@@ -125,11 +127,11 @@ def test_retrieve_compute_service_with_flavors(
     """Check flavors in the returned service."""
     if visibility == "public":
         mock_flavors.return_value = [
-            FlavorCreateExtended(uuid=uuid4(), name=random_lower_string())
+            SharedFlavorCreate(uuid=uuid4(), name=random_lower_string())
         ]
     elif visibility == "private":
         mock_flavors.return_value = [
-            FlavorCreateExtended(
+            PrivateFlavorCreateExtended(
                 uuid=uuid4(),
                 name=random_lower_string(),
                 is_public=False,
@@ -164,11 +166,11 @@ def test_retrieve_compute_service_with_images(
     """Check images in the returned service."""
     if visibility == "public":
         mock_images.return_value = [
-            ImageCreateExtended(uuid=uuid4(), name=random_lower_string())
+            SharedImageCreate(uuid=uuid4(), name=random_lower_string())
         ]
     elif visibility == "private":
         mock_images.return_value = [
-            ImageCreateExtended(
+            PrivateImageCreateExtended(
                 uuid=uuid4(),
                 name=random_lower_string(),
                 is_public=False,

@@ -133,10 +133,7 @@ def test_update_existing_service_quotas(
 
 @parametrize_with_cases("services", cases=CaseService, has_tag="flavor")
 def test_update_existing_service_flavors(
-    services: list[BlockStorageServiceCreateExtended]
-    | list[ComputeServiceCreateExtended]
-    | list[NetworkServiceCreateExtended]
-    | list[ObjectStoreServiceCreateExtended],
+    services: list[ComputeServiceCreateExtended],
 ) -> None:
     curr_srv = services[:1]
     new_srv = copy.deepcopy(services[:1])
@@ -151,10 +148,7 @@ def test_update_existing_service_flavors(
 
 @parametrize_with_cases("services", cases=CaseService, has_tag="image")
 def test_update_existing_service_images(
-    services: list[BlockStorageServiceCreateExtended]
-    | list[ComputeServiceCreateExtended]
-    | list[NetworkServiceCreateExtended]
-    | list[ObjectStoreServiceCreateExtended],
+    services: list[ComputeServiceCreateExtended],
 ) -> None:
     curr_srv = services[:1]
     new_srv = copy.deepcopy(services[:1])
@@ -169,10 +163,7 @@ def test_update_existing_service_images(
 
 @parametrize_with_cases("services", cases=CaseService, has_tag="network")
 def test_update_existing_service_networks(
-    services: list[BlockStorageServiceCreateExtended]
-    | list[ComputeServiceCreateExtended]
-    | list[NetworkServiceCreateExtended]
-    | list[ObjectStoreServiceCreateExtended],
+    services: list[NetworkServiceCreateExtended],
 ) -> None:
     curr_srv = services[:1]
     new_srv = copy.deepcopy(services[:1])
