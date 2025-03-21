@@ -152,14 +152,17 @@ def get_updated_networks(
     If the service does not exist, add it; otherwise, add new quotas, flavors and
     images.
     """
-    resources = []
+    resources = [*current_resources]
     for new_res in new_resources:
         for curr_res in current_resources:
             if new_res.uuid == curr_res.uuid:
                 if isinstance(new_res, PrivateNetworkCreateExtended) and isinstance(
                     curr_res, PrivateNetworkCreateExtended
                 ):
-                    new_res.projects += curr_res.projects
+                    new_res.projects = list(
+                        set(new_res.projects).union(curr_res.projects)
+                    )
+                resources.remove(curr_res)
                 resources.append(new_res)
                 break
         else:
