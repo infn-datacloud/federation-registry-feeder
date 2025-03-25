@@ -89,7 +89,7 @@ class CaseNetworks:
             ),
         ]
 
-    @case(tags=("private", "same-id-diff-proj"))
+    @case(tags="same-id-diff-proj")
     def case_same_net_diff_proj(self) -> list[PrivateNetworkCreateExtended]:
         net_id = uuid4()
         name = random_lower_string()
@@ -149,7 +149,7 @@ def test_add_only_new_resources(
     assert len(update_resources) == 3
 
 
-@parametrize_with_cases("networks", cases=CaseNetworks)
+@parametrize_with_cases("networks", cases=CaseNetworks, glob="*networks")
 def test_identical_networks(
     networks: list[SharedNetworkCreate] | list[PrivateNetworkCreateExtended],
 ) -> None:
@@ -163,7 +163,7 @@ def test_identical_networks(
         assert len(update_networks[0].projects) == 1
 
 
-@parametrize_with_cases("networks", cases=CaseNetworks)
+@parametrize_with_cases("networks", cases=CaseNetworks, glob="*networks")
 def test_add_new_networks(
     networks: list[SharedNetworkCreate] | list[PrivateNetworkCreateExtended],
 ) -> None:
@@ -175,7 +175,7 @@ def test_add_new_networks(
     assert len(update_networks) == 3
 
 
-@parametrize_with_cases("networks", cases=CaseNetworks)
+@parametrize_with_cases("networks", cases=CaseNetworks, glob="*networks")
 def test_add_only_new_networks(
     networks: list[SharedNetworkCreate] | list[PrivateNetworkCreateExtended],
 ) -> None:
