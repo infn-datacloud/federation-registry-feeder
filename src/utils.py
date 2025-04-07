@@ -162,6 +162,7 @@ def get_updated_networks(
                     new_res.projects = list(
                         set(new_res.projects).union(curr_res.projects)
                     )
+                new_res.is_default = new_res.is_default or curr_res.is_default
                 resources.remove(curr_res)
                 resources.append(new_res)
                 break

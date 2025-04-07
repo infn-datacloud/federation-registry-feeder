@@ -378,10 +378,14 @@ class OpenstackData:
     ) -> bool:
         """Detect if this network is the default one."""
         return bool(
-            (is_unique and network.is_shared and default_public_net is None)
-            or (is_unique and not network.is_shared and default_private_net is None)
-            or (network.is_shared and default_public_net == network.name)
-            or (not network.is_shared and default_private_net == network.name)
+            (is_unique and network.is_router_external and default_public_net is None)
+            or (
+                is_unique
+                and not network.is_router_external
+                and default_private_net is None
+            )
+            or (network.is_router_external and default_public_net == network.name)
+            or (not network.is_router_external and default_private_net == network.name)
             or network.is_default
         )
 
@@ -512,11 +516,15 @@ class OpenstackData:
         )
         # If only one private network or only one public network, set it as default
         # Set default network when user specifies it in the configuration file
-        tot_pub_nets = len([x for x in network_service.networks if x.is_shared])
-        tot_priv_nets = len([x for x in network_service.networks if not x.is_shared])
+        tot_pub_nets = len(
+            [x for x in network_service.networks if x.is_router_external]
+        )
+        tot_priv_nets = len(
+            [x for x in network_service.networks if not x.is_router_external]
+        )
         for network in network_service.networks:
-            is_unique = (network.is_shared and tot_pub_nets == 1) or (
-                not network.is_shared and tot_priv_nets == 1
+            is_unique = (network.is_router_external and tot_pub_nets == 1) or (
+                not network.is_router_external and tot_priv_nets == 1
             )
             network.is_default = self.is_default_network(
                 network=network,
