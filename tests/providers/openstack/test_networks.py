@@ -1,4 +1,5 @@
 from unittest.mock import Mock, PropertyMock, patch
+from uuid import uuid4
 
 from fedreg.provider.schemas_extended import (
     PrivateNetworkCreateExtended,
@@ -43,16 +44,21 @@ class CaseDefaultNet:
 
 
 class CaseNetwork:
-    @parametrize(is_shared=[True, False])
-    def case_network(
-        self, is_shared: bool
-    ) -> PrivateNetworkCreateExtended | SharedNetworkCreate:
+    @parametrize(is_router_external=(True, False))
+    def case_private_network(
+        self, is_router_external: bool
+    ) -> PrivateNetworkCreateExtended:
         """Fixture with network."""
         d = network_dict()
-        if is_shared:
-            return SharedNetworkCreate(**d)
-        else:
-            return PrivateNetworkCreateExtended(**d)
+        return PrivateNetworkCreateExtended(
+            **d, is_router_external=is_router_external, projects=[uuid4()]
+        )
+
+    @parametrize(is_router_external=(True, False))
+    def case_shared_network(self, is_router_external: bool) -> SharedNetworkCreate:
+        """Fixture with network."""
+        d = network_dict()
+        return SharedNetworkCreate(**d, is_router_external=is_router_external)
 
 
 class CaseOpenstackNetwork:
@@ -235,27 +241,27 @@ def test_retrieve_networks_with_proxy(
     assert data[0].proxy_user == net_proxy.user
 
 
-@parametrize_with_cases("network", cases=CaseNetwork, has_tag="base")
+@parametrize_with_cases("network", cases=CaseNetwork)
 def test_is_default_network(
     network: PrivateNetworkCreateExtended | SharedNetworkCreate,
     openstack_item: OpenstackData,
 ):
     assert not openstack_item.is_default_network(network=network)
 
-    if network.is_shared:
+    if network.is_router_external:
         args = {"default_private_net": network.name}
     else:
         args = {"default_public_net": network.name}
     assert not openstack_item.is_default_network(network=network, **args)
 
-    if network.is_shared:
+    if network.is_router_external:
         args = {"default_public_net": network.name}
     else:
         args = {"default_private_net": network.name}
     assert openstack_item.is_default_network(network=network, **args)
 
     assert openstack_item.is_default_network(network=network, is_unique=True)
-    if network.is_shared:
+    if network.is_router_external:
         args = {"default_private_net": network.name, "is_unique": True}
     else:
         args = {"default_public_net": network.name, "is_unique": True}
