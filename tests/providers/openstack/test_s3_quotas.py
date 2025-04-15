@@ -18,11 +18,11 @@ def test_retrieve_s3_quotas(mock_conn: Mock, openstack_item: OpenstackData) -> N
     assert data_usage.type == QuotaType.OBJECT_STORE.value
     assert not data_limit.per_user
     assert not data_usage.per_user
-    assert data_limit.bytes == -1
-    assert data_usage.bytes == -1
-    assert data_limit.containers == 1000
-    assert data_usage.containers == 1000
-    assert data_limit.objects == -1
-    assert data_usage.objects == -1
+    assert data_limit.bytes is None
+    assert data_usage.bytes is None
+    assert data_limit.containers is None
+    assert data_usage.containers is None
+    assert data_limit.objects is None
+    assert data_usage.objects is None
     assert data_limit.project == openstack_item.project_conf.id
     assert data_usage.project == openstack_item.project_conf.id

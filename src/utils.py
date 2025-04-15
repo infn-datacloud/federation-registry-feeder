@@ -7,14 +7,18 @@ from fedreg.provider.enum import ProviderStatus
 from fedreg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
-    FlavorCreateExtended,
     IdentityProviderCreateExtended,
-    ImageCreateExtended,
     NetworkServiceCreateExtended,
     ObjectStoreServiceCreateExtended,
+    PrivateFlavorCreateExtended,
+    PrivateImageCreateExtended,
+    PrivateNetworkCreateExtended,
     ProjectCreate,
     ProviderCreateExtended,
     RegionCreateExtended,
+    SharedFlavorCreate,
+    SharedImageCreate,
+    SharedNetworkCreate,
 )
 from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
 from pydantic import ValidationError
@@ -99,9 +103,9 @@ def get_site_configs(
 
 def filter_compute_resources_projects(
     *,
-    items: list[FlavorCreateExtended] | list[ImageCreateExtended],
+    items: list[PrivateFlavorCreateExtended] | list[PrivateImageCreateExtended],
     projects: list[str],
-) -> list[FlavorCreateExtended] | list[ImageCreateExtended]:
+) -> list[PrivateFlavorCreateExtended] | list[PrivateImageCreateExtended]:
     """Remove from compute resources projects not imported in the Fed-Reg.
 
     Apply the filtering only on private flavors and images.
@@ -111,7 +115,7 @@ def filter_compute_resources_projects(
     there can't be an empty projects list.
     """
     for item in items:
-        if not item.is_public:
+        if not item.is_shared:
             item.projects = list(
                 filter(lambda x, projects=projects: x in projects, item.projects)
             )
@@ -138,18 +142,44 @@ def get_updated_identity_provider(
     return current_idp
 
 
+def get_updated_networks(
+    *,
+    current_resources: list[PrivateNetworkCreateExtended | SharedNetworkCreate],
+    new_resources: list[PrivateNetworkCreateExtended | SharedNetworkCreate],
+) -> list[PrivateNetworkCreateExtended | SharedNetworkCreate]:
+    """Update Compute services.
+
+    If the service does not exist, add it; otherwise, add new quotas, flavors and
+    images.
+    """
+    resources = [*current_resources]
+    for new_res in new_resources:
+        for curr_res in current_resources:
+            if new_res.uuid == curr_res.uuid:
+                if isinstance(new_res, PrivateNetworkCreateExtended) and isinstance(
+                    curr_res, PrivateNetworkCreateExtended
+                ):
+                    new_res.projects = list(
+                        set(new_res.projects).union(curr_res.projects)
+                    )
+                new_res.is_default = new_res.is_default or curr_res.is_default
+                resources.remove(curr_res)
+                resources.append(new_res)
+                break
+        else:
+            resources.append(new_res)
+    return resources
+
+
 def get_updated_resources(
     *,
-    current_resources: list[FlavorCreateExtended]
-    | list[ImageCreateExtended]
-    | list[NetworkServiceCreateExtended],
-    new_resources: list[FlavorCreateExtended]
-    | list[ImageCreateExtended]
-    | list[NetworkServiceCreateExtended],
+    current_resources: list[PrivateFlavorCreateExtended | SharedFlavorCreate]
+    | list[PrivateImageCreateExtended | SharedImageCreate],
+    new_resources: list[PrivateFlavorCreateExtended | SharedFlavorCreate]
+    | list[PrivateImageCreateExtended | SharedImageCreate],
 ) -> (
-    list[FlavorCreateExtended]
-    | list[ImageCreateExtended]
-    | list[NetworkServiceCreateExtended]
+    list[PrivateFlavorCreateExtended | SharedFlavorCreate]
+    | list[PrivateImageCreateExtended | SharedImageCreate]
 ):
     """Update Compute services.
 
@@ -199,7 +229,7 @@ def update_service(
             new_resources=new_service.images,
         )
     if isinstance(curr_service, NetworkServiceCreateExtended):
-        curr_service.networks = get_updated_resources(
+        curr_service.networks = get_updated_networks(
             current_resources=curr_service.networks,
             new_resources=new_service.networks,
         )

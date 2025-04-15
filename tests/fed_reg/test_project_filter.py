@@ -2,9 +2,11 @@ from uuid import uuid4
 
 from fedreg.provider.schemas_extended import (
     ComputeServiceCreateExtended,
-    FlavorCreateExtended,
-    ImageCreateExtended,
+    PrivateFlavorCreateExtended,
+    PrivateImageCreateExtended,
     ProjectCreate,
+    SharedFlavorCreate,
+    SharedImageCreate,
 )
 from pytest_cases import parametrize, parametrize_with_cases
 
@@ -20,7 +22,12 @@ class CaseResource:
         type: str,
         projects: str,
         project_create: ProjectCreate,
-    ) -> FlavorCreateExtended | ImageCreateExtended:
+    ) -> (
+        PrivateFlavorCreateExtended
+        | SharedFlavorCreate
+        | PrivateImageCreateExtended
+        | SharedImageCreate
+    ):
         """Resource value description.
 
         Resource can be public (no projects).
@@ -42,16 +49,26 @@ class CaseResource:
             pass
 
         if type == "flavor":
-            return FlavorCreateExtended(**d)
+            if d.get("projects", None):
+                return PrivateFlavorCreateExtended(**d)
+            else:
+                return SharedFlavorCreate(**d)
+
         if type == "image":
-            return ImageCreateExtended(**d)
+            if d.get("projects", None):
+                return PrivateImageCreateExtended(**d)
+            else:
+                return SharedImageCreate(**d)
 
 
 @parametrize_with_cases("resource", cases=CaseResource)
 def test_filter_projects(
     compute_service_create: ComputeServiceCreateExtended,
     project_create: ProjectCreate,
-    resource: FlavorCreateExtended | ImageCreateExtended,
+    resource: PrivateFlavorCreateExtended
+    | SharedFlavorCreate
+    | PrivateImageCreateExtended
+    | SharedImageCreate,
 ) -> None:
     """
     None matching projects case can't exist since when retrieving resources we
@@ -59,18 +76,21 @@ def test_filter_projects(
     one of the target projects.
     """
     target_projects = [project_create.uuid]
-    if isinstance(resource, FlavorCreateExtended):
+    if isinstance(resource, (PrivateFlavorCreateExtended, SharedFlavorCreate)):
         compute_service_create.flavors = [resource]
         updated_items = filter_compute_resources_projects(
             items=compute_service_create.flavors, projects=target_projects
         )
-    elif isinstance(resource, ImageCreateExtended):
+    elif isinstance(resource, (PrivateImageCreateExtended, SharedImageCreate)):
         compute_service_create.images = [resource]
         updated_items = filter_compute_resources_projects(
             items=compute_service_create.images, projects=target_projects
         )
 
     assert len(updated_items) == 1
-    num_projects = len(updated_items[0].projects)
-    target_len = min(len(target_projects), len(resource.projects))
-    assert num_projects == target_len
+    if isinstance(
+        updated_items[0], (PrivateFlavorCreateExtended, PrivateImageCreateExtended)
+    ):
+        num_projects = len(updated_items[0].projects)
+        target_len = min(len(target_projects), len(resource.projects))
+        assert num_projects == target_len

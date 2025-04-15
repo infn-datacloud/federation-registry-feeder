@@ -3,9 +3,10 @@ from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
 from fedreg.provider.schemas_extended import (
-    NetworkCreateExtended,
     NetworkQuotaCreateExtended,
     NetworkServiceCreateExtended,
+    PrivateNetworkCreateExtended,
+    SharedNetworkCreate,
 )
 from fedreg.service.enum import NetworkServiceName, ServiceType
 from keystoneauth1.exceptions.catalog import EndpointNotFound
@@ -126,15 +127,15 @@ def test_retrieve_network_service_with_networks(
     """Check networks in the returned service."""
     if visibility == "public":
         mock_networks.return_value = [
-            NetworkCreateExtended(uuid=uuid4(), name=random_lower_string())
+            SharedNetworkCreate(uuid=uuid4(), name=random_lower_string())
         ]
     elif visibility == "private":
         mock_networks.return_value = [
-            NetworkCreateExtended(
+            PrivateNetworkCreateExtended(
                 uuid=uuid4(),
                 name=random_lower_string(),
                 is_shared=False,
-                project=openstack_item.project_conf.id,
+                projects=[openstack_item.project_conf.id],
             )
         ]
     elif visibility == "no-access":

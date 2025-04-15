@@ -2,7 +2,10 @@ from random import getrandbits, randint
 from typing import Any
 from unittest.mock import Mock, PropertyMock, patch
 
-from fedreg.provider.schemas_extended import FlavorCreateExtended
+from fedreg.provider.schemas_extended import (
+    PrivateFlavorCreateExtended,
+    SharedFlavorCreate,
+)
 from openstack.compute.v2.flavor import Flavor
 from openstack.exceptions import ForbiddenException
 from pytest_cases import case, parametrize, parametrize_with_cases
@@ -82,7 +85,7 @@ def test_retrieve_flavors(
     assert len(data) == len(flavors)
     if len(data) > 0:
         item = data[0]
-        assert isinstance(item, FlavorCreateExtended)
+        assert isinstance(item, (PrivateFlavorCreateExtended, SharedFlavorCreate))
         if openstack_flavor.description:
             assert item.description == openstack_flavor.description
         else:
@@ -90,7 +93,6 @@ def test_retrieve_flavors(
         assert item.uuid == openstack_flavor.id
         assert item.name == openstack_flavor.name
         assert item.disk == openstack_flavor.disk
-        assert item.is_public == openstack_flavor.is_public
         assert item.ram == openstack_flavor.ram
         assert item.vcpus == openstack_flavor.vcpus
         assert item.swap == openstack_flavor.swap
@@ -102,9 +104,11 @@ def test_retrieve_flavors(
             "aggregate_instance_extra_specs:local_storage"
         )
         assert item.infiniband == openstack_flavor.extra_specs.get("infiniband", False)
-        if item.is_public:
-            assert len(item.projects) == 0
+        if isinstance(item, SharedFlavorCreate):
+            assert item.is_shared
+            assert not hasattr(item, "projects")
         else:
+            assert not item.is_shared
             assert len(item.projects) == 1
 
 
