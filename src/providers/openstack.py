@@ -318,7 +318,7 @@ class OpenstackData:
                 data = {**self.get_flavor_extra_specs(extra), **data}
             if data["is_shared"]:
                 flavors.append(SharedFlavorCreate(**data))
-            else:
+            elif len(data["projects"]) > 0:
                 flavors.append(PrivateFlavorCreateExtended(**data))
             self.logger.debug("Flavor manipulated data=%s", data)
         return flavors
