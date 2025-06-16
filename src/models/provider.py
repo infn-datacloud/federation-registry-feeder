@@ -1,19 +1,18 @@
 from typing import Literal
 
-from fedreg.auth_method.schemas import AuthMethodBase
-from fedreg.core import BaseNode
-from fedreg.location.schemas import LocationBase
-from fedreg.provider.enum import ProviderType
-from fedreg.provider.schemas import ProviderBase
-from fedreg.provider.schemas_extended import find_duplicates
-from fedreg.quota.schemas import (
+from fedreg.v1.core import BaseNode
+from fedreg.v1.location.schemas import LocationBase
+from fedreg.v1.provider.enum import ProviderType
+from fedreg.v1.provider.schemas import ProviderBase
+from fedreg.v1.provider.schemas_extended import find_duplicates
+from fedreg.v1.quota.schemas import (
     BlockStorageQuotaBase,
     ComputeQuotaBase,
     NetworkQuotaBase,
     ObjectStoreQuotaBase,
 )
-from fedreg.region.schemas import RegionBase
-from pydantic import AnyHttpUrl, BaseModel, Field, IPvAnyAddress, validator
+from fedreg.v1.region.schemas import RegionBase
+from pydantic.v1 import AnyHttpUrl, BaseModel, Field, IPvAnyAddress, validator
 
 
 class Limits(BaseNode):
@@ -76,11 +75,15 @@ class PerRegionProps(BaseNode):
     )
 
 
-class AuthMethod(AuthMethodBase):
-    idp_name: str = Field(
+class AuthMethod(BaseModel):
+    endpoint: AnyHttpUrl = Field(description="Identity Provider URL")
+    idp_name: str | None = Field(
         alias="name", description="Identity provider name used to authenticate"
     )
-    endpoint: AnyHttpUrl = Field(description="Identity Provider URL")
+    protocol: str | None = Field(description="Protocol name")
+    audience: str | None = Field(
+        description="Audience to use when connecting to k8s clusters"
+    )
 
 
 class BlockStorageVolMap(BaseModel): ...

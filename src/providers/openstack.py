@@ -2,7 +2,7 @@ import os
 from logging import Logger
 from typing import Any
 
-from fedreg.provider.schemas_extended import (
+from fedreg.v1.provider.schemas_extended import (
     BlockStorageQuotaCreateExtended,
     BlockStorageServiceCreateExtended,
     ComputeQuotaCreateExtended,
@@ -20,7 +20,7 @@ from fedreg.provider.schemas_extended import (
     SharedImageCreate,
     SharedNetworkCreate,
 )
-from fedreg.service.enum import (
+from fedreg.v1.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
     IdentityServiceName,
@@ -201,8 +201,7 @@ class OpenstackData:
         """Retrieve current project accessible compute quota"""
         self.logger.info("Retrieve current project accessible compute quotas")
         quota = self.conn.compute.get_quota_set(
-            self.conn.current_project_id,
-            base_path="/os-quota-sets/%(project_id)s/detail",
+            self.conn.current_project_id, usage=True
         )
         data = quota.to_dict()
         self.logger.debug("Compute service quotas=%s", data)

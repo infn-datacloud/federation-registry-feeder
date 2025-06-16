@@ -3,8 +3,8 @@ from concurrent.futures import ThreadPoolExecutor
 from logging import Logger
 
 import yaml
-from fedreg.provider.enum import ProviderStatus
-from fedreg.provider.schemas_extended import (
+from fedreg.v1.provider.enum import ProviderStatus
+from fedreg.v1.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
     IdentityProviderCreateExtended,
@@ -21,7 +21,7 @@ from fedreg.provider.schemas_extended import (
     SharedNetworkCreate,
 )
 from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
-from pydantic import ValidationError
+from pydantic.v1 import ValidationError
 
 from src.logger import create_logger
 from src.models.config import Settings, URLs

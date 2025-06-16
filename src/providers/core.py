@@ -1,8 +1,8 @@
 import copy
 from concurrent.futures import ThreadPoolExecutor
 
-from fedreg.provider.enum import ProviderStatus
-from pydantic import AnyHttpUrl
+from fedreg.v1.provider.enum import ProviderStatus
+from pydantic.v1 import AnyHttpUrl
 
 from src.logger import create_logger
 from src.models.identity_provider import Issuer
