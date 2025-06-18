@@ -1,5 +1,5 @@
 from fedreg.v1.provider.schemas_extended import find_duplicates
-from pydantic.v1 import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator
 
 from src.models.identity_provider import Issuer
 from src.models.provider import Kubernetes, Openstack, Provider

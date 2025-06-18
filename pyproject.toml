@@ -10,10 +10,9 @@ python = ">=3.9.2,<4.0.0"
 python-openstackclient = "^6.2.0"
 python-glanceclient = "^4.4.0"
 kafka-python = "^2.0.2"
-fedreg = {git = "https://github.com/infn-datacloud/federation-registry-lib.git", branch = "v2"}
+fedreg = {git = "https://github.com/infn-datacloud/federation-registry-lib.git", branch = "k8s"}
 liboidcagent = "^0.6"
 kubernetes = "^32.0.1"
-pydantic-settings = "^2.9.1"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.5.0"

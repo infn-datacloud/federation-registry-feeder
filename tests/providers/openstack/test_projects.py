@@ -2,7 +2,7 @@ from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
 import pytest
-from fedreg.provider.schemas_extended import (
+from fedreg.v1.provider.schemas_extended import (
     ProjectCreate,
 )
 from keystoneauth1.exceptions.connection import ConnectFailure

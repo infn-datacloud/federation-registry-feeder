@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from fedreg.provider.schemas_extended import IdentityProviderCreateExtended
+from fedreg.v1.provider.schemas_extended import IdentityProviderCreateExtended
 
 from src.utils import get_updated_identity_provider
 from tests.schemas.utils import sla_dict

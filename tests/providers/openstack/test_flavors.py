@@ -2,7 +2,7 @@ from random import getrandbits, randint
 from typing import Any
 from unittest.mock import Mock, PropertyMock, patch
 
-from fedreg.provider.schemas_extended import (
+from fedreg.v1.provider.schemas_extended import (
     PrivateFlavorCreateExtended,
     SharedFlavorCreate,
 )

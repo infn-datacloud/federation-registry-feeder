@@ -21,7 +21,7 @@ from fedreg.v1.provider.schemas_extended import (
     SharedNetworkCreate,
 )
 from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
-from pydantic.v1 import ValidationError
+from pydantic import ValidationError
 
 from src.logger import create_logger
 from src.models.config import Settings, URLs

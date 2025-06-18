@@ -2,11 +2,11 @@ import os
 from typing import Literal
 from unittest.mock import Mock, PropertyMock, patch
 
-from fedreg.provider.schemas_extended import (
+from fedreg.v1.provider.schemas_extended import (
     BlockStorageQuotaCreateExtended,
     BlockStorageServiceCreateExtended,
 )
-from fedreg.service.enum import BlockStorageServiceName, ServiceType
+from fedreg.v1.service.enum import BlockStorageServiceName, ServiceType
 from keystoneauth1.exceptions.catalog import EndpointNotFound
 from pytest_cases import parametrize_with_cases
 

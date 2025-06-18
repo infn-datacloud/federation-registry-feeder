@@ -1,14 +1,14 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from fedreg.provider.schemas_extended import (
+from fedreg.v1.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
     NetworkServiceCreateExtended,
     ObjectStoreServiceCreateExtended,
     ProjectCreate,
 )
-from fedreg.service.enum import IdentityServiceName
+from fedreg.v1.service.enum import IdentityServiceName
 from keystoneauth1.exceptions.auth_plugins import NoMatchingPlugin
 from keystoneauth1.exceptions.connection import ConnectFailure, ConnectTimeout, SSLError
 from keystoneauth1.exceptions.http import GatewayTimeout, NotFound, Unauthorized

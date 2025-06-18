@@ -1,6 +1,7 @@
 from src.logger import create_logger
 from src.models.identity_provider import Issuer
 from src.models.provider import Kubernetes, Openstack
+from src.providers.k8s import KubernetesData
 from src.providers.openstack import OpenstackData
 
 
@@ -43,7 +44,7 @@ class ConnectionThread:
         logger_name += f"Project {provider_conf.projects[0].id}"
         self.logger = create_logger(logger_name, level=log_level)
 
-    def get_provider_data(self) -> OpenstackData:
+    def get_provider_data(self) -> OpenstackData | KubernetesData:
         """Retrieve the provider region, project and identity provider.
 
         From the current configuration, connect to the correct provider and retrieve the
@@ -53,6 +54,10 @@ class ConnectionThread:
         """
         if isinstance(self.provider_conf, Openstack):
             return OpenstackData(
+                provider_conf=self.provider_conf, issuer=self.issuer, logger=self.logger
+            )
+        if isinstance(self.provider_conf, Kubernetes):
+            return KubernetesData(
                 provider_conf=self.provider_conf, issuer=self.issuer, logger=self.logger
             )
         raise NotImplementedError("Not yet implemented")

@@ -12,7 +12,7 @@ from fedreg.v1.quota.schemas import (
     ObjectStoreQuotaBase,
 )
 from fedreg.v1.region.schemas import RegionBase
-from pydantic.v1 import AnyHttpUrl, BaseModel, Field, IPvAnyAddress, validator
+from pydantic import AnyHttpUrl, BaseModel, Field, IPvAnyAddress, validator
 
 
 class Limits(BaseNode):

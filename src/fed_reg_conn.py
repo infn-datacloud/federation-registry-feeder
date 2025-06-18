@@ -8,8 +8,8 @@ from fedreg.v1.provider.schemas_extended import (
     ProviderRead,
     ProviderReadExtended,
 )
-from pydantic.v1 import AnyHttpUrl
-from pydantic.v1.json import isoformat
+from pydantic import AnyHttpUrl
+from pydantic.json import isoformat
 from requests.exceptions import ConnectionError, HTTPError
 from starlette import status
 

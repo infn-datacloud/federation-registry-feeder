@@ -1,7 +1,7 @@
 from typing import Any, Literal
 
 import pytest
-from fedreg.provider.enum import ProviderType
+from fedreg.v1.provider.enum import ProviderType
 from pytest_cases import parametrize_with_cases
 
 from src.models.provider import AuthMethod, Openstack, Project, Region

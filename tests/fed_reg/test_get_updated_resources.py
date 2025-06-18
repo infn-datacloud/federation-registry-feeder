@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from fedreg.provider.schemas_extended import (
+from fedreg.v1.provider.schemas_extended import (
     PrivateFlavorCreateExtended,
     PrivateImageCreateExtended,
     PrivateNetworkCreateExtended,

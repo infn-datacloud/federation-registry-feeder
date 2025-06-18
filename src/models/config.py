@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic.v1 import AnyHttpUrl, BaseModel, BaseSettings, Field, validator
+from pydantic import AnyHttpUrl, BaseModel, BaseSettings, Field, validator
 
 
 class URLs(BaseModel):

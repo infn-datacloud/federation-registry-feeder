@@ -1,5 +1,5 @@
-from fedreg.quota.enum import QuotaType
-from fedreg.quota.schemas import (
+from fedreg.v1.quota.enum import QuotaType
+from fedreg.v1.quota.schemas import (
     BlockStorageQuotaBase,
     ComputeQuotaBase,
     NetworkQuotaBase,

@@ -2,7 +2,7 @@ from logging import getLogger
 from unittest.mock import Mock, patch
 from uuid import uuid4
 
-from fedreg.provider.schemas_extended import ProviderCreateExtended, ProviderRead
+from fedreg.v1.provider.schemas_extended import ProviderCreateExtended, ProviderRead
 from pytest_cases import parametrize_with_cases
 from requests.exceptions import ConnectionError, HTTPError
 

@@ -4,7 +4,7 @@ from fedreg.v1.provider.schemas_extended import IdentityProviderCreate, find_dup
 from fedreg.v1.sla.schemas import SLABase
 from fedreg.v1.user_group.schemas import UserGroupBase
 from liboidcagent import get_access_token_by_issuer_url
-from pydantic.v1 import AnyHttpUrl, Field, validator
+from pydantic import AnyHttpUrl, Field, validator
 
 from src.models.config import get_settings
 
