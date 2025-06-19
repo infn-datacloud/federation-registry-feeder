@@ -3,7 +3,7 @@ import os
 from logging import Logger
 
 import requests
-from fedreg.v1.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     ProviderCreateExtended,
     ProviderRead,
     ProviderReadExtended,

@@ -1,7 +1,7 @@
 from random import randint
 from unittest.mock import Mock, PropertyMock, patch
 
-from fedreg.v1.quota.enum import QuotaType
+from fedreg.quota.enum import QuotaType
 from openstack.object_store.v1.info import Info
 from requests import Response
 

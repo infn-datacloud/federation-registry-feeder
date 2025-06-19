@@ -2,7 +2,7 @@ import os
 from uuid import uuid4
 
 import pytest
-from fedreg.v1.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
     IdentityProviderCreateExtended,
@@ -13,7 +13,7 @@ from fedreg.v1.provider.schemas_extended import (
     ProviderCreateExtended,
     RegionCreateExtended,
 )
-from fedreg.v1.service.enum import ObjectStoreServiceName
+from fedreg.service.enum import ObjectStoreServiceName
 
 from tests.fed_reg.utils import (
     fedreg_provider_dict,

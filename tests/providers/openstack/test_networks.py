@@ -1,7 +1,7 @@
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
-from fedreg.v1.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     PrivateNetworkCreateExtended,
     SharedNetworkCreate,
 )

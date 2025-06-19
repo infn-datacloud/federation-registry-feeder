@@ -4,10 +4,10 @@ from logging import getLogger
 from random import choice
 from typing import Any
 
-from fedreg.v1.image.enum import ImageOS
-from fedreg.v1.provider.enum import ProviderStatus, ProviderType
-from fedreg.v1.provider.schemas_extended import ProviderCreateExtended, ProviderRead
-from fedreg.v1.service.enum import (
+from fedreg.image.enum import ImageOS
+from fedreg.provider.enum import ProviderStatus, ProviderType
+from fedreg.provider.schemas_extended import ProviderCreateExtended, ProviderRead
+from fedreg.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
     IdentityServiceName,

@@ -1,4 +1,4 @@
-from fedreg.v1.location.schemas import LocationBase
+from fedreg.location.schemas import LocationBase
 from pytest_cases import parametrize, parametrize_with_cases
 
 from src.models.provider import Region

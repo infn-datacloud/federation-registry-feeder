@@ -1,4 +1,4 @@
-from fedreg.v1.provider.schemas_extended import find_duplicates
+from fedreg.provider.schemas_extended import find_duplicates
 from pydantic import BaseModel, Field, validator
 
 from src.models.identity_provider import Issuer

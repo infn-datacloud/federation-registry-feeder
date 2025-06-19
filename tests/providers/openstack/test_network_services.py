@@ -2,13 +2,13 @@ from typing import Literal
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
-from fedreg.v1.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     NetworkQuotaCreateExtended,
     NetworkServiceCreateExtended,
     PrivateNetworkCreateExtended,
     SharedNetworkCreate,
 )
-from fedreg.v1.service.enum import NetworkServiceName, ServiceType
+from fedreg.service.enum import NetworkServiceName, ServiceType
 from keystoneauth1.exceptions.catalog import EndpointNotFound
 from pytest_cases import case, parametrize_with_cases
 

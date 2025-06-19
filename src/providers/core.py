@@ -1,7 +1,7 @@
 import copy
 from concurrent.futures import ThreadPoolExecutor
 
-from fedreg.v1.provider.enum import ProviderStatus
+from fedreg.provider.enum import ProviderStatus
 from pydantic import AnyHttpUrl
 
 from src.logger import create_logger

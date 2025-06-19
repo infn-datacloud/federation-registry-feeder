@@ -1,8 +1,8 @@
 from typing import Literal
 from unittest.mock import Mock, patch
 
-from fedreg.v1.provider.enum import ProviderStatus
-from fedreg.v1.provider.schemas_extended import ProjectCreate
+from fedreg.provider.enum import ProviderStatus
+from fedreg.provider.schemas_extended import ProjectCreate
 from pytest_cases import case, parametrize_with_cases
 
 from src.models.identity_provider import Issuer

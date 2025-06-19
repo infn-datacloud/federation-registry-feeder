@@ -1,7 +1,7 @@
 import copy
 from uuid import uuid4
 
-from fedreg.v1.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
     IdentityServiceCreate,

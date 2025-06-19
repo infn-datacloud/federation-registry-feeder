@@ -2,11 +2,11 @@ from typing import Any, Literal
 from unittest.mock import Mock, PropertyMock, patch
 from uuid import uuid4
 
-from fedreg.v1.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     ObjectStoreQuotaCreateExtended,
     ObjectStoreServiceCreateExtended,
 )
-from fedreg.v1.service.enum import ObjectStoreServiceName, ServiceType
+from fedreg.service.enum import ObjectStoreServiceName, ServiceType
 from pytest_cases import parametrize_with_cases
 
 from src.models.provider import Limits

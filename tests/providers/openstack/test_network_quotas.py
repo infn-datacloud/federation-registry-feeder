@@ -1,6 +1,6 @@
 from unittest.mock import Mock, PropertyMock, patch
 
-from fedreg.v1.quota.enum import QuotaType
+from fedreg.quota.enum import QuotaType
 from openstack.network.v2.quota import QuotaDetails
 
 from src.providers.openstack import OpenstackData

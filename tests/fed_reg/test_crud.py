@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
-from fedreg.v1.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     ProviderCreateExtended,
     ProviderRead,
     ProviderReadExtended,

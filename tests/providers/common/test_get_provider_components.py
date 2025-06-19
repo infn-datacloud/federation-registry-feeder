@@ -1,7 +1,7 @@
 from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
-from fedreg.v1.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
     IdentityServiceCreate,

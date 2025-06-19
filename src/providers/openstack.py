@@ -2,7 +2,7 @@ import os
 from logging import Logger
 from typing import Any
 
-from fedreg.v1.provider.schemas_extended import (
+from fedreg.provider.schemas_extended import (
     BlockStorageQuotaCreateExtended,
     BlockStorageServiceCreateExtended,
     ComputeQuotaCreateExtended,
@@ -20,7 +20,7 @@ from fedreg.v1.provider.schemas_extended import (
     SharedImageCreate,
     SharedNetworkCreate,
 )
-from fedreg.v1.service.enum import (
+from fedreg.service.enum import (
     BlockStorageServiceName,
     ComputeServiceName,
     IdentityServiceName,

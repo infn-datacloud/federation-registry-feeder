@@ -1,8 +1,8 @@
 import subprocess
 
-from fedreg.v1.provider.schemas_extended import IdentityProviderCreate, find_duplicates
-from fedreg.v1.sla.schemas import SLABase
-from fedreg.v1.user_group.schemas import UserGroupBase
+from fedreg.provider.schemas_extended import IdentityProviderCreate, find_duplicates
+from fedreg.sla.schemas import SLABase
+from fedreg.user_group.schemas import UserGroupBase
 from liboidcagent import get_access_token_by_issuer_url
 from pydantic import AnyHttpUrl, Field, validator
 

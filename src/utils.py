@@ -3,8 +3,8 @@ from concurrent.futures import ThreadPoolExecutor
 from logging import Logger
 
 import yaml
-from fedreg.v1.provider.enum import ProviderStatus
-from fedreg.v1.provider.schemas_extended import (
+from fedreg.provider.enum import ProviderStatus
+from fedreg.provider.schemas_extended import (
     BlockStorageServiceCreateExtended,
     ComputeServiceCreateExtended,
     IdentityProviderCreateExtended,
