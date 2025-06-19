@@ -8,6 +8,7 @@ from src.logger import create_logger
 from src.models.identity_provider import Issuer
 from src.models.provider import AuthMethod, Kubernetes, Openstack, Project, Region
 from src.providers.conn_thread import ConnectionThread
+from src.providers.k8s import KubernetesData, KubernetesProviderError
 from src.providers.openstack import OpenstackData, OpenstackProviderError
 
 
@@ -50,11 +51,13 @@ class ProviderThread:
             item.per_user_limits = region_props.per_user_limits
         return item
 
-    def retrieve_data(self, item: ConnectionThread) -> OpenstackData | None:
+    def retrieve_data(
+        self, item: ConnectionThread
+    ) -> OpenstackData | KubernetesData | None:
         """Get provider data"""
         try:
             return item.get_provider_data()
-        except OpenstackProviderError:
+        except (OpenstackProviderError, KubernetesProviderError):
             self.error = True
         except NotImplementedError as e:
             self.error = True
@@ -121,7 +124,9 @@ class ProviderThread:
             self.logger.error("Skipping project")
         return None
 
-    def get_provider(self) -> tuple[Openstack | Kubernetes, list[OpenstackData], bool]:
+    def get_provider(
+        self,
+    ) -> tuple[Openstack | Kubernetes, list[OpenstackData | KubernetesData], bool]:
         """Generate a list of generic providers.
 
         Read data from real instances.
