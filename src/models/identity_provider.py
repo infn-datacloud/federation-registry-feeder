@@ -26,7 +26,7 @@ def retrieve_token(endpoint: str, *, audience: str | None = None):
                 "oidc-token",
                 f"--time={min_valid_period}",
                 f"--aud={audience}",
-                endpoint,
+                str(endpoint),
             ],
             capture_output=True,
             text=True,
@@ -37,7 +37,7 @@ def retrieve_token(endpoint: str, *, audience: str | None = None):
         return token
 
     token = get_access_token_by_issuer_url(
-        endpoint, min_valid_period=min_valid_period, audience=audience
+        str(endpoint), min_valid_period=min_valid_period, audience=audience
     )
     return token
 
