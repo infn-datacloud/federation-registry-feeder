@@ -153,6 +153,8 @@ class Settings(BaseSettings):
         """Sub class to set attribute as case sensitive."""
 
         case_sensitive = True
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
 @lru_cache
