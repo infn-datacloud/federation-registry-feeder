@@ -14,7 +14,7 @@ pipeline {
 
     environment {
         PROJECT_NAME = 'federation-registry-feeder'
-        DOCKERFILE = './Dockerfile'
+        DOCKERFILE = './docker/Dockerfile'
 
         DOCKER_HUB_CREDENTIALS_NAME = 'docker-hub-credentials'
         DOCKER_HUB_CREDENTIALS = credentials("${DOCKER_HUB_CREDENTIALS_NAME}")
