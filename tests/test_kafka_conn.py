@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 from kafka.errors import NoBrokersAvailable
 
-from src.kafka_conn import Producer, get_kafka_prod
+from src.kafka_conn import Producer, send_to_kafka
 
 
 @pytest.fixture
@@ -13,11 +13,13 @@ def mock_settings():
         KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"
         KAFKA_MAX_REQUEST_SIZE = 1048576
         KAFKA_ALLOW_AUTO_CREATE_TOPICS = True
-        KAFKA_ENABLE_SSL = False
+        KAFKA_TOPIC = "example"
+        KAFKA_SSL_ENABLE = False
         KAFKA_SSL_PASSWORD_PATH = None
         KAFKA_SSL_CACERT_PATH = None
         KAFKA_SSL_CERT_PATH = None
         KAFLA_SSL_KEY_PATH = None
+        KAFKA_MSG_VERSION = "1.2.0"
 
     return MockSettings()
 
@@ -36,7 +38,7 @@ def test_producer_init_no_ssl(mock_kafka_producer, mock_settings, mock_logger):
 
 @patch("src.kafka_conn.KafkaProducer")
 def test_producer_init_with_ssl(mock_kafka_producer, mock_settings, mock_logger):
-    mock_settings.KAFKA_ENABLE_SSL = True
+    mock_settings.KAFKA_SSL_ENABLE = True
     mock_settings.KAFKA_SSL_PASSWORD_PATH = "/tmp/ssl_password.txt"
     mock_settings.KAFKA_SSL_CACERT_PATH = "/tmp/ca.pem"
     mock_settings.KAFKA_SSL_CERT_PATH = "/tmp/cert.pem"
@@ -51,7 +53,7 @@ def test_producer_init_with_ssl(mock_kafka_producer, mock_settings, mock_logger)
 def test_producer_init_ssl_missing_password_path(
     mock_kafka_producer, mock_settings, mock_logger
 ):
-    mock_settings.KAFKA_ENABLE_SSL = True
+    mock_settings.KAFKA_SSL_ENABLE = True
     mock_settings.KAFKA_SSL_PASSWORD_PATH = None
     with pytest.raises(ValueError):
         Producer(settings=mock_settings, logger=mock_logger)
@@ -99,23 +101,30 @@ def test_send_message_and_build_message(
     assert msg["project_id"] == "uuid1"
     assert msg["other"] == "value"
     # Test send (calls build_message internally)
-    prod.send(topic="test-topic", data=data, msg_version="1.2.0")
+    prod.send(
+        topic=mock_settings.KAFKA_TOPIC,
+        data=data,
+        msg_version=mock_settings.KAFKA_MSG_VERSION,
+    )
     prod.producer.send.assert_called()
     prod.producer.flush.assert_called_once()
     prod.producer.close.assert_called_once()
 
 
 @patch("src.kafka_conn.Producer")
-def test_get_kafka_prod_success(mock_producer, mock_settings, mock_logger):
-    instance = MagicMock()
-    mock_producer.return_value = instance
-    result = get_kafka_prod(settings=mock_settings, logger=mock_logger)
-    assert result == instance
+def test_send_to_kafka_success(mock_producer, mock_settings, mock_logger):
+    data = MagicMock()
+    mock_producer.return_value.send = MagicMock()
+    result = send_to_kafka(settings=mock_settings, logger=mock_logger, data=data)
+    assert result is None
+    mock_producer.assert_called_once()
+    mock_producer.return_value.send.assert_called_once()
 
 
 @patch("src.kafka_conn.Producer", side_effect=NoBrokersAvailable)
-def test_get_kafka_prod_no_brokers(mock_producer, mock_settings, mock_logger):
-    result = get_kafka_prod(settings=mock_settings, logger=mock_logger)
+def test_send_to_kafka_no_brokers(mock_producer, mock_settings, mock_logger):
+    data = MagicMock()
+    result = send_to_kafka(settings=mock_settings, logger=mock_logger, data=data)
     assert result is None
     mock_logger.error.assert_called_with(
         "No brokers available at %s", mock_settings.KAFKA_BOOTSTRAP_SERVERS
@@ -123,14 +132,16 @@ def test_get_kafka_prod_no_brokers(mock_producer, mock_settings, mock_logger):
 
 
 @patch("src.kafka_conn.Producer", side_effect=ValueError("bad config"))
-def test_get_kafka_prod_value_error(mock_producer, mock_settings, mock_logger):
-    result = get_kafka_prod(settings=mock_settings, logger=mock_logger)
+def test_send_to_kafka_value_error(mock_producer, mock_settings, mock_logger):
+    data = MagicMock()
+    result = send_to_kafka(settings=mock_settings, logger=mock_logger, data=data)
     assert result is None
     mock_logger.error.assert_called_with("bad config")
 
 
 @patch("src.kafka_conn.Producer", side_effect=FileNotFoundError("missing file"))
-def test_get_kafka_prod_file_not_found_error(mock_producer, mock_settings, mock_logger):
-    result = get_kafka_prod(settings=mock_settings, logger=mock_logger)
+def test_send_to_kafka_file_not_found_error(mock_producer, mock_settings, mock_logger):
+    data = MagicMock()
+    result = send_to_kafka(settings=mock_settings, logger=mock_logger, data=data)
     assert result is None
     mock_logger.error.assert_called_with("missing file")

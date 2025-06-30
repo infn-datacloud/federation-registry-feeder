@@ -264,7 +264,7 @@ def test_main_success(
         False,
     ),
 )
-@patch("src.main.get_kafka_prod")
+@patch("src.main.send_to_kafka")
 def test_send_kafka_msg(
     mock_prod: Mock,
     mock_get_provider: Mock,

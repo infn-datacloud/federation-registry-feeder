@@ -31,6 +31,5 @@ RUN pip install --user --upgrade pip \
     && pip install --user --no-cache-dir --upgrade -r /app/requirements.txt
 
 ENV PYTHONPATH="${PYTHONPATH}:/app"
-ENV PROVIDERS_CONF_DIR=/providers-conf
 
 COPY ./src /app/src

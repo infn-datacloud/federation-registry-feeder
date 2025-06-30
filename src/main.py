@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 
 from src.fed_reg_conn import update_database
-from src.kafka_conn import get_kafka_prod
+from src.kafka_conn import send_to_kafka
 from src.logger import create_logger
 from src.models.config import get_settings
 from src.parser import parser
@@ -58,12 +58,7 @@ def main(log_level: str) -> None:
 
     # Create kafka producer if needed and send data to kafka
     if settings.KAFKA_ENABLE:
-        kafka_prod = get_kafka_prod(settings=settings, logger=logger)
-        kafka_prod.send(
-            topic=settings.KAFKA_TOPIC,
-            data=kafka_data,
-            msg_version=settings.KAFKA_MSG_VERSION,
-        )
+        send_to_kafka(settings=settings, logger=logger, data=kafka_data)
 
     # Update the Federation-Registry
     token = site_configs[0].trusted_idps[0].token if len(site_configs) > 0 else ""

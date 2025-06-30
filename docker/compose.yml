@@ -13,6 +13,7 @@ services:
       - oidc-agent
     environment:
       - OIDC_AGENT_CONTAINER_NAME=feeder-oidc-agent
+      - PROVIDERS_CONF_DIR=/providers-conf
     env_file:
       - ../.env
     volumes:

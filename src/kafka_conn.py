@@ -41,10 +41,10 @@ class Producer:
             "allow_auto_create_topics": settings.KAFKA_ALLOW_AUTO_CREATE_TOPICS,
         }
 
-        if settings.KAFKA_ENABLE_SSL:
+        if settings.KAFKA_SSL_ENABLE:
             if settings.KAFKA_SSL_PASSWORD_PATH is None:
                 raise ValueError(
-                    "KAFKA_SSL_PASSWORD_PATH can't be None when KAFKA_ENABLE_SSL is "
+                    "KAFKA_SSL_PASSWORD_PATH can't be None when KAFKA_SSL_ENABLE is "
                     "True"
                 )
             with open(settings.KAFKA_SSL_PASSWORD_PATH) as reader:
@@ -52,7 +52,6 @@ class Producer:
             self.producer = KafkaProducer(
                 security_protocol="SSL",
                 ssl_check_hostname=False,
-                ssl_passwordfile=settings.KAFKA_SSL_PASSWORD_PATH,
                 ssl_cafile=settings.KAFKA_SSL_CACERT_PATH,
                 ssl_certfile=settings.KAFKA_SSL_CERT_PATH,
                 ssl_keyfile=settings.KAFLA_SSL_KEY_PATH,
@@ -133,7 +132,9 @@ class Producer:
             }
 
 
-def get_kafka_prod(*, settings: Settings, logger: Logger) -> Producer:
+def send_to_kafka(
+    *, settings: Settings, logger: Logger, data: list[dict[str, Any]]
+) -> Producer:
     """Creates a Kafka producer instance using the provided settings and logger.
 
     Args:
@@ -151,8 +152,15 @@ def get_kafka_prod(*, settings: Settings, logger: Logger) -> Producer:
 
     """
     try:
-        return Producer(settings=settings, logger=logger)
+        producer = Producer(settings=settings, logger=logger)
+        producer.send(
+            topic=settings.KAFKA_TOPIC,
+            data=data,
+            msg_version=settings.KAFKA_MSG_VERSION,
+        )
     except NoBrokersAvailable:
         logger.error("No brokers available at %s", settings.KAFKA_BOOTSTRAP_SERVERS)
-    except (ValueError, FileNotFoundError) as e:
+    except ValueError as e:
+        logger.error(e.args[0])
+    except FileNotFoundError as e:
         logger.error(e.args[0])

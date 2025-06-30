@@ -111,7 +111,7 @@ class Settings(BaseSettings):
         default="fedreg-feeder",
         description="Client name to use when connecting to kafka",
     )
-    KAFKA_ENABLE_SSL: bool = Field(
+    KAFKA_SSL_ENABLE: bool = Field(
         default=False, description="Enable SSL connection with kafka"
     )
     KAFKA_SSL_CACERT_PATH: str | None = Field(
