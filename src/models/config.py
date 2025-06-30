@@ -96,8 +96,10 @@ class Settings(BaseSettings):
     KAFKA_ENABLE: bool = Field(
         default=False, description="Enable Kafka message exchange"
     )
-    KAFKA_BOOTSTRAP_SERVERS: str | None = Field(
-        default=None, description="Kafka server hostname. DNS name and port"
+    KAFKA_BOOTSTRAP_SERVERS: str = Field(
+        default="localhost:9092",
+        description="Kafka server hostnames. DNS name and port. Can be comma separeted "
+        "list",
     )
     KAFKA_TOPIC: str = Field(
         default="federation-registry-feeder", description="Kafka topic to upload data"

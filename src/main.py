@@ -57,7 +57,7 @@ def main(log_level: str) -> None:
         providers.append(provider)
 
     # Create kafka producer if needed and send data to kafka
-    if settings.KAFKA_ENABLE and settings.KAFKA_BOOTSTRAP_SERVERS is not None:
+    if settings.KAFKA_ENABLE:
         kafka_prod = get_kafka_prod(settings=settings, logger=logger)
         kafka_prod.send(
             topic=settings.KAFKA_TOPIC,
