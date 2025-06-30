@@ -120,7 +120,7 @@ class Settings(BaseSettings):
     KAFKA_SSL_CERT_PATH: str | None = Field(
         default=None, descrption="Path to the SSL cert file"
     )
-    KAFLA_SSL_KEY_PATH: str | None = Field(
+    KAFKA_SSL_KEY_PATH: str | None = Field(
         default=None, descrption="Path to the SSL Key file"
     )
     KAFKA_SSL_PASSWORD_PATH: str | None = Field(

@@ -18,7 +18,7 @@ def mock_settings():
         KAFKA_SSL_PASSWORD_PATH = None
         KAFKA_SSL_CACERT_PATH = None
         KAFKA_SSL_CERT_PATH = None
-        KAFLA_SSL_KEY_PATH = None
+        KAFKA_SSL_KEY_PATH = None
         KAFKA_MSG_VERSION = "1.2.0"
 
     return MockSettings()
@@ -42,7 +42,7 @@ def test_producer_init_with_ssl(mock_kafka_producer, mock_settings, mock_logger)
     mock_settings.KAFKA_SSL_PASSWORD_PATH = "/tmp/ssl_password.txt"
     mock_settings.KAFKA_SSL_CACERT_PATH = "/tmp/ca.pem"
     mock_settings.KAFKA_SSL_CERT_PATH = "/tmp/cert.pem"
-    mock_settings.KAFLA_SSL_KEY_PATH = "/tmp/key.pem"
+    mock_settings.KAFKA_SSL_KEY_PATH = "/tmp/key.pem"
     with patch("builtins.open", mock_open(read_data="password")):
         prod = Producer(settings=mock_settings, logger=mock_logger)
         mock_kafka_producer.assert_called_once()

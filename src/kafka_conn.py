@@ -55,7 +55,7 @@ class Producer:
                 ssl_check_hostname=False,
                 ssl_cafile=settings.KAFKA_SSL_CACERT_PATH,
                 ssl_certfile=settings.KAFKA_SSL_CERT_PATH,
-                ssl_keyfile=settings.KAFLA_SSL_KEY_PATH,
+                ssl_keyfile=settings.KAFKA_SSL_KEY_PATH,
                 ssl_password=ssl_password,
                 **kwargs,
             )
