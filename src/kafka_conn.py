@@ -76,7 +76,6 @@ class Producer:
             msg_version (str): The version identifier to include in each message.
 
         """
-        msg_version = msg_version
         for item in data:
             message = self.build_message(data=item, msg_version=msg_version)
             message = json.loads(json.dumps(message, default=str))
