@@ -264,9 +264,9 @@ def test_main_success(
         False,
     ),
 )
-@patch("src.main.send_kafka_messages")
+@patch("src.main.get_kafka_prod")
 def test_send_kafka_msg(
-    mock_send_msg: Mock,
+    mock_prod: Mock,
     mock_get_provider: Mock,
     mock_get_configs: Mock,
     mock_load_files: Mock,
@@ -281,7 +281,8 @@ def test_send_kafka_msg(
     with patch(
         "src.main.get_settings",
         return_value=Settings(
-            KAFKA_HOSTNAME=random_url(),
+            KAFKA_ENABLE=True,
+            KAFKA_BOOTSTRAP_SERVERS=random_url(),
             KAFKA_TOPIC=random_lower_string(),
             api_ver=APIVersions(),
         ),
@@ -292,5 +293,5 @@ def test_send_kafka_msg(
     mock_load_files.assert_called_once()
     mock_get_configs.assert_called_once()
     mock_get_provider.assert_called_once()
-    mock_send_msg.assert_called_once()
+    mock_prod.assert_called_once()
     mock_edit_db.assert_called_once()
