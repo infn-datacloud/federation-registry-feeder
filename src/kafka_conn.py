@@ -82,7 +82,7 @@ class Producer:
             message = json.loads(json.dumps(message, default=str))
             self.producer.send(topic, message)
             self.logger.info("Sending message")
-            self.logger.debug("Data: %d", message)
+            self.logger.debug("Data: %s", message)
         self.producer.flush()
         self.producer.close()
 
