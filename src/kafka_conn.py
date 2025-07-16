@@ -43,20 +43,17 @@ class Producer:
         }
 
         if settings.KAFKA_SSL_ENABLE:
-            if settings.KAFKA_SSL_PASSWORD_PATH is None:
+            if settings.KAFKA_SSL_PASSWORD is None:
                 raise ValueError(
-                    "KAFKA_SSL_PASSWORD_PATH can't be None when KAFKA_SSL_ENABLE is "
-                    "True"
+                    "KAFKA_SSL_PASSWORD can't be None when KAFKA_SSL_ENABLE is True"
                 )
-            with open(settings.KAFKA_SSL_PASSWORD_PATH) as reader:
-                ssl_password = reader.read()
             self.producer = KafkaProducer(
                 security_protocol="SSL",
                 ssl_check_hostname=False,
                 ssl_cafile=settings.KAFKA_SSL_CACERT_PATH,
                 ssl_certfile=settings.KAFKA_SSL_CERT_PATH,
                 ssl_keyfile=settings.KAFKA_SSL_KEY_PATH,
-                ssl_password=ssl_password,
+                ssl_password=settings.KAFKA_SSL_PASSWORD,
                 **kwargs,
             )
         else:

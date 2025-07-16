@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from kafka.errors import NoBrokersAvailable
@@ -15,7 +15,7 @@ def mock_settings():
         KAFKA_ALLOW_AUTO_CREATE_TOPICS = True
         KAFKA_TOPIC = "example"
         KAFKA_SSL_ENABLE = False
-        KAFKA_SSL_PASSWORD_PATH = None
+        KAFKA_SSL_PASSWORD = None
         KAFKA_SSL_CACERT_PATH = None
         KAFKA_SSL_CERT_PATH = None
         KAFKA_SSL_KEY_PATH = None
@@ -39,14 +39,13 @@ def test_producer_init_no_ssl(mock_kafka_producer, mock_settings, mock_logger):
 @patch("src.kafka_conn.KafkaProducer")
 def test_producer_init_with_ssl(mock_kafka_producer, mock_settings, mock_logger):
     mock_settings.KAFKA_SSL_ENABLE = True
-    mock_settings.KAFKA_SSL_PASSWORD_PATH = "/tmp/ssl_password.txt"
+    mock_settings.KAFKA_SSL_PASSWORD = "ssl_password"
     mock_settings.KAFKA_SSL_CACERT_PATH = "/tmp/ca.pem"
     mock_settings.KAFKA_SSL_CERT_PATH = "/tmp/cert.pem"
     mock_settings.KAFKA_SSL_KEY_PATH = "/tmp/key.pem"
-    with patch("builtins.open", mock_open(read_data="password")):
-        prod = Producer(settings=mock_settings, logger=mock_logger)
-        mock_kafka_producer.assert_called_once()
-        assert hasattr(prod, "producer")
+    prod = Producer(settings=mock_settings, logger=mock_logger)
+    mock_kafka_producer.assert_called_once()
+    assert hasattr(prod, "producer")
 
 
 @patch("src.kafka_conn.KafkaProducer")
@@ -54,7 +53,7 @@ def test_producer_init_ssl_missing_password_path(
     mock_kafka_producer, mock_settings, mock_logger
 ):
     mock_settings.KAFKA_SSL_ENABLE = True
-    mock_settings.KAFKA_SSL_PASSWORD_PATH = None
+    mock_settings.KAFKA_SSL_PASSWORD = None
     with pytest.raises(ValueError):
         Producer(settings=mock_settings, logger=mock_logger)
 

@@ -123,9 +123,7 @@ class Settings(BaseSettings):
     KAFKA_SSL_KEY_PATH: str | None = Field(
         default=None, descrption="Path to the SSL Key file"
     )
-    KAFKA_SSL_PASSWORD_PATH: str | None = Field(
-        default=None, descrption="Path to the SSL password file"
-    )
+    KAFKA_SSL_PASSWORD: str | None = Field(default=None, descrption="SSL password")
     KAFKA_ALLOW_AUTO_CREATE_TOPICS: bool = Field(
         default=False,
         description="Enable automatic creation of new topics if not yet in kafka",
