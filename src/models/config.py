@@ -73,6 +73,14 @@ class APIVersions(BaseSettings):
         case_sensitive = True
 
 
+class IdentityProviderClient(BaseModel):
+    endpoint: AnyHttpUrl = Field(description="Trusted IDP endpoint")
+    client_id: str = Field(description="ID of the client associated to this IDP")
+    client_secret: str = Field(
+        description="Secret of the client associated to this IDP"
+    )
+
+
 class Settings(BaseSettings):
     FED_REG_API_URL: AnyHttpUrl = Field(
         default="http://localhost:8000/api", description="Federation-Registry base URL"
@@ -128,6 +136,10 @@ class Settings(BaseSettings):
         default="1.2.0",
         description="Message version. It defines the fields in the message sent to "
         "kafka",
+    )
+    IDP_CLIENTS: list[IdentityProviderClient] = Field(
+        default_factory=list,
+        description="List of trusted identity providers and related client credentials",
     )
 
     api_ver: APIVersions = Field(description="API versions.")

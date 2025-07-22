@@ -7,12 +7,22 @@ from fedreg.sla.schemas import SLABase
 from fedreg.user_group.schemas import UserGroupBase
 from pydantic import AnyHttpUrl, Field, root_validator, validator
 
+from src.models.config import get_settings
 
-def retrieve_token(*, endpoint: str, client_id: str, client_secret: str):
+
+def retrieve_token(endpoint: AnyHttpUrl):
     """Retrieve token using client_id and secret.
 
     Query the instrospection endpoint to retrieve the token endpoint. Ask a new token.
     """
+    settings = get_settings()
+    for client in settings.IDP_CLIENTS:
+        if client.endpoint == endpoint:
+            client_secret = client.client_secret
+            client_id = client.client_id
+            break
+    else:
+        raise ValueError("Missing provider %s", str(endpoint))
     resp = requests.get(
         urllib.parse.urljoin(endpoint, ".well-known/openid-configuration")
     )
@@ -58,14 +68,8 @@ class UserGroup(UserGroupBase):
 
 class Issuer(IdentityProviderCreate):
     endpoint: AnyHttpUrl = Field(description="issuer url", alias="issuer")
-    token: str = Field(default="", description="Access token")
     user_groups: list[UserGroup] = Field(description="User groups")
-    client_id: str = Field(
-        description="ID of the client to contact to retrieve the access token"
-    )
-    client_secret: str = Field(
-        description="Secret of the client to contact to retrieve the access token"
-    )
+    token: str = Field(default="", description="Access token")
 
     @validator("user_groups")
     @classmethod
@@ -80,9 +84,5 @@ class Issuer(IdentityProviderCreate):
     def set_token(cls, values: dict[str, Any]) -> str:
         token = values.get("token")
         if token == "":
-            values["token"] = retrieve_token(
-                endpoint=values.get("endpoint"),
-                client_id=values.get("client_id"),
-                client_secret=values.get("client_secret"),
-            )
+            values["token"] = retrieve_token(values.get("endpoint"))
         return values

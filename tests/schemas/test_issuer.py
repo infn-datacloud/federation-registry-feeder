@@ -40,8 +40,6 @@ def test_identity_provider_schema(mock_token: Mock) -> None:
     assert len(item.user_groups) == len(d.get("user_groups"))
     assert item.user_groups[0] == d.get("user_groups")[0]
     assert item.token == mock_token.return_value.strip("\n")
-    assert item.client_id == d.get("client_id")
-    assert item.client_secret == d.get("client_secret")
 
 
 @patch(
@@ -89,9 +87,7 @@ def test_retrieve_token_success(mock_post, mock_get):
     mock_post.return_value = Mock(
         status_code=200, json=lambda: {"access_token": "test_token"}
     )
-    token = retrieve_token(
-        endpoint="https://example.com/", client_id="cid", client_secret="csecret"
-    )
+    token = retrieve_token(endpoint="https://example.com/")
     assert token == "test_token"
     mock_get.assert_called_once()
     mock_post.assert_called_once()
@@ -101,9 +97,7 @@ def test_retrieve_token_success(mock_post, mock_get):
 def test_retrieve_token_introspection_fail(mock_get):
     mock_get.return_value = Mock(status_code=404)
     with pytest.raises(ValueError, match="Failed to contact introspection endpoint"):
-        retrieve_token(
-            endpoint="https://example.com/", client_id="cid", client_secret="csecret"
-        )
+        retrieve_token(endpoint="https://example.com/")
     mock_get.assert_called_once()
 
 
@@ -115,9 +109,7 @@ def test_retrieve_token_token_fail(mock_post, mock_get):
     )
     mock_post.return_value = Mock(status_code=400)
     with pytest.raises(ValueError, match="Failed to retrieve token"):
-        retrieve_token(
-            endpoint="https://example.com/", client_id="cid", client_secret="csecret"
-        )
+        retrieve_token(endpoint="https://example.com/")
     mock_get.assert_called_once()
     mock_post.assert_called_once()
 
@@ -129,7 +121,5 @@ def test_retrieve_token_no_access_token(mock_post, mock_get):
         status_code=200, json=lambda: {"token_endpoint": "https://example.com/token"}
     )
     mock_post.return_value = Mock(status_code=200, json=lambda: {})
-    token = retrieve_token(
-        endpoint="https://example.com/", client_id="cid", client_secret="csecret"
-    )
+    token = retrieve_token(endpoint="https://example.com/")
     assert token is None

@@ -20,12 +20,7 @@ def auth_method_dict() -> dict[str, Any]:
 
 def issuer_dict() -> dict[str, Any]:
     """Dict with Issuer minimal attributes."""
-    return {
-        "issuer": random_url(),
-        "group_claim": random_lower_string(),
-        "client_id": random_lower_string(),
-        "client_secret": random_lower_string(),
-    }
+    return {"issuer": random_url(), "group_claim": random_lower_string()}
 
 
 def kubernetes_dict() -> dict[str, Any]:
