@@ -26,38 +26,24 @@ services:
       - feeder-devc-db
       - feeder-devc-fed-reg
 
-  oidc-agent:
-    image: opensciencegrid/oidc-agent:3.6-release-20240220-1639
-    container_name: feeder-devc-oidc-agent
-    platform: linux/amd64
-    volumes:
-      - feeder-devc-oidc-agent-iss-config:/root/.oidc-agent
-    networks:
-      - feeder-devc-oidc-agent
-
   base:
     image: mcr.microsoft.com/devcontainers/typescript-node:18
     container_name: feeder-devc
     depends_on:
       - registry
-      - oidc-agent
     volumes:
       - ..:/workspace:cached
     environment:
       - FED_REG_API_URL=http://feeder-devc-registry/api
-      - OIDC_AGENT_CONTAINER_NAME=feeder-devc-oidc-agent
     networks:
-      - feeder-devc-oidc-agent
       - feeder-devc-fed-reg
     command: sleep infinity
 
 volumes:
   feeder-devc-db-data:
   feeder-devc-db-logs:
-  feeder-devc-oidc-agent-iss-config:
 
 
 networks:
   feeder-devc-db:
   feeder-devc-fed-reg:
-  feeder-devc-oidc-agent:

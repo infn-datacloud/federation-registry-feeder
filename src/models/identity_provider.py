@@ -1,41 +1,46 @@
-import subprocess
+import urllib.parse
+from typing import Any
 
+import requests
 from fedreg.provider.schemas_extended import IdentityProviderCreate, find_duplicates
 from fedreg.sla.schemas import SLABase
 from fedreg.user_group.schemas import UserGroupBase
-from liboidcagent import get_access_token_by_issuer_url
-from pydantic import AnyHttpUrl, Field, validator
+from pydantic import AnyHttpUrl, Field, root_validator, validator
 
 from src.models.config import get_settings
 
 
-def retrieve_token(endpoint: str):
-    """Retrieve token using OIDC-Agent.
+def retrieve_token(endpoint: AnyHttpUrl):
+    """Retrieve token using client_id and secret.
 
-    If the container name is set use perform a docker exec command, otherwise use a
-    local instance."""
+    Query the instrospection endpoint to retrieve the token endpoint. Ask a new token.
+    """
     settings = get_settings()
-    min_valid_period = 5 * 60  # 5 min
-
-    if settings.OIDC_AGENT_CONTAINER_NAME is not None:
-        token_cmd = subprocess.run(
-            [
-                "docker",
-                "exec",
-                settings.OIDC_AGENT_CONTAINER_NAME,
-                "oidc-token",
-                f"--time={min_valid_period}",
-                endpoint,
-            ],
-            capture_output=True,
-            text=True,
-        )
-        if token_cmd.returncode > 0:
-            raise ValueError(token_cmd.stderr if token_cmd.stderr else token_cmd.stdout)
-        token = token_cmd.stdout.strip("\n")
-        return token
-
-    token = get_access_token_by_issuer_url(endpoint, min_valid_period=min_valid_period)
+    for client in settings.IDP_CLIENTS:
+        if client.endpoint == endpoint:
+            client_secret = client.client_secret
+            client_id = client.client_id
+            break
+    else:
+        raise ValueError("Missing provider %s", str(endpoint))
+    resp = requests.get(
+        urllib.parse.urljoin(endpoint, ".well-known/openid-configuration")
+    )
+    if resp.status_code != 200:
+        raise ValueError("Failed to contact introspection endpoint")
+    token_url = resp.json().get("token_endpoint")
+    resp = requests.post(
+        token_url,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        data={
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret,
+        },
+    )
+    if resp.status_code != 200:
+        raise ValueError("Failed to retrieve token")
+    token = resp.json().get("access_token")
     return token
 
 
@@ -63,8 +68,8 @@ class UserGroup(UserGroupBase):
 
 class Issuer(IdentityProviderCreate):
     endpoint: AnyHttpUrl = Field(description="issuer url", alias="issuer")
-    token: str = Field(default="", description="Access token")
     user_groups: list[UserGroup] = Field(description="User groups")
+    token: str = Field(default="", description="Access token")
 
     @validator("user_groups")
     @classmethod
@@ -74,9 +79,10 @@ class Issuer(IdentityProviderCreate):
         assert len(v), "Identity provider's user group list can't be empty"
         return v
 
-    @validator("token", pre=True, always=True)
+    @root_validator()
     @classmethod
-    def get_token(cls, v: str, values) -> str:
-        if v == "":
-            return retrieve_token(values.get("endpoint"))
-        return v
+    def set_token(cls, values: dict[str, Any]) -> str:
+        token = values.get("token")
+        if token == "":
+            values["token"] = retrieve_token(values.get("endpoint"))
+        return values

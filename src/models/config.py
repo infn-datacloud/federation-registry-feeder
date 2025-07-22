@@ -73,6 +73,14 @@ class APIVersions(BaseSettings):
         case_sensitive = True
 
 
+class IdentityProviderClient(BaseModel):
+    endpoint: AnyHttpUrl = Field(description="Trusted IDP endpoint")
+    client_id: str = Field(description="ID of the client associated to this IDP")
+    client_secret: str = Field(
+        description="Secret of the client associated to this IDP"
+    )
+
+
 class Settings(BaseSettings):
     FED_REG_API_URL: AnyHttpUrl = Field(
         default="http://localhost:8000/api", description="Federation-Registry base URL"
@@ -88,10 +96,6 @@ class Settings(BaseSettings):
         default="providers-conf",
         description="Path to the directory containing the federated provider \
             yaml configurations.",
-    )
-    OIDC_AGENT_CONTAINER_NAME: str | None = Field(
-        default=None,
-        description="Name of the container with the oidc-agent service instance.",
     )
     KAFKA_ENABLE: bool = Field(
         default=False, description="Enable Kafka message exchange"
@@ -133,6 +137,10 @@ class Settings(BaseSettings):
         description="Message version. It defines the fields in the message sent to "
         "kafka",
     )
+    IDP_CLIENTS: list[IdentityProviderClient] = Field(
+        default_factory=list,
+        description="List of trusted identity providers and related client credentials",
+    )
 
     api_ver: APIVersions = Field(description="API versions.")
 
@@ -140,12 +148,6 @@ class Settings(BaseSettings):
     @classmethod
     def convert_path_to_str(cls, v: Path) -> str:
         return str(v)
-
-    @validator("OIDC_AGENT_CONTAINER_NAME")
-    @classmethod
-    def invalid_empty(cls, v: str) -> str:
-        assert v != "", "Empty string is not a valid container name"
-        return v
 
     class Config:
         """Sub class to set attribute as case sensitive."""

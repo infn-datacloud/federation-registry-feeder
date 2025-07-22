@@ -1,32 +1,16 @@
 services:
-  oidc-agent:
-    image: opensciencegrid/oidc-agent:3.6-release-20240220-1639
-    container_name: feeder-oidc-agent
-    platform: linux/amd64
-    networks:
-      - oidc-net
-
   federation-registry-feeder:
     image: harbor.cloud.infn.it/datacloud-middleware/federation-registry-feeder
     container_name: feeder
-    depends_on:
-      - oidc-agent
     environment:
-      - OIDC_AGENT_CONTAINER_NAME=feeder-oidc-agent
       - PROVIDERS_CONF_DIR=/providers-conf
     env_file:
       - ../.env
     volumes:
       - ../providers-conf:/providers-conf:ro
       - ../certs:/certs:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - oidc-net
     # Infinite loop to keep container live doing nothing
     command: sleep infinity
     extra_hosts:
       - "host.docker.internal:host-gateway"
-networks:
-  oidc-net:
-
  
