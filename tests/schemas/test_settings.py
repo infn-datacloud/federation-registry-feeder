@@ -34,11 +34,6 @@ class CaseSettings:
     ) -> tuple[Literal["PROVIDERS_CONF_DIR"], Literal["/test/path"]]:
         return "PROVIDERS_CONF_DIR", "/test/path"
 
-    def case_oidc_agent_container(
-        self,
-    ) -> tuple[Literal["OIDC_AGENT_CONTAINER_NAME"], Literal["test-container-name"]]:
-        return "OIDC_AGENT_CONTAINER_NAME", "test-container-name"
-
 
 class CaseInvalidSettings:
     def case_fedreg_url_empty_string(
@@ -50,11 +45,6 @@ class CaseInvalidSettings:
         self,
     ) -> tuple[Literal["FED_REG_API_URL"], Literal["test.wrong.url.it"]]:
         return "FED_REG_API_URL", "test.wrong.url.it"
-
-    def case_oidc_agent_container_empty_string(
-        self,
-    ) -> tuple[Literal["OIDC_AGENT_CONTAINER_NAME"], Literal[""]]:
-        return "OIDC_AGENT_CONTAINER_NAME", ""
 
 
 def test_api_versions_defaults() -> None:
@@ -88,7 +78,6 @@ def test_settings_defaults() -> None:
     assert settings.FED_REG_API_URL == "http://localhost:8000/api"
     assert settings.BLOCK_STORAGE_VOL_LABELS == []
     assert settings.PROVIDERS_CONF_DIR == "providers-conf"
-    assert settings.OIDC_AGENT_CONTAINER_NAME is None
     assert settings.FED_REG_TIMEOUT == 30
     assert settings.KAFKA_BOOTSTRAP_SERVERS == "localhost:9092"
     assert settings.KAFKA_TOPIC == "federation-registry-feeder"

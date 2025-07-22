@@ -66,7 +66,7 @@ class CaseSiteConfigError:
     def case_validation_error(self) -> type[ValidationError]:
         return ValidationError([], SiteConfig)
 
-    def case_oidc_agent_conn_error(self) -> type[ValueError]:
+    def case_idp_conn_error(self) -> type[ValueError]:
         return ValueError(random_lower_string())
 
 

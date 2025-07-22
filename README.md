@@ -2,7 +2,7 @@
 
 This python script populates the [Federation Registry](https://github.com/infn-datacloud/federation-registry.git) through the REST API provider by that service.
 
-It uses [oidc-agent](https://indigo-dc.gitbook.io/oidc-agent/) to generate the tokens to use to perform authenticated requests on both the `federation-registry` and the resource providers.
+It calls the IDP introspection endpoint to retrieve the token endpoint and using the client id and client secret it retrieves the access tokens to use to perform authenticated requests on both the `federation-registry` and the resource providers.
 
 In production mode the application is meant to be used with [docker](https://www.docker.com/) and another scheduler service such as [ofelia](https://github.com/mcuadros/ofelia) to execute the script at fixed intervals.
 
@@ -37,17 +37,16 @@ In production mode you should run the application using the dedicated image [ind
 The application requires the following persistent volumes:
 
 - **/providers-conf**: folder with the `.config.yaml` files with the federated providers configurations. Read only mode.
-- **/var/run/docker.sock**: docker socket used to connect to the docker daemon from inside the container. Read only mode.
 
-It uses **environment variables** to configure the connection with the `federation-registry` service and with the `oidc-agent` service in charge of continuously generate the authorization tokens. You can pass these variables as arguments when starting the container.
+It uses **environment variables** to configure the connection with the `federation-registry` service. You can pass these variables as arguments when starting the container.
 
 The command to correctly start the application inside a container is the environment variables default is:
 
 ```bash
-docker run -d -v providers-conf:/providers-conf:ro -v /var/run/docker.sock:/var/run/docker.sock:ro indigopaas/federation-registry-feeder
+docker run -d -v providers-conf:/providers-conf:ro indigopaas/federation-registry-feeder
 ```
 
-The previous command binds the host's **providers-conf** folder (in the project top level) to the container's **/providers-conf** directory. The application will try to connect to the `federation-registry` instance located at http://localhost:8000; it will try to use the docker container named `feeder-dev-oidc-agent` to generate the authorization tokens.
+The previous command binds the host's **providers-conf** folder (in the project top level) to the container's **/providers-conf** directory. The application will try to connect to the `federation-registry` instance located at http://localhost:8000.
 
 In the following table we list all the environment variables that can be passed to the command using the `-e` param.
 
@@ -56,11 +55,6 @@ In the following table we list all the environment variables that can be passed 
   - **type**: URL
   - **mandatory**: YES
   - **default**: http://localhost:8000/api. _A default value if provided to simplify development environment start up._
-- `OIDC_AGENT_CONTAINER_NAME`
-  - **description**: Name of the container with the oidc-agent service instance. It depends on the value of `container_name` of the `oidc-agent` docker service to use.
-  - **type**: string
-  - **mandatory**: YES
-  - **default**: feeder-dev-oidc-agent. _A default value if provided to simplify development environment start up._
 - `BLOCK_STORAGE_VOL_LABELS`
   - **description**: List of the volume type labels accepted. **The project starts also if this variable is not set but ...**
   - **type**: List of string
@@ -163,7 +157,6 @@ You can also create a `.env` file with all the variables you want to override. H
 # .env
 
 FED_REG_API_URL=https://fed-reg.it/my-prefix/api
-OIDC_AGENT_CONTAINER_NAME=fed-reg-feeder-oidc-1
 BLOCK_STORAGE_VOL_LABELS=["first", "second"]
 
 FLAVORS=v1
@@ -184,65 +177,6 @@ To correctly work, the application requires a running `federation-registry` serv
 If you don't have an already running instance, we suggest to deploy your instance using the [indigopaas/federation-registry](https://hub.docker.com/r/indigopaas/federation-registry) docker image available on DockerHub.
 
 > The service instance needs a `neo4j` database instance with the **apoc** extension. Look at the [federation-registry documentation](https://github.com/infn-datacloud/federation-registry) for more information about it.
-
-### OIDC-Agent
-
-It also needs a running `oidc-agent` service instance. **In fact you have to register a client for each trusted identity provider in any yaml files.**
-
-When registering a client:
-
-- Choose a user having access to every project defined in the `.config.yaml` files. This is essential to have read access to the target projects.
-- The chosen user must be associated to one of the emails defined in the `federation-registry` `ADMIN_EMAIL_LIST` env variable, and it's hosting identity provider must be in the `TRUSTED_IDP_LIST`. This is essential to have write access to the `federation-registry` instance.
-- **If the default profile for that issuer is not iam (for example wlcg), add to the scopes `iam`.**
-
-If you don't have an already running instance, we suggest to deploy your instance using the [opensciencegrid/oidc-agent](https://hub.docker.com/r/opensciencegrid/oidc-agent) docker image available on DockerHub.
-
-> When using this image remember to set `platform: linux/amd64`. We also suggest to bind a volume to the container `/root/.oidc-agent` folder to not loose your oidc configurations.
-
-If you are using a container run the following command to register a new client using the oidc-agent inside that container. The provided scopes are not mandatory.
-
-```bash
-docker exec -it <oidc-agent-container-name> \
-    oidc-gen \
-    --flow device \
-    --iss <issuer-url> \
-    --dae <device-code-url> \
-    --scope="openid profile offline_access email iam" \
-    <config-name>
-```
-
-Once the service responds, move to the received link and authenticate using the credentials of the user with special privileges defined before. Once you have authorized service to access to user information the procedure will conclude.
-
-To manually retrieve the token you can use the following command
-
-```bash
-docker exec <oidc-agent-container-name> oidc-token <config-name>
-```
-
-On service start up, since the script does not use the <config-name> but the issuer url, you have to manually add again your configurations. For each configuration run the following command:
-
-```bash
-docker exec <oidc-agent-container-name> oidc-add <config-name>
-```
-
-Here an example using INFN Cloud IAM:
-
-```bash
-# Create a new INFN CLoud IAM configuration.
-docker exec feeder-dev-oidc-agent \
-    oidc-gen \
-    --flow device \
-    --iss https://iam.cloud.infn.it/ \
-    --dae https://iam.cloud.infn.it/devicecode \
-    --scope="openid profile offline_access email" \
-    infncloud
-
-# Retrieve a valid token for the INFN CLoud IAM configuration.
-docker exec feeder-dev-oidc-agent oidc-token infncloud
-
-# Add again the INFN CLoud IAM configuration on service start-up.
-docker exec feeder-dev-oidc-agent oidc-token infncloud
-```
 
 ### Job Scheduler
 
@@ -302,7 +236,7 @@ cd federation-registry-feeder
 
 Developers can launch the project locally or using containers.
 
-In both cases, developers need a `federation-registry` service and an `oidc-agent` service. Both can be started using docker.
+In both cases, developers need a `federation-registry` service.
 
 > Remember that the `federation-registry` needs a `neo4j` database instance.
 
@@ -310,20 +244,20 @@ In both cases, developers need a `federation-registry` service and an `oidc-agen
 
 Requirements:
 
-- Docker (to start `neo4j`, `federation-registry` and `oidc-agent` services)
+- Docker (to start `neo4j` and `federation-registry` services)
 - Poetry
 
-If you don't have an already running instance, we suggest to start the `neo4j` database, the `federation-registry` application and the `oidc-agent` service using the `docker-compose.yml` located inside the `.devcontainer` folder.
+If you don't have an already running instance, we suggest to start the `neo4j` database and the `federation-registry` application using the `docker-compose.yml` located inside the `.devcontainer` folder.
 
 ```bash
 cd .devcontainer
-docker compose up -d db oidc-agent registry
+docker compose up -d db registry
 ```
 
 or
 
 ```bash
-docker compose -f .devcontainer/docker-compose.ymal up -d db oidc-agent registry
+docker compose -f .devcontainer/docker-compose.ymal up -d db registry
 ```
 
 Then, using [poetry](https://python-poetry.org/), developers can install the libraries needed to start the python app and the tools to manage the code versioning, linting and formatting.
@@ -349,7 +283,7 @@ Requirements:
 
 - Docker
 
-Using VSCode you can open the entire folder inside the provided development container. The `docker-compose.yaml`, located in the `.devcontainer` folder, starts a `neo4j` database, a `federation-registry` application instance, an `oidc-agent` service and a python based container with all the production and development libraries. The development container use a non root user **vscode** with sudoers privileges, it has access to the host docker service and has a set of VSCode extensions already installed.
+Using VSCode you can open the entire folder inside the provided development container. The `docker-compose.yaml`, located in the `.devcontainer` folder, starts a `neo4j` database, a `federation-registry` application instance and a python based container with all the production and development libraries. The development container use a non root user **vscode** with sudoers privileges, it has access to the host docker service and has a set of VSCode extensions already installed.
 
 > The _docker-outside-docker_ extension allows developers to connect to the docker daemon service running on their host from inside the container.
 

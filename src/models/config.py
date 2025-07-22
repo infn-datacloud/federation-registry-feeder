@@ -89,10 +89,6 @@ class Settings(BaseSettings):
         description="Path to the directory containing the federated provider \
             yaml configurations.",
     )
-    OIDC_AGENT_CONTAINER_NAME: str | None = Field(
-        default=None,
-        description="Name of the container with the oidc-agent service instance.",
-    )
     KAFKA_ENABLE: bool = Field(
         default=False, description="Enable Kafka message exchange"
     )
@@ -140,12 +136,6 @@ class Settings(BaseSettings):
     @classmethod
     def convert_path_to_str(cls, v: Path) -> str:
         return str(v)
-
-    @validator("OIDC_AGENT_CONTAINER_NAME")
-    @classmethod
-    def invalid_empty(cls, v: str) -> str:
-        assert v != "", "Empty string is not a valid container name"
-        return v
 
     class Config:
         """Sub class to set attribute as case sensitive."""
