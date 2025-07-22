@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch
 
-from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
 from pydantic import ValidationError
 from pytest_cases import parametrize_with_cases
 
@@ -67,11 +66,8 @@ class CaseSiteConfigError:
     def case_validation_error(self) -> type[ValidationError]:
         return ValidationError([], SiteConfig)
 
-    def case_oidc_agent_conn_error(self) -> type[OidcAgentConnectError]:
-        return OidcAgentConnectError(random_lower_string())
-
-    def case_oidc_agent_error(self) -> type[OidcAgentError]:
-        return OidcAgentError(random_lower_string())
+    def case_oidc_agent_conn_error(self) -> type[ValueError]:
+        return ValueError(random_lower_string())
 
 
 class CaseOverbookingBandwidth:

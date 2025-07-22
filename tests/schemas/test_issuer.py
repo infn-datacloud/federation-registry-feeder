@@ -1,13 +1,11 @@
-import os
 from unittest.mock import Mock, patch
 
 import pytest
-from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
 from pytest_cases import parametrize_with_cases
 
 from src.models.identity_provider import Issuer, UserGroup, retrieve_token
 from tests.schemas.utils import issuer_dict, sla_dict, user_group_dict
-from tests.utils import random_lower_string, random_url
+from tests.utils import random_lower_string
 
 
 class CaseInvalidUserGroups:
@@ -42,6 +40,8 @@ def test_identity_provider_schema(mock_token: Mock) -> None:
     assert len(item.user_groups) == len(d.get("user_groups"))
     assert item.user_groups[0] == d.get("user_groups")[0]
     assert item.token == mock_token.return_value.strip("\n")
+    assert item.client_id == d.get("client_id")
+    assert item.client_secret == d.get("client_secret")
 
 
 @patch(
@@ -66,7 +66,7 @@ def test_identity_provider_invalid_schema(
     mock_token.assert_called_once()
 
 
-@patch("src.models.identity_provider.retrieve_token", return_value=ValueError)
+@patch("src.models.identity_provider.retrieve_token", side_effect=ValueError)
 def test_identity_provider_no_token(mock_token: Mock) -> None:
     """Invalid Issuer schema.
 
@@ -78,52 +78,58 @@ def test_identity_provider_no_token(mock_token: Mock) -> None:
     mock_token.assert_called_once()
 
 
-# Retrieve token
+@patch("src.models.identity_provider.requests.get")
+@patch("src.models.identity_provider.requests.post")
+def test_retrieve_token_success(mock_post, mock_get):
+    # Mock GET to introspection endpoint
+    mock_get.return_value = Mock(
+        status_code=200, json=lambda: {"token_endpoint": "https://example.com/token"}
+    )
+    # Mock POST to token endpoint
+    mock_post.return_value = Mock(
+        status_code=200, json=lambda: {"access_token": "test_token"}
+    )
+    token = retrieve_token(
+        endpoint="https://example.com/", client_id="cid", client_secret="csecret"
+    )
+    assert token == "test_token"
+    mock_get.assert_called_once()
+    mock_post.assert_called_once()
 
 
-@patch(
-    "src.models.identity_provider.get_settings",
-    return_value=Mock(OIDC_AGENT_CONTAINER_NAME="test"),
-)
-@patch(
-    "src.models.identity_provider.subprocess.run",
-    return_value=Mock(returncode=0, stdout=random_lower_string()),
-)
-def test_retrieve_token_with_container(mock_subprocess_cmd: Mock, mock_settings: Mock):
-    assert retrieve_token(random_url()) is not None
+@patch("src.models.identity_provider.requests.get")
+def test_retrieve_token_introspection_fail(mock_get):
+    mock_get.return_value = Mock(status_code=404)
+    with pytest.raises(ValueError, match="Failed to contact introspection endpoint"):
+        retrieve_token(
+            endpoint="https://example.com/", client_id="cid", client_secret="csecret"
+        )
+    mock_get.assert_called_once()
 
 
-@patch(
-    "src.models.identity_provider.get_settings",
-    return_value=Mock(OIDC_AGENT_CONTAINER_NAME="test"),
-)
-@patch(
-    "src.models.identity_provider.subprocess.run",
-    return_value=Mock(returncode=1, stdout=random_lower_string()),
-)
-def test_container_not_found(mock_subprocess_cmd: Mock, mock_settings: Mock):
-    with pytest.raises(ValueError):
-        retrieve_token(random_lower_string())
+@patch("src.models.identity_provider.requests.get")
+@patch("src.models.identity_provider.requests.post")
+def test_retrieve_token_token_fail(mock_post, mock_get):
+    mock_get.return_value = Mock(
+        status_code=200, json=lambda: {"token_endpoint": "https://example.com/token"}
+    )
+    mock_post.return_value = Mock(status_code=400)
+    with pytest.raises(ValueError, match="Failed to retrieve token"):
+        retrieve_token(
+            endpoint="https://example.com/", client_id="cid", client_secret="csecret"
+        )
+    mock_get.assert_called_once()
+    mock_post.assert_called_once()
 
 
-def test_env_oidc_sock_not_set():
-    """Variabile OIDC_SOCK is not set."""
-    with pytest.raises(OidcAgentConnectError):
-        retrieve_token(random_lower_string())
-
-
-def test_oidc_agent_not_running():
-    """Variable is set but the agent is not running."""
-    os.environ.setdefault("OIDC_SOCK", random_lower_string())
-    with pytest.raises(OidcAgentError):
-        retrieve_token(random_lower_string())
-
-
-@patch(
-    "src.models.identity_provider.get_access_token_by_issuer_url",
-    return_value=random_lower_string(),
-)
-def test_retrieve_token_with_local_oidc(mock_liboidc: Mock):
-    """Mock response from liboidcagent function returning token."""
-    os.environ.setdefault("OIDC_SOCK", random_lower_string())
-    retrieve_token(random_lower_string())
+@patch("src.models.identity_provider.requests.get")
+@patch("src.models.identity_provider.requests.post")
+def test_retrieve_token_no_access_token(mock_post, mock_get):
+    mock_get.return_value = Mock(
+        status_code=200, json=lambda: {"token_endpoint": "https://example.com/token"}
+    )
+    mock_post.return_value = Mock(status_code=200, json=lambda: {})
+    token = retrieve_token(
+        endpoint="https://example.com/", client_id="cid", client_secret="csecret"
+    )
+    assert token is None

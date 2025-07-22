@@ -74,6 +74,7 @@ description = "Foreign Function Interface for Python calling C code."
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
+markers = "platform_python_implementation != \"PyPy\""
 files = [
     {file = "cffi-1.16.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:6b3d6606d369fc1da4fd8c357d026317fbb9c9b75d36dc16e90e84c26854b088"},
     {file = "cffi-1.16.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:ac0f5edd2360eea2f1daa9e26a41db02dd4b0451b48f7c318e217ee092a213e9"},
@@ -803,21 +804,6 @@ saml2 = ["lxml (>=4.2.0)"]
 test = ["PyYAML (>=3.12)", "bandit (>=1.7.6,<1.8.0)", "betamax (>=0.7.0)", "coverage (>=4.0,!=4.4)", "fixtures (>=3.0.0)", "flake8-docstrings (>=1.7.0,<1.8.0)", "flake8-import-order (>=0.18.2,<0.19.0)", "hacking (>=6.1.0,<6.2.0)", "lxml (>=4.2.0)", "oauthlib (>=0.6.2)", "oslo.config (>=5.2.0)", "oslo.utils (>=3.33.0)", "oslotest (>=3.2.0)", "reno (>=3.1.0)", "requests-kerberos (>=0.8.0)", "requests-mock (>=1.2.0)", "stestr (>=1.0.0)", "testresources (>=2.0.0)", "testtools (>=2.2.0)"]
 
 [[package]]
-name = "liboidcagent"
-version = "0.6.0"
-description = "A python library for requesting OpenID Connect access tokens from oidc-agent."
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "liboidcagent-0.6.0-py3-none-any.whl", hash = "sha256:52e1ff2e6283f814d5276f3d134f2e3c23a43d2751c17a01b3adf4ad6c41c97b"},
-    {file = "liboidcagent-0.6.0.tar.gz", hash = "sha256:4eacb1cbbc9e23ea7869f2443a121669ff531b5d679867a1174a23a994a62967"},
-]
-
-[package.dependencies]
-PyNaCl = ">=1.2.0"
-
-[[package]]
 name = "makefun"
 version = "1.15.2"
 description = "Small library to dynamically create python functions."
@@ -1261,6 +1247,7 @@ description = "C parser in Python"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
+markers = "platform_python_implementation != \"PyPy\""
 files = [
     {file = "pycparser-2.22-py3-none-any.whl", hash = "sha256:c3702b6d3dd8c7abc1afa565d7e63d53a1d0bd86cdc24edd75470f4de499cfcc"},
     {file = "pycparser-2.22.tar.gz", hash = "sha256:491c8be9c040f5390f5bf44a5b07752bd07f56edf992381b05c701439eec10f6"},
@@ -1319,33 +1306,6 @@ typing-extensions = ">=4.2.0"
 [package.extras]
 dotenv = ["python-dotenv (>=0.10.4)"]
 email = ["email-validator (>=1.0.3)"]
-
-[[package]]
-name = "pynacl"
-version = "1.5.0"
-description = "Python binding to the Networking and Cryptography (NaCl) library"
-optional = false
-python-versions = ">=3.6"
-groups = ["main"]
-files = [
-    {file = "PyNaCl-1.5.0-cp36-abi3-macosx_10_10_universal2.whl", hash = "sha256:401002a4aaa07c9414132aaed7f6836ff98f59277a234704ff66878c2ee4a0d1"},
-    {file = "PyNaCl-1.5.0-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_24_aarch64.whl", hash = "sha256:52cb72a79269189d4e0dc537556f4740f7f0a9ec41c1322598799b0bdad4ef92"},
-    {file = "PyNaCl-1.5.0-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a36d4a9dda1f19ce6e03c9a784a2921a4b726b02e1c736600ca9c22029474394"},
-    {file = "PyNaCl-1.5.0-cp36-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_24_x86_64.whl", hash = "sha256:0c84947a22519e013607c9be43706dd42513f9e6ae5d39d3613ca1e142fba44d"},
-    {file = "PyNaCl-1.5.0-cp36-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:06b8f6fa7f5de8d5d2f7573fe8c863c051225a27b61e6860fd047b1775807858"},
-    {file = "PyNaCl-1.5.0-cp36-abi3-musllinux_1_1_aarch64.whl", hash = "sha256:a422368fc821589c228f4c49438a368831cb5bbc0eab5ebe1d7fac9dded6567b"},
-    {file = "PyNaCl-1.5.0-cp36-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:61f642bf2378713e2c2e1de73444a3778e5f0a38be6fee0fe532fe30060282ff"},
-    {file = "PyNaCl-1.5.0-cp36-abi3-win32.whl", hash = "sha256:e46dae94e34b085175f8abb3b0aaa7da40767865ac82c928eeb9e57e1ea8a543"},
-    {file = "PyNaCl-1.5.0-cp36-abi3-win_amd64.whl", hash = "sha256:20f42270d27e1b6a29f54032090b972d97f0a1b0948cc52392041ef7831fee93"},
-    {file = "PyNaCl-1.5.0.tar.gz", hash = "sha256:8ac7448f09ab85811607bdd21ec2464495ac8b7c66d146bf545b0f08fb9220ba"},
-]
-
-[package.dependencies]
-cffi = ">=1.4.1"
-
-[package.extras]
-docs = ["sphinx (>=1.6.5)", "sphinx-rtd-theme"]
-tests = ["hypothesis (>=3.27.0)", "pytest (>=3.2.1,!=3.3.0)"]
 
 [[package]]
 name = "pyopenssl"
@@ -2267,4 +2227,4 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-it
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9.2,<4.0.0"
-content-hash = "f90405126210af52667c37a7007aef43ca0927fb61b924a321391432b963dedd"
+content-hash = "509ac106a4402795bd8ef13c015a48c17e47692a0f69b6bb59931fb58e72b0b5"

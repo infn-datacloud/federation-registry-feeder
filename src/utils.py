@@ -20,7 +20,6 @@ from fedreg.provider.schemas_extended import (
     SharedImageCreate,
     SharedNetworkCreate,
 )
-from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
 from pydantic import ValidationError
 
 from src.logger import create_logger
@@ -79,7 +78,7 @@ def load_config(*, fname: str, log_level: str | int | None = None) -> SiteConfig
             logger.info("Configuration loaded")
             logger.debug("%r", config)
             return config
-        except (ValidationError, OidcAgentConnectError, OidcAgentError) as e:
+        except (ValidationError, ValueError) as e:
             logger.error(e)
             return None
     else:
