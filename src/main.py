@@ -1,17 +1,11 @@
 from concurrent.futures import ThreadPoolExecutor
 
-from src.fed_reg_conn import update_database
+from src.config import get_settings
 from src.kafka_conn import send_to_kafka
 from src.logger import create_logger
-from src.models.config import get_settings
 from src.parser import parser
 from src.providers.core import ProviderThread
-from src.utils import (
-    create_provider,
-    get_conf_files,
-    get_site_configs,
-    infer_service_endpoints,
-)
+from src.utils import create_provider, get_conf_files, get_site_configs
 
 
 def main(log_level: str) -> None:
@@ -25,9 +19,15 @@ def main(log_level: str) -> None:
     logger = create_logger("Federation-Registry-Feeder", level=log_level)
     settings = get_settings()
 
-    # Read all yaml files containing providers configurations.
-    yaml_files = get_conf_files(settings=settings, logger=logger)
-    site_configs, error = get_site_configs(yaml_files=yaml_files, log_level=log_level)
+    if settings.FED_MGR_ENABLE:
+        # Retrieve site configs from Federation-Manager
+        site_configs = []
+    else:
+        # Read all yaml files containing providers configurations.
+        yaml_files = get_conf_files(settings=settings, logger=logger)
+        site_configs, error = get_site_configs(
+            yaml_files=yaml_files, log_level=log_level
+        )
 
     # Prepare data (merge issuers and provider configurations)
     pthreads: list[ProviderThread] = []
@@ -59,17 +59,6 @@ def main(log_level: str) -> None:
     # Create kafka producer if needed and send data to kafka
     if settings.KAFKA_ENABLE:
         send_to_kafka(settings=settings, logger=logger, data=kafka_data)
-
-    # Update the Federation-Registry
-    token = site_configs[0].trusted_idps[0].token if len(site_configs) > 0 else ""
-    fedreg_endpoints = infer_service_endpoints(settings=settings, logger=logger)
-    error |= not update_database(
-        service_api_url=fedreg_endpoints,
-        token=token,
-        items=providers,
-        logger=logger,
-        settings=settings,
-    )
 
     if error:
         logger.error("Found at least one error.")
