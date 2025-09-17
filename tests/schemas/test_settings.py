@@ -90,8 +90,8 @@ def test_settings_defaults() -> None:
     assert settings.PROVIDERS_CONF_DIR == "providers-conf"
     assert settings.OIDC_AGENT_CONTAINER_NAME is None
     assert settings.FED_REG_TIMEOUT == 30
-    assert settings.KAFKA_HOSTNAME is None
-    assert settings.KAFKA_TOPIC is None
+    assert settings.KAFKA_BOOTSTRAP_SERVERS == "localhost:9092"
+    assert settings.KAFKA_TOPIC == "federation-registry-feeder"
     assert settings.api_ver == api_ver
 
 

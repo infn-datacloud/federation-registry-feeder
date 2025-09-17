@@ -93,12 +93,47 @@ class Settings(BaseSettings):
         default=None,
         description="Name of the container with the oidc-agent service instance.",
     )
-    KAFKA_HOSTNAME: str | None = Field(
-        default=None, description="Kafka server hostname. DNS name and port"
+    KAFKA_ENABLE: bool = Field(
+        default=False, description="Enable Kafka message exchange"
     )
-    KAFKA_TOPIC: str | None = Field(
-        default=None, description="Kafka topic to upload data"
+    KAFKA_BOOTSTRAP_SERVERS: str = Field(
+        default="localhost:9092",
+        description="Kafka server hostnames. DNS name and port. Can be comma separeted "
+        "list",
     )
+    KAFKA_TOPIC: str = Field(
+        default="federation-registry-feeder", description="Kafka topic to upload data"
+    )
+    KAFKA_MAX_REQUEST_SIZE: int = Field(
+        default=104857600, description="Maximum size of a request to send to kafka (B)."
+    )
+    KAFKA_CLIENT_NAME: str = Field(
+        default="fedreg-feeder",
+        description="Client name to use when connecting to kafka",
+    )
+    KAFKA_SSL_ENABLE: bool = Field(
+        default=False, description="Enable SSL connection with kafka"
+    )
+    KAFKA_SSL_CACERT_PATH: str | None = Field(
+        default=None, descrption="Path to the SSL CA cert file"
+    )
+    KAFKA_SSL_CERT_PATH: str | None = Field(
+        default=None, descrption="Path to the SSL cert file"
+    )
+    KAFKA_SSL_KEY_PATH: str | None = Field(
+        default=None, descrption="Path to the SSL Key file"
+    )
+    KAFKA_SSL_PASSWORD: str | None = Field(default=None, descrption="SSL password")
+    KAFKA_ALLOW_AUTO_CREATE_TOPICS: bool = Field(
+        default=False,
+        description="Enable automatic creation of new topics if not yet in kafka",
+    )
+    KAFKA_MSG_VERSION: str = Field(
+        default="1.2.0",
+        description="Message version. It defines the fields in the message sent to "
+        "kafka",
+    )
+
     api_ver: APIVersions = Field(description="API versions.")
 
     @validator("PROVIDERS_CONF_DIR")
@@ -116,6 +151,8 @@ class Settings(BaseSettings):
         """Sub class to set attribute as case sensitive."""
 
         case_sensitive = True
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
 @lru_cache
