@@ -1,3 +1,5 @@
+"""Module to define kafka connection parameters and message details."""
+
 import json
 from datetime import datetime, timezone
 from logging import Logger
@@ -6,11 +8,12 @@ from typing import Any
 from kafka import KafkaProducer
 from kafka.errors import NoBrokersAvailable
 
-from src.models.config import Settings
+from src.config import Settings
+from src.providers.openstack import OpenstackClient
 
 
 class Producer:
-    """Producer instance to send messages to kafka"""
+    """Producer instance to send messages to kafka."""
 
     def __init__(self, *, settings: Settings, logger: Logger) -> None:
         """Initializes a Kafka producer with the provided settings and logger.
@@ -27,14 +30,14 @@ class Producer:
                 parameters.
             logger (Logger): Logger instance for logging events and errors.
 
-        Raises:
-            ValueError: If SSL is enabled but the SSL password path is not provided.
-
         """
         self.logger = logger
+        self.topic = settings.KAFKA_TOPIC
+        self.bootstrap_servers = settings.KAFKA_BOOTSTRAP_SERVERS
+
         kwargs = {
             "client_id": settings.KAFKA_CLIENT_NAME,
-            "bootstrap_servers": settings.KAFKA_BOOTSTRAP_SERVERS,
+            "bootstrap_servers": self.bootstrap_servers,
             "value_serializer": lambda x: json.dumps(x, sort_keys=True).encode("utf-8"),
             "max_request_size": settings.KAFKA_MAX_REQUEST_SIZE,
             "acks": "all",
@@ -43,10 +46,6 @@ class Producer:
         }
 
         if settings.KAFKA_SSL_ENABLE:
-            if settings.KAFKA_SSL_PASSWORD is None:
-                raise ValueError(
-                    "KAFKA_SSL_PASSWORD can't be None when KAFKA_SSL_ENABLE is True"
-                )
             self.producer = KafkaProducer(
                 security_protocol="SSL",
                 ssl_check_hostname=False,
@@ -59,7 +58,7 @@ class Producer:
         else:
             self.producer = KafkaProducer(**kwargs)
 
-    def send(self, *, topic: str, data: list[dict[str, Any]], msg_version: str):
+    def send(self, clients: list[OpenstackClient]) -> None:
         """Sends a list of data items to a specified Kafka topic.
 
         - For each item in `data`, builds a message using `build_message`,
@@ -68,22 +67,29 @@ class Producer:
         - Flushes and closes the Kafka producer after sending all messages.
 
         Args:
-            topic (str): The Kafka topic to which messages will be sent.
-            data (list[dict[str, Any]]): A list of data dictionaries to be sent as
-                messages.
-            msg_version (str): The version identifier to include in each message.
+            clients (list of Client): A list of clients from which extrapolate data to
+                be sent as messages.
+
+        Returns:
+            bool: True messages are successfully sent to kafka. False otherwise.
 
         """
-        for item in data:
-            message = self.build_message(data=item, msg_version=msg_version)
-            message = json.loads(json.dumps(message, default=str))
-            self.producer.send(topic, message)
-            self.logger.info("Sending message")
-            self.logger.debug("Data: %s", message)
-        self.producer.flush()
-        self.producer.close()
+        try:
+            for item in clients:
+                message = self.build_message(data=item)
+                message = json.loads(json.dumps(message, default=str))
+                self.producer.send(self.topic, message)
+                self.logger.debug("Data: %s", message)
+            self.producer.flush()
+            self.logger.info("Sending messages")
+            self.producer.close()
+            return True
+        except NoBrokersAvailable:
+            msg = f"No brokers available at {self.bootstrap_servers}"
+            self.logger.error(msg)
+            return False
 
-    def build_message(self, *, data: dict[str, Any], msg_version: str):
+    def build_message(self, data: OpenstackClient) -> dict[str, Any]:
         """Builds a message dictionary for a specific message version.
 
         Parameters:
@@ -105,87 +111,24 @@ class Producer:
             KeyError: If any required key is missing from the input data.
 
         """
-        provider_conf = data.pop("provider_conf")
-        issuer = data.pop("issuer")
-        project = data.pop("project")
-        identity_services = data.pop("identity_services")
-        match msg_version:
-            case "1.2.0":
-                return {
-                    "msg_version": msg_version,
-                    "provider_name": provider_conf["name"],
-                    "provider_type": provider_conf["type"],
-                    "identity_endpoint": identity_services[0]["endpoint"],
-                    "region_name": provider_conf["regions"][0]["name"],
-                    "overbooking_cpu": provider_conf["regions"][0]["overbooking_cpu"],
-                    "overbooking_ram": provider_conf["regions"][0]["overbooking_ram"],
-                    "bandwidth_in": provider_conf["regions"][0]["bandwidth_in"],
-                    "bandwidth_out": provider_conf["regions"][0]["bandwidth_out"],
-                    "issuer_endpoint": issuer["endpoint"],
-                    "issuer_name": provider_conf["identity_providers"][0]["idp_name"],
-                    "issuer_protocol": provider_conf["identity_providers"][0][
-                        "protocol"
-                    ],
-                    "user_group": issuer["user_groups"][0]["name"],
-                    "project_id": project["uuid"],
-                    **data,
-                }
-            case "1.3.0":
-                return {
-                    "msg_version": msg_version,
-                    "timestamp": datetime.now(timezone.utc).isoformat(
-                        timespec="seconds"
-                    ),
-                    "provider_name": provider_conf["name"],
-                    "provider_type": provider_conf["type"],
-                    "identity_endpoint": identity_services[0]["endpoint"],
-                    "region_name": provider_conf["regions"][0]["name"],
-                    "overbooking_cpu": provider_conf["regions"][0]["overbooking_cpu"],
-                    "overbooking_ram": provider_conf["regions"][0]["overbooking_ram"],
-                    "bandwidth_in": provider_conf["regions"][0]["bandwidth_in"],
-                    "bandwidth_out": provider_conf["regions"][0]["bandwidth_out"],
-                    "issuer_endpoint": issuer["endpoint"],
-                    "issuer_name": provider_conf["identity_providers"][0]["idp_name"],
-                    "issuer_protocol": provider_conf["identity_providers"][0][
-                        "protocol"
-                    ],
-                    "user_group": issuer["user_groups"][0]["name"],
-                    "project_id": project["uuid"],
-                    **data,
-                }
-            case _:
-                raise ValueError("Invalid message version: %s", msg_version)
-
-
-def send_to_kafka(
-    *, settings: Settings, logger: Logger, data: list[dict[str, Any]]
-) -> Producer:
-    """Creates a Kafka producer instance using the provided settings and logger.
-
-    Args:
-        settings (Settings): Configuration object containing Kafka connection
-            parameters.
-        logger (Logger, optional): Logger instance for logging errors.
-
-    Returns:
-        Producer: An instance of the Kafka Producer if the broker is available.
-
-    Raises:
-        NoBrokersAvailable: If no Kafka brokers are available at the specified address.
-        ValueError: If there is a value error during producer creation.
-        FileNotFoundError: If a required file is not found during producer creation.
-
-    """
-    try:
-        producer = Producer(settings=settings, logger=logger)
-        producer.send(
-            topic=settings.KAFKA_TOPIC,
-            data=data,
-            msg_version=settings.KAFKA_MSG_VERSION,
-        )
-    except NoBrokersAvailable:
-        logger.error("No brokers available at %s", settings.KAFKA_BOOTSTRAP_SERVERS)
-    except ValueError as e:
-        logger.error(e.args[0])
-    except FileNotFoundError as e:
-        logger.error(e.args[0])
+        return {
+            "msg_version": "2.0.0",
+            "provider_name": data.provider_name,
+            "provider_type": data.provider_type,
+            "identity_endpoint": data.provider_endpoint,
+            "region_name": data.region_name,
+            "overbooking_cpu": data.overbooking_cpu,
+            "overbooking_ram": data.overbooking_ram,
+            "bandwidth_in": data.bandwidth_in,
+            "bandwidth_out": data.bandwidth_out,
+            "issuer_endpoint": data.idp_endpoint,
+            "issuer_protocol": data.idp_protocol,
+            "issuer_name": data.idp_name,
+            "user_group": data.user_group,
+            "project_id": data.project_id,
+            "quotas": [i.model_dump() for i in data.quotas],
+            "flavors": [i.model_dump() for i in data.flavors],
+            "images": [i.model_dump() for i in data.images],
+            "networks": [i.model_dump() for i in data.networks],
+            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        }

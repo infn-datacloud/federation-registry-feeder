@@ -1,64 +1,58 @@
-from concurrent.futures import ThreadPoolExecutor
+"""Population script."""
 
 from src.config import get_settings
-from src.kafka_conn import send_to_kafka
+from src.core import create_clients, retrieve_data_from_providers
+from src.kafka_conn import Producer
+from src.loaders.fed_mgr import load_connections_from_fed_mgr
+from src.loaders.yaml_files import load_connections_from_yaml_files
 from src.logger import create_logger
 from src.parser import parser
-from src.providers.core import ProviderThread
-from src.utils import create_provider, get_conf_files, get_site_configs
+from src.utils import filter_connections_with_valid_token
 
 
 def main(log_level: str) -> None:
     """Main function.
 
-    - Read yaml files
-    - Organize data
-    - Connect to federated provider and retrieve resources
-    - Update Federation-Registry
+    Based on settings, retrieve the list of site configurations from a list of YAML
+    files or contacting the federation-manager service.
+
+    Based on provider type, create a client object for each provider-region-project
+    triplet and retrieve resources (limits, usage, flavors, images and networks).
+    If the connection with a provider fails, do not interrupt the script.
+
+    Send to kafka a message for each triplet with the relevant data.
     """
-    logger = create_logger("Federation-Registry-Feeder", level=log_level)
+    error = False
     settings = get_settings()
+    logger = create_logger(settings.APP_NAME, level=log_level)
 
+    # Retrieve configurations from YAML files or fed-mgr
     if settings.FED_MGR_ENABLE:
-        # Retrieve site configs from Federation-Manager
-        site_configs = []
+        connections, idps = load_connections_from_fed_mgr(
+            settings=settings, logger=logger
+        )
     else:
-        # Read all yaml files containing providers configurations.
-        yaml_files = get_conf_files(settings=settings, logger=logger)
-        site_configs, error = get_site_configs(
-            yaml_files=yaml_files, log_level=log_level
+        connections, idps = load_connections_from_yaml_files(
+            settings.PROVIDERS_CONF_DIR, settings=settings, logger=logger
         )
 
-    # Prepare data (merge issuers and provider configurations)
-    pthreads: list[ProviderThread] = []
-    for config in site_configs:
-        prov_configs = [*config.openstack, *config.kubernetes]
-        issuers = config.trusted_idps
-        for conf in prov_configs:
-            pthreads.append(
-                ProviderThread(provider_conf=conf, issuers=issuers, log_level=log_level)
-            )
+    filtered_connections = filter_connections_with_valid_token(
+        connections, idps, settings=settings, logger=logger
+    )
+    error = error or len(filtered_connections) != len(connections)
 
-    # Multithreading read
-    providers = []
-    with ThreadPoolExecutor() as executor:
-        providers_data = executor.map(lambda x: x.get_provider(), pthreads)
-    providers_data = list(providers_data)
-    providers_data = list(filter(lambda x: x, providers_data))
-    error |= any([x.error for x in pthreads])
-
-    providers = []
-    kafka_data = []
-    for provider_conf, connections_data, error in providers_data:
-        kafka_data += [i.to_dict() for i in connections_data]
-        provider = create_provider(
-            provider_conf=provider_conf, connections_data=connections_data, error=error
-        )
-        providers.append(provider)
+    # Retrieve data from providers
+    clients = create_clients(filtered_connections, logger=logger)
+    success_clients = retrieve_data_from_providers(
+        clients, multithreading=settings.MULTITHREADING, logger=logger
+    )
+    error = error or len(clients) != len(success_clients)
 
     # Create kafka producer if needed and send data to kafka
     if settings.KAFKA_ENABLE:
-        send_to_kafka(settings=settings, logger=logger, data=kafka_data)
+        producer = Producer(settings=settings, logger=logger)
+        success = producer.send(clients=clients)
+        error = error or not success
 
     if error:
         logger.error("Found at least one error.")

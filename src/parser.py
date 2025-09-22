@@ -1,3 +1,5 @@
+"""Command line arguments parser."""
+
 import argparse
 import logging
 

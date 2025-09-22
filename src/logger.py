@@ -1,15 +1,23 @@
+"""Module to create a logger instance."""
+
 import logging
 import sys
 from logging import Formatter, Logger, StreamHandler
 
 
 class StdoutFilter(logging.Filter):
+    """Class to redirect logs to stdout."""
+
     def filter(self, record):
+        """Redirect to stdout only logs with level lower or equal then WARNING."""
         return record.levelno <= logging.WARNING
 
 
 class StderrFilter(logging.Filter):
+    """Class to redirect logs to stderr."""
+
     def filter(self, record):
+        """Redirect to stderr only logs with level greater or equal then ERROR."""
         return record.levelno >= logging.ERROR
 
 

@@ -1,3 +1,5 @@
+"""Application settings."""
+
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
@@ -5,10 +7,29 @@ from typing import Annotated
 from pydantic import AfterValidator, AnyHttpUrl, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from src.utils import invalid_empty
+
+def invalid_empty(v: str) -> str:
+    """An empty string is not a valid input.
+
+    Args:
+        v (str): input string.
+
+    Returns:
+        str: the input string
+
+    """
+    if v == "":
+        raise ValueError("Empty string is not a valid value")
+    return v
 
 
 class Settings(BaseSettings):
+    """Settings for the application."""
+
+    APP_NAME: Annotated[str, Field(default="Feeder", description="Application name.")]
+    MULTITHREADING: Annotated[
+        bool, Field(default=False, description="Enable multithreading")
+    ]
     BLOCK_STORAGE_VOL_LABELS: Annotated[
         list[str],
         Field(default_factory=list, description="List of accepted volume type labels."),
@@ -28,6 +49,9 @@ class Settings(BaseSettings):
             description="Name of the container with the oidc-agent service instance.",
         ),
         AfterValidator(invalid_empty),
+    ]
+    TOKEN_MIN_VALID_PERIOD: Annotated[
+        int, Field(default=300, decsription="Token minimum validity period in minutes")
     ]
     FED_MGR_ENABLE: Annotated[
         bool, Field(default=False, description="Enable communication with Fed-Mgr")
@@ -91,14 +115,6 @@ class Settings(BaseSettings):
         Field(
             default=False,
             description="Enable automatic creation of new topics if not yet in kafka",
-        ),
-    ]
-    KAFKA_MSG_VERSION: Annotated[
-        str,
-        Field(
-            default="1.2.0",
-            description="Message version. It defines the fields in the message sent to "
-            "kafka",
         ),
     ]
 

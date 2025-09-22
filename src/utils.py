@@ -1,388 +1,123 @@
-import os
-from concurrent.futures import ThreadPoolExecutor
+"""Application utilities."""
+
+import subprocess
 from logging import Logger
+from typing import Any
 
-import yaml
-from fedreg.provider.enum import ProviderStatus
-from fedreg.provider.schemas_extended import (
-    BlockStorageServiceCreateExtended,
-    ComputeServiceCreateExtended,
-    IdentityProviderCreateExtended,
-    NetworkServiceCreateExtended,
-    ObjectStoreServiceCreateExtended,
-    PrivateFlavorCreateExtended,
-    PrivateImageCreateExtended,
-    PrivateNetworkCreateExtended,
-    ProjectCreate,
-    ProviderCreateExtended,
-    RegionCreateExtended,
-    SharedFlavorCreate,
-    SharedImageCreate,
-    SharedNetworkCreate,
-)
+from liboidcagent import get_access_token_by_issuer_url
 from liboidcagent.liboidcagent import OidcAgentConnectError, OidcAgentError
-from pydantic import ValidationError
+from pydantic import AnyHttpUrl
 
-from src.logger import create_logger
-from src.models.config import Settings, URLs
-from src.models.provider import Kubernetes, Openstack
+from src.config import Settings
 from src.models.site_config import SiteConfig
-from src.providers.openstack import OpenstackData
 
 
-def infer_service_endpoints(*, settings: Settings, logger: Logger) -> URLs:
-    """Detect Federation-Registry endpoints from given configuration."""
-    logger.info("Building Federation-Registry endpoints from configuration.")
-    logger.debug("%r", settings)
-    d = {}
-    for k, v in settings.api_ver.dict().items():
-        d[k.lower()] = os.path.join(settings.FED_REG_API_URL, f"{v}", f"{k.lower()}")
-    endpoints = URLs(**d)
-    logger.info("Federation-Registry endpoints detected")
-    logger.debug("%r", endpoints)
-    return endpoints
+def find_duplicates(items: list[Any], attr: str | None = None) -> list[Any]:
+    """Find duplicate items in a list.
 
+    Optionally filter items by attribute.
 
-def get_conf_files(*, settings: Settings, logger: Logger) -> list[str]:
-    """Get the list of the yaml files with the provider configurations."""
-    logger.info("Detecting yaml files with provider configurations.")
-    file_extension = ".config.yaml"
-    try:
-        yaml_files = filter(
-            lambda x: x.endswith(file_extension),
-            os.listdir(settings.PROVIDERS_CONF_DIR),
-        )
-        yaml_files = [os.path.join(settings.PROVIDERS_CONF_DIR, i) for i in yaml_files]
-        logger.info("Files retrieved")
-        logger.debug(yaml_files)
-    except FileNotFoundError as e:
-        logger.error(e)
-        yaml_files = []
-    return yaml_files
+    Args:
+        items (list of Any): List of items to inspects
+        attr (str | None): Optional to key to use as reference for duplicate values in
+            the list.
 
+    Returns:
+        list (Any): the original list.
 
-def load_config(*, fname: str, log_level: str | int | None = None) -> SiteConfig | None:
-    """Load provider configuration from yaml file."""
-    logger = create_logger(f"Yaml file {fname}", level=log_level)
-    logger.info("Loading provider configuration from file")
-
-    try:
-        with open(fname) as f:
-            config = yaml.load(f, Loader=yaml.FullLoader)
-    except FileNotFoundError as e:
-        logger.error(e)
-        return None
-
-    if config:
-        try:
-            config = SiteConfig(**config)
-            logger.info("Configuration loaded")
-            logger.debug("%r", config)
-            return config
-        except (ValidationError, OidcAgentConnectError, OidcAgentError) as e:
-            logger.error(e)
-            return None
-    else:
-        logger.error("Empty configuration")
-        return config
-
-
-def get_site_configs(
-    *, yaml_files: list[str], log_level: str | int | None = None
-) -> tuple[list[SiteConfig], bool]:
-    """Create a list of SiteConfig from a list of yaml files."""
-    with ThreadPoolExecutor() as executor:
-        site_configs = executor.map(
-            lambda x: load_config(fname=x, log_level=log_level), yaml_files
-        )
-    site_configs = list(site_configs)
-    error = any([x is None for x in site_configs])
-    items = list(filter(lambda x: x is not None, site_configs))
-    return items, error
-
-
-def filter_compute_resources_projects(
-    *,
-    items: list[PrivateFlavorCreateExtended] | list[PrivateImageCreateExtended],
-    projects: list[str],
-) -> list[PrivateFlavorCreateExtended] | list[PrivateImageCreateExtended]:
-    """Remove from compute resources projects not imported in the Fed-Reg.
-
-    Apply the filtering only on private flavors and images.
-
-    Since resources not matching at least the project used to discover them have
-    already been discarded, on a specific resource, after the filtering projects,
-    there can't be an empty projects list.
     """
-    for item in items:
-        if not item.is_shared:
-            item.projects = list(
-                filter(lambda x, projects=projects: x in projects, item.projects)
-            )
+    if attr:
+        values = [j.__getattribute__(attr) for j in items]
+    else:
+        values = items
+    seen = set()
+    dupes = [x for x in values if x in seen or seen.add(x)]
+    if attr:
+        msg = f"There are multiple items with identical {attr}: {','.join(dupes)}"
+    else:
+        msg = f"There are multiple identical items: {','.join(dupes)}"
+    if not len(dupes) == 0:
+        raise ValueError(msg)
     return items
 
 
-def get_updated_identity_provider(
-    *,
-    current_idp: IdentityProviderCreateExtended | None,
-    new_idp: IdentityProviderCreateExtended,
-) -> IdentityProviderCreateExtended:
+def retrieve_token(endpoint: AnyHttpUrl, *, settings: Settings) -> str:
+    """Retrieve token using OIDC-Agent.
+
+    If the container name is set use perform a docker exec command, otherwise use a
+    local instance.
+
+    Args:
+        endpoint (AnyHttpUrl): issuer endpoint.
+        settings (Settings): application settings.
+
+    Returns:
+        str: access token belonging to the service user for this identity provider
+
+    Raises:
+        ValueError when there is an error executing the subprocess
+        OidcAgentConnectError when there is an error connecting to OIDC-agent
+        OidcAgentError when there is an error retrieving the token
+
     """
-    Update the identity provider user groups.
+    if settings.OIDC_AGENT_CONTAINER_NAME is not None:
+        token_cmd = subprocess.run(
+            [
+                "docker",
+                "exec",
+                settings.OIDC_AGENT_CONTAINER_NAME,
+                "oidc-token",
+                f"--time={settings.TOKEN_MIN_VALID_PERIOD}",
+                str(endpoint),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if token_cmd.returncode > 0:
+            raise ValueError(token_cmd.stderr if token_cmd.stderr else token_cmd.stdout)
+        token = token_cmd.stdout.strip("\n")
+        return token
 
-    Since for each provider a user group can have just one SLA pointing to exactly
-    one project. If the user group is not already in the current identity provider
-    user groups add it, otherwise skip.
+    token = get_access_token_by_issuer_url(
+        str(endpoint), min_valid_period=settings.TOKEN_MIN_VALID_PERIOD
+    )
+    return token
+
+
+def filter_connections_with_valid_token(
+    connections: list[SiteConfig],
+    idps: list[AnyHttpUrl],
+    *,
+    settings: Settings,
+    logger: Logger,
+) -> list[SiteConfig]:
+    """Filter connections using an idp without a valid token.
+
+    For each identity provider retrieve the token and filter connections using an idp
+    without a valid token.
+
+    Args:
+        connections (list of SiteConfig): connections to filter
+        idps (list of AnyHttpUrl): retrieve a token for each of the listed idps.
+        settings (Settings): Application settings
+        logger (Logger): Logger instance
+
+    Returns:
+        list of SiteConfig: the filtered list of connections.
+
     """
-    if current_idp is None:
-        return new_idp
-    names = [i.name for i in current_idp.user_groups]
-    if new_idp.user_groups[0].name not in names:
-        current_idp.user_groups.append(new_idp.user_groups[0])
-    return current_idp
+    tokens = {}
+    for idp in idps:
+        try:
+            tokens[idp] = retrieve_token(idp, settings=settings)
+        except (OidcAgentConnectError, OidcAgentError, ValueError) as e:
+            msg = f"Failed to load account configuration for idp {idp}. Error is: {e!s}"
+            logger.error(msg)
 
+    valid_connections = []
+    for connection in connections:
+        connection.idp_token = tokens.get(connection.idp_endpoint, None)
+        if connection.idp_token is not None:
+            valid_connections.append(connection)
 
-def get_updated_networks(
-    *,
-    current_resources: list[PrivateNetworkCreateExtended | SharedNetworkCreate],
-    new_resources: list[PrivateNetworkCreateExtended | SharedNetworkCreate],
-) -> list[PrivateNetworkCreateExtended | SharedNetworkCreate]:
-    """Update Compute services.
-
-    If the service does not exist, add it; otherwise, add new quotas, flavors and
-    images.
-    """
-    resources = [*current_resources]
-    for new_res in new_resources:
-        for curr_res in current_resources:
-            if new_res.uuid == curr_res.uuid:
-                if isinstance(new_res, PrivateNetworkCreateExtended) and isinstance(
-                    curr_res, PrivateNetworkCreateExtended
-                ):
-                    new_res.projects = list(
-                        set(new_res.projects).union(curr_res.projects)
-                    )
-                new_res.is_default = new_res.is_default or curr_res.is_default
-                resources.remove(curr_res)
-                resources.append(new_res)
-                break
-        else:
-            resources.append(new_res)
-    return resources
-
-
-def get_updated_resources(
-    *,
-    current_resources: list[PrivateFlavorCreateExtended | SharedFlavorCreate]
-    | list[PrivateImageCreateExtended | SharedImageCreate],
-    new_resources: list[PrivateFlavorCreateExtended | SharedFlavorCreate]
-    | list[PrivateImageCreateExtended | SharedImageCreate],
-) -> (
-    list[PrivateFlavorCreateExtended | SharedFlavorCreate]
-    | list[PrivateImageCreateExtended | SharedImageCreate]
-):
-    """Update Compute services.
-
-    If the service does not exist, add it; otherwise, add new quotas, flavors and
-    images.
-    """
-    curr_uuids = [i.uuid for i in current_resources]
-    current_resources += list(
-        filter(lambda x, uuids=curr_uuids: x.uuid not in uuids, new_resources)
-    )
-    return current_resources
-
-
-def update_service(
-    *,
-    curr_service: BlockStorageServiceCreateExtended
-    | ComputeServiceCreateExtended
-    | NetworkServiceCreateExtended
-    | ObjectStoreServiceCreateExtended,
-    new_service: BlockStorageServiceCreateExtended
-    | ComputeServiceCreateExtended
-    | NetworkServiceCreateExtended
-    | ObjectStoreServiceCreateExtended,
-) -> (
-    BlockStorageServiceCreateExtended
-    | ComputeServiceCreateExtended
-    | NetworkServiceCreateExtended
-    | ObjectStoreServiceCreateExtended
-):
-    if isinstance(
-        curr_service,
-        (
-            BlockStorageServiceCreateExtended,
-            ComputeServiceCreateExtended,
-            NetworkServiceCreateExtended,
-            ObjectStoreServiceCreateExtended,
-        ),
-    ):
-        curr_service.quotas += new_service.quotas
-    if isinstance(curr_service, ComputeServiceCreateExtended):
-        curr_service.flavors = get_updated_resources(
-            current_resources=curr_service.flavors,
-            new_resources=new_service.flavors,
-        )
-        curr_service.images = get_updated_resources(
-            current_resources=curr_service.images,
-            new_resources=new_service.images,
-        )
-    if isinstance(curr_service, NetworkServiceCreateExtended):
-        curr_service.networks = get_updated_networks(
-            current_resources=curr_service.networks,
-            new_resources=new_service.networks,
-        )
-    return curr_service
-
-
-def get_updated_services(
-    *,
-    current_services: list[BlockStorageServiceCreateExtended]
-    | list[ComputeServiceCreateExtended]
-    | list[NetworkServiceCreateExtended]
-    | list[ObjectStoreServiceCreateExtended],
-    new_services: list[BlockStorageServiceCreateExtended]
-    | list[ComputeServiceCreateExtended]
-    | list[NetworkServiceCreateExtended]
-    | list[ObjectStoreServiceCreateExtended],
-) -> (
-    list[BlockStorageServiceCreateExtended]
-    | list[ComputeServiceCreateExtended]
-    | list[NetworkServiceCreateExtended]
-    | list[ObjectStoreServiceCreateExtended]
-):
-    """Update Object store services.
-
-    If the service does not exist, add it; otherwise, add new quotas and resources.
-    """
-    for new_service in new_services:
-        for service in current_services:
-            if service.endpoint == new_service.endpoint:
-                service = update_service(curr_service=service, new_service=new_service)
-                break
-        else:
-            current_services.append(new_service)
-    return current_services
-
-
-def get_updated_region(
-    *,
-    current_region: RegionCreateExtended | None,
-    new_region: RegionCreateExtended,
-) -> RegionCreateExtended:
-    """Update region services."""
-    if current_region is None:
-        return new_region
-    current_region.block_storage_services = get_updated_services(
-        current_services=current_region.block_storage_services,
-        new_services=new_region.block_storage_services,
-    )
-    current_region.compute_services = get_updated_services(
-        current_services=current_region.compute_services,
-        new_services=new_region.compute_services,
-    )
-    current_region.identity_services = get_updated_services(
-        current_services=current_region.identity_services,
-        new_services=new_region.identity_services,
-    )
-    current_region.network_services = get_updated_services(
-        current_services=current_region.network_services,
-        new_services=new_region.network_services,
-    )
-    current_region.object_store_services = get_updated_services(
-        current_services=current_region.object_store_services,
-        new_services=new_region.object_store_services,
-    )
-    return current_region
-
-
-def merge_components(
-    siblings: list[
-        tuple[IdentityProviderCreateExtended, ProjectCreate, RegionCreateExtended]
-    ],
-) -> tuple[
-    list[IdentityProviderCreateExtended],
-    list[ProjectCreate],
-    list[RegionCreateExtended],
-]:
-    """Merge regions, identity providers and projects."""
-    identity_providers: dict[str, IdentityProviderCreateExtended] = {}
-    projects: dict[str, ProjectCreate] = {}
-    regions: dict[str, RegionCreateExtended] = {}
-
-    for identity_provider, project, region in siblings:
-        projects[project.uuid] = project
-        identity_providers[identity_provider.endpoint] = get_updated_identity_provider(
-            current_idp=identity_providers.get(identity_provider.endpoint),
-            new_idp=identity_provider,
-        )
-        regions[region.name] = get_updated_region(
-            current_region=regions.get(region.name), new_region=region
-        )
-
-    # Filter non-federated projects from shared resources
-    for region in regions.values():
-        for service in region.compute_services:
-            service.flavors = filter_compute_resources_projects(
-                items=service.flavors, projects=projects.keys()
-            )
-            service.images = filter_compute_resources_projects(
-                items=service.images, projects=projects.keys()
-            )
-
-    return (
-        list(identity_providers.values()),
-        list(projects.values()),
-        list(regions.values()),
-    )
-
-
-def retrieve_components(
-    data: OpenstackData,
-) -> tuple[IdentityProviderCreateExtended, ProjectCreate, RegionCreateExtended] | None:
-    region = RegionCreateExtended(
-        **data.provider_conf.regions[0].dict(),
-        block_storage_services=data.block_storage_services,
-        compute_services=data.compute_services,
-        identity_services=data.identity_services,
-        network_services=data.network_services,
-        object_store_services=data.object_store_services,
-    )
-    identity_provider = IdentityProviderCreateExtended(
-        description=data.issuer.description,
-        group_claim=data.issuer.group_claim,
-        endpoint=data.issuer.endpoint,
-        relationship=data.provider_conf.identity_providers[0],
-        user_groups=[
-            {
-                **data.issuer.user_groups[0].dict(exclude={"slas"}),
-                "sla": {
-                    **data.issuer.user_groups[0].slas[0].dict(),
-                    "project": data.provider_conf.projects[0].id,
-                },
-            }
-        ],
-    )
-    return identity_provider, data.project, region
-
-
-def create_provider(
-    *,
-    provider_conf: Openstack | Kubernetes,
-    connections_data: list[OpenstackData],
-    error: bool,
-) -> ProviderCreateExtended:
-    """Merge regions, identity providers and projects retrieved from previous steps."""
-    siblings = [retrieve_components(data) for data in connections_data]
-    identity_providers, projects, regions = merge_components(siblings)
-    return ProviderCreateExtended(
-        name=provider_conf.name,
-        type=provider_conf.type,
-        is_public=provider_conf.is_public,
-        support_emails=provider_conf.support_emails,
-        status=ProviderStatus.LIMITED if error else provider_conf.status,
-        identity_providers=identity_providers,
-        projects=projects,
-        regions=regions,
-    )
+    return valid_connections

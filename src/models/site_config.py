@@ -1,34 +1,93 @@
-from fedreg.provider.schemas_extended import find_duplicates
-from pydantic import BaseModel, Field, validator
+"""Models to define sites configurations."""
 
-from src.models.identity_provider import Issuer
-from src.models.provider import Kubernetes, Openstack, Provider
+from typing import Annotated
+
+from fed_mgr.v1.providers.schemas import ProviderType
+from pydantic import AnyHttpUrl, BaseModel, Field, IPvAnyAddress
 
 
 class SiteConfig(BaseModel):
-    trusted_idps: list[Issuer] = Field(
-        description="list of OIDC-Agent supported identity providers endpoints"
-    )
-    openstack: list[Openstack] = Field(
-        default_factory=list,
-        description="Openstack providers to integrate in the Federation-Registry",
-    )
-    kubernetes: list[Kubernetes] = Field(
-        default_factory=list,
-        description="Kubernetes providers to integrate in the Federation-Registry",
-    )
+    """Model to define all the data needed to connect to a resource provider.
 
-    @validator("trusted_idps")
-    @classmethod
-    def validate_issuers(cls, v: list[Issuer]) -> list[Issuer]:
-        """Verify the list is not empty and there are no duplicates."""
-        find_duplicates(v, "endpoint")
-        assert len(v), "Site config's Identity providers list can't be empty"
-        return v
+    Not all data contained in this class are used to open the connection with the
+    provider but they must be sent to kafka.
+    """
 
-    @validator("openstack", "kubernetes")
-    @classmethod
-    def find_duplicates(cls, v: list[Provider]) -> list[Provider]:
-        """Verify there are no duplicates."""
-        find_duplicates(v, "name")
-        return v
+    provider_name: Annotated[str, Field(description="Provider name")]
+    provider_type: Annotated[ProviderType, Field(description="Provider type")]
+    provider_endpoint: Annotated[AnyHttpUrl, Field(description="Connection URL")]
+    region_name: Annotated[str, Field(description="Name of the region")]
+    project_id: Annotated[str, Field(description="ID of the tenant or namespace")]
+    idp_endpoint: Annotated[AnyHttpUrl, Field(description="Identity provider's issuer")]
+    idp_protocol: Annotated[
+        str | None,
+        Field(default=None, description="Protocol name used by the provider"),
+    ]
+    idp_name: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="Name of the IDP stored in the provider configuration",
+        ),
+    ]
+    idp_audience: Annotated[
+        str | None, Field(default=None, description="Audience needed in the token")
+    ]
+    idp_token: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="OIDC token of the service user on the specified idp to be use "
+            "to connect to the provider",
+        ),
+    ]
+    user_group: Annotated[str, Field(description="Authorized user group")]
+    image_tags: Annotated[
+        list[str] | None,
+        Field(
+            default=None,
+            description="List of tags used to filter provider images (used only with "
+            "'openstack' provider types)",
+        ),
+    ]
+    network_tags: Annotated[
+        list[str] | None,
+        Field(
+            default=None,
+            description="List of tags used to filter provider networks (used only with "
+            "'openstack' provider types)",
+        ),
+    ]
+    overbooking_cpu: Annotated[
+        float, Field(default=1, description="Value used to overbook RAM.")
+    ]
+    overbooking_ram: Annotated[
+        float, Field(default=1, description="Value used to overbook CPUs.")
+    ]
+    bandwidth_in: Annotated[
+        float, Field(default=10, description="Input network bandwidth.")
+    ]
+    bandwidth_out: Annotated[
+        float, Field(default=10, description="Output network bandwidth.")
+    ]
+    default_public_net: Annotated[
+        str | None,
+        Field(default=None, description="Name of the default public network"),
+    ]
+    default_private_net: Annotated[
+        str | None,
+        Field(default=None, description="Name of the default private network"),
+    ]
+    private_net_proxy_host: Annotated[
+        str | IPvAnyAddress | None,
+        Field(
+            default=None,
+            description="Proxy IP address or hostname with/without the port",
+        ),
+    ]
+    private_net_proxy_user: Annotated[
+        str | None,
+        Field(
+            default=None, description="Username to use when performing ssh operations"
+        ),
+    ]
