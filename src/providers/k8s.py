@@ -18,9 +18,9 @@ from fedreg.service.enum import (
     IdentityServiceName,
 )
 from fedreg.service.schemas import IdentityServiceCreate
+
 from kubernetes import client
 from kubernetes.client.exceptions import ApiException
-
 from src.models.identity_provider import Issuer, retrieve_token
 from src.models.provider import Kubernetes
 
@@ -138,9 +138,9 @@ class KubernetesData:
         for storage_class in storage_classes.items:
             data = {
                 "name": storage_class.metadata.name,
-                "is_default": storage_class.metadata.annotations[
-                    "storageclass.kubernetes.io/is-default-class"
-                ],
+                "is_default": storage_class.metadata.annotations.get(
+                    "storageclass.kubernetes.io/is-default-class", False
+                ),
                 "provisioner": storage_class.provisioner,
             }
             storage_class_list.append(StorageClassCreateExtended(**data))
