@@ -18,9 +18,9 @@ from fedreg.service.enum import (
     IdentityServiceName,
 )
 from fedreg.service.schemas import IdentityServiceCreate
+from kubernetes.client.exceptions import ApiException
 
 from kubernetes import client
-from kubernetes.client.exceptions import ApiException
 from src.models.identity_provider import Issuer, retrieve_token
 from src.models.provider import Kubernetes
 
