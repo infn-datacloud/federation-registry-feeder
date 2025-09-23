@@ -9,7 +9,7 @@ from pydantic import AnyHttpUrl, Field, validator
 from src.models.config import get_settings
 
 
-def retrieve_token(endpoint: str):
+def retrieve_token(endpoint: str, *, audience: str | None = None):
     """Retrieve token using OIDC-Agent.
 
     If the container name is set use perform a docker exec command, otherwise use a
@@ -25,7 +25,8 @@ def retrieve_token(endpoint: str):
                 settings.OIDC_AGENT_CONTAINER_NAME,
                 "oidc-token",
                 f"--time={min_valid_period}",
-                endpoint,
+                f"--aud={audience}",
+                str(endpoint),
             ],
             capture_output=True,
             text=True,
@@ -35,7 +36,9 @@ def retrieve_token(endpoint: str):
         token = token_cmd.stdout.strip("\n")
         return token
 
-    token = get_access_token_by_issuer_url(endpoint, min_valid_period=min_valid_period)
+    token = get_access_token_by_issuer_url(
+        str(endpoint), min_valid_period=min_valid_period, audience=audience
+    )
     return token
 
 

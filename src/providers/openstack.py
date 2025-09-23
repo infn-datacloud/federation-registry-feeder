@@ -201,8 +201,7 @@ class OpenstackData:
         """Retrieve current project accessible compute quota"""
         self.logger.info("Retrieve current project accessible compute quotas")
         quota = self.conn.compute.get_quota_set(
-            self.conn.current_project_id,
-            base_path="/os-quota-sets/%(project_id)s/detail",
+            self.conn.current_project_id, usage=True
         )
         data = quota.to_dict()
         self.logger.debug("Compute service quotas=%s", data)

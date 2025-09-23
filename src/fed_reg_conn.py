@@ -1,16 +1,17 @@
+import json
 import os
 from logging import Logger
 
 import requests
-from fastapi import status
-from fastapi.encoders import jsonable_encoder
 from fedreg.provider.schemas_extended import (
     ProviderCreateExtended,
     ProviderRead,
     ProviderReadExtended,
 )
 from pydantic import AnyHttpUrl
+from pydantic.json import isoformat
 from requests.exceptions import ConnectionError, HTTPError
+from starlette import status
 
 from src.models.config import Settings, URLs
 
@@ -67,7 +68,7 @@ class CRUD:
 
         resp = requests.post(
             url=self.multi_url,
-            json=jsonable_encoder(data),
+            json=json.loads(data.json(encoder=isoformat)),
             headers=self.write_headers,
             timeout=self.timeout,
         )
@@ -109,7 +110,7 @@ class CRUD:
 
         resp = requests.put(
             url=self.single_url.format(uid=old_data.uid),
-            json=jsonable_encoder(new_data),
+            json=json.loads(new_data.json(encoder=isoformat)),
             headers=self.write_headers,
             timeout=self.timeout,
         )

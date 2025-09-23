@@ -1,6 +1,5 @@
 from typing import Literal
 
-from fedreg.auth_method.schemas import AuthMethodBase
 from fedreg.core import BaseNode
 from fedreg.location.schemas import LocationBase
 from fedreg.provider.enum import ProviderType
@@ -76,11 +75,15 @@ class PerRegionProps(BaseNode):
     )
 
 
-class AuthMethod(AuthMethodBase):
-    idp_name: str = Field(
+class AuthMethod(BaseModel):
+    endpoint: AnyHttpUrl = Field(description="Identity Provider URL")
+    idp_name: str | None = Field(
         alias="name", description="Identity provider name used to authenticate"
     )
-    endpoint: AnyHttpUrl = Field(description="Identity Provider URL")
+    protocol: str | None = Field(description="Protocol name")
+    audience: str | None = Field(
+        description="Audience to use when connecting to k8s clusters"
+    )
 
 
 class BlockStorageVolMap(BaseModel): ...

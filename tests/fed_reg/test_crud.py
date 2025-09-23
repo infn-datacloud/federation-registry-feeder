@@ -1,19 +1,20 @@
 import copy
+import json
 import os
 from typing import Literal
 from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi import status
-from fastapi.encoders import jsonable_encoder
 from fedreg.provider.schemas_extended import (
     ProviderCreateExtended,
     ProviderRead,
     ProviderReadExtended,
 )
+from pydantic.json import isoformat
 from pytest_cases import case, parametrize, parametrize_with_cases
 from requests.exceptions import ConnectionError, ReadTimeout
+from starlette import status
 
 from src.fed_reg_conn import CRUD
 from tests.fed_reg.utils import crud_dict, execute_operation, fedreg_provider_dict
@@ -110,7 +111,9 @@ def test_invalid_crud_class(missing_attr: str) -> None:
 def test_read(mock_get: Mock, providers: list[ProviderRead]) -> None:
     crud = CRUD(**crud_dict())
     mock_get.return_value.status_code = status.HTTP_200_OK
-    mock_get.return_value.json.return_value = jsonable_encoder(providers)
+    mock_get.return_value.json.return_value = [
+        json.loads(i.json(encoder=isoformat)) for i in providers
+    ]
 
     resp_body = crud.read()
     mock_get.return_value.raise_for_status.assert_not_called()
@@ -126,7 +129,9 @@ def test_create(mock_post: Mock) -> None:
     provider_create = ProviderCreateExtended(**fedreg_provider_dict())
     provider_read_extended = ProviderReadExtended(uid=uuid4(), **provider_create.dict())
     mock_post.return_value.status_code = status.HTTP_201_CREATED
-    mock_post.return_value.json.return_value = jsonable_encoder(provider_read_extended)
+    mock_post.return_value.json.return_value = json.loads(
+        provider_read_extended.json(encoder=isoformat)
+    )
 
     resp_body = crud.create(data=provider_create)
     mock_post.return_value.raise_for_status.assert_not_called()
@@ -158,7 +163,9 @@ def test_update(mock_put: Mock) -> None:
         **provider_create.dict(), uid=provider_read.uid
     )
     mock_put.return_value.status_code = status.HTTP_200_OK
-    mock_put.return_value.json.return_value = jsonable_encoder(new_read_data)
+    mock_put.return_value.json.return_value = json.loads(
+        new_read_data.json(encoder=isoformat)
+    )
 
     resp_body = crud.update(new_data=provider_create, old_data=provider_read)
     mock_put.return_value.raise_for_status.assert_not_called()
