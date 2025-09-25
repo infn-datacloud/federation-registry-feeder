@@ -12,13 +12,15 @@ python-glanceclient = "^4.4.0"
 kafka-python = "^2.2"
 fed-mgr = {git = "https://github.com/infn-datacloud/federation-manager.git", rev = "devel", extras = ["main"]}
 liboidcagent = "^0.6"
+kubernetes = "^32.0.1"
 python-dotenv = "^1.1.1"
+starlette = "^0.48.0"
 
 [tool.poetry.group.dev.dependencies]
-pre-commit = "^4.3.0"
+pre-commit = "^4.3"
 pytest = "^8.4"
 pytest-cases = "^3.8.2"
-pytest-cov = {extras = ["toml"], version = "^6.0.0"}
+pytest-cov = {extras = ["toml"], version = "^7.0"}
 pytest-mock = "^3.12.0"
 ruff = "^0.13"
 

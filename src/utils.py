@@ -41,7 +41,9 @@ def find_duplicates(items: list[Any], attr: str | None = None) -> list[Any]:
     return items
 
 
-def retrieve_token(endpoint: AnyHttpUrl, *, settings: Settings) -> str:
+def retrieve_token(
+    endpoint: AnyHttpUrl, *, settings: Settings, audience: str | None = None
+) -> str:
     """Retrieve token using OIDC-Agent.
 
     If the container name is set use perform a docker exec command, otherwise use a
@@ -50,6 +52,7 @@ def retrieve_token(endpoint: AnyHttpUrl, *, settings: Settings) -> str:
     Args:
         endpoint (AnyHttpUrl): issuer endpoint.
         settings (Settings): application settings.
+        audience (str | None): audience the token should be generated for.
 
     Returns:
         str: access token belonging to the service user for this identity provider
@@ -68,6 +71,7 @@ def retrieve_token(endpoint: AnyHttpUrl, *, settings: Settings) -> str:
                 settings.OIDC_AGENT_CONTAINER_NAME,
                 "oidc-token",
                 f"--time={settings.TOKEN_MIN_VALID_PERIOD}",
+                f"--aud={audience}",
                 str(endpoint),
             ],
             capture_output=True,
@@ -79,14 +83,15 @@ def retrieve_token(endpoint: AnyHttpUrl, *, settings: Settings) -> str:
         return token
 
     token = get_access_token_by_issuer_url(
-        str(endpoint), min_valid_period=settings.TOKEN_MIN_VALID_PERIOD
+        str(endpoint),
+        min_valid_period=settings.TOKEN_MIN_VALID_PERIOD,
+        audience=audience,
     )
     return token
 
 
 def filter_connections_with_valid_token(
     connections: list[SiteConfig],
-    idps: list[AnyHttpUrl],
     *,
     settings: Settings,
     logger: Logger,
@@ -106,18 +111,38 @@ def filter_connections_with_valid_token(
         list of SiteConfig: the filtered list of connections.
 
     """
-    tokens = {}
-    for idp in idps:
-        try:
-            tokens[idp] = retrieve_token(idp, settings=settings)
-        except (OidcAgentConnectError, OidcAgentError, ValueError) as e:
-            msg = f"Failed to load account configuration for idp {idp}. Error is: {e!s}"
-            logger.error(msg)
-
     valid_connections = []
+    tokens = {}
+    failed = []
     for connection in connections:
-        connection.idp_token = tokens.get(connection.idp_endpoint, None)
+        # Skipping connection with an invalid IDP
+        if connection.idp_endpoint in failed:
+            continue
+
+        # Check a similar token has already been generated and re-use it
+        token = tokens.get((connection.idp_endpoint, connection.idp_audience), None)
+        if token is not None:
+            connection.idp_token = token
+            valid_connections.append(connection)
+            continue
+
+        # Retrieve a new token
+        try:
+            connection.idp_token = retrieve_token(
+                connection.idp_endpoint,
+                settings=settings,
+                audience=connection.idp_audience,
+            )
+        except (OidcAgentConnectError, OidcAgentError, ValueError) as e:
+            msg = "Failed to load account configuration for idp "
+            msg += f"{connection.idp_endpoint}. Error is: {e!s}"
+            logger.error(msg)
+            failed.append(connection.idp_endpoint)
+
         if connection.idp_token is not None:
+            tokens[(connection.idp_endpoint, connection.idp_audience)] = (
+                connection.idp_token
+            )
             valid_connections.append(connection)
 
     return valid_connections

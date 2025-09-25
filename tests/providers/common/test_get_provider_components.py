@@ -13,13 +13,13 @@ from keystoneauth1.exceptions.connection import ConnectFailure
 from pytest_cases import parametrize_with_cases
 
 from src.models.identity_provider import Issuer
-from src.models.provider import Kubernetes, Openstack
+from src.models.provider import Openstack  # Kubernetes,
 from src.providers.conn_thread import ConnectionThread
 from src.providers.openstack import OpenstackProviderError
 from tests.schemas.utils import (
     auth_method_dict,
     issuer_dict,
-    kubernetes_dict,
+    # kubernetes_dict,
     openstack_dict,
     project_dict,
     sla_dict,
@@ -125,24 +125,24 @@ def test_openstack_raise_error(error: OpenstackProviderError | ConnectFailure):
             item.get_provider_data()
 
 
-def test_get_kubernetes_components():
-    provider_conf = Kubernetes(
-        **kubernetes_dict(),
-        identity_providers=[auth_method_dict()],
-        projects=[project_dict()],
-    )
-    issuer = Issuer(
-        **issuer_dict(),
-        token=random_lower_string(),
-        user_groups=[
-            {
-                **user_group_dict(),
-                "slas": [{**sla_dict(), "projects": [provider_conf.projects[0].id]}],
-            }
-        ],
-    )
-    issuer.endpoint = provider_conf.identity_providers[0].endpoint
-    item = ConnectionThread(provider_conf=provider_conf, issuer=issuer)
+# def test_get_kubernetes_components():
+#     provider_conf = Kubernetes(
+#         **kubernetes_dict(),
+#         identity_providers=[auth_method_dict()],
+#         projects=[project_dict()],
+#     )
+#     issuer = Issuer(
+#         **issuer_dict(),
+#         token=random_lower_string(),
+#         user_groups=[
+#             {
+#                 **user_group_dict(),
+#                 "slas": [{**sla_dict(), "projects": [provider_conf.projects[0].id]}],
+#             }
+#         ],
+#     )
+#     issuer.endpoint = provider_conf.identity_providers[0].endpoint
+#     item = ConnectionThread(provider_conf=provider_conf, issuer=issuer)
 
-    with pytest.raises(NotImplementedError):
-        item.get_provider_data()
+#     with pytest.raises(NotImplementedError):
+#         item.get_provider_data()

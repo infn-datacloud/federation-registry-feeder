@@ -2,7 +2,6 @@
 
 import urllib.parse
 import uuid
-from logging import Logger
 from typing import Any
 
 import requests
@@ -17,7 +16,6 @@ from fed_mgr.v1.providers.regions.schemas import RegionRead
 from fed_mgr.v1.providers.schemas import ProviderRead
 from pydantic import AnyHttpUrl
 
-from src.config import Settings
 from src.loaders.utils import complete_partial_connection, create_partial_connection
 from src.models.site_config import SiteConfig
 
@@ -291,23 +289,19 @@ def list_conn_params_from_providers(
     return connections
 
 
-def load_connections_from_fed_mgr(
-    settings: Settings, logger: Logger
-) -> tuple[list[SiteConfig], list[AnyHttpUrl]]:
+def load_connections_from_fed_mgr(base_url: AnyHttpUrl) -> list[SiteConfig]:
     """Retrieve the list of connections from fed-mgr.
 
     Read the folder content and parse the yaml files content.
 
     Args:
-        settings (Settings): Application settings.
-        logger (Logger): Logger instance.
+        base_url (AnyHttpUrl): Federation-Manager URl.
 
     Returns:
         list(Connections): list of connection parameters
 
     """
-    trusted_idps = get_idps(settings.FED_MGR_URL)
-    providers = get_providers(settings.FED_MGR_URL)
+    trusted_idps = get_idps(base_url)
+    providers = get_providers(base_url)
     connections = list_conn_params_from_providers(providers, trusted_idps)
-    idps = [idp.endpoint for idp in trusted_idps]
-    return connections, idps
+    return connections

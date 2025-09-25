@@ -9,6 +9,7 @@ from kafka import KafkaProducer
 from kafka.errors import NoBrokersAvailable
 
 from src.config import Settings
+from src.providers.k8s import KubernetesClient
 from src.providers.openstack import OpenstackClient
 
 
@@ -89,7 +90,7 @@ class Producer:
             self.logger.error(msg)
             return False
 
-    def build_message(self, data: OpenstackClient) -> dict[str, Any]:
+    def build_message(self, data: OpenstackClient | KubernetesClient) -> dict[str, Any]:
         """Builds a message dictionary for a specific message version.
 
         Parameters:
@@ -111,24 +112,31 @@ class Producer:
             KeyError: If any required key is missing from the input data.
 
         """
-        return {
+        msg = {
             "msg_version": "2.0.0",
             "provider_name": data.provider_name,
             "provider_type": data.provider_type,
             "identity_endpoint": data.provider_endpoint,
-            "region_name": data.region_name,
-            "overbooking_cpu": data.overbooking_cpu,
-            "overbooking_ram": data.overbooking_ram,
-            "bandwidth_in": data.bandwidth_in,
-            "bandwidth_out": data.bandwidth_out,
             "issuer_endpoint": data.idp_endpoint,
-            "issuer_protocol": data.idp_protocol,
             "issuer_name": data.idp_name,
             "user_group": data.user_group,
             "project_id": data.project_id,
             "quotas": [i.model_dump() for i in data.quotas],
-            "flavors": [i.model_dump() for i in data.flavors],
-            "images": [i.model_dump() for i in data.images],
-            "networks": [i.model_dump() for i in data.networks],
             "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         }
+
+        if isinstance(data, OpenstackClient):
+            msg["issuer_protocol"] = data.idp_protocol
+            msg["region_name"] = data.region_name
+            msg["overbooking_cpu"] = data.overbooking_cpu
+            msg["overbooking_ram"] = data.overbooking_ram
+            msg["bandwidth_in"] = data.bandwidth_in
+            msg["bandwidth_out"] = data.bandwidth_out
+            msg["flavors"] = [i.model_dump() for i in data.flavors]
+            msg["images"] = [i.model_dump() for i in data.images]
+            msg["networks"] = [i.model_dump() for i in data.networks]
+        elif isinstance(data, OpenstackClient):
+            msg["issuer_audience"] = data.idp_audience
+            msg["storage_classes"] = [i.model_dump() for i in data.storage_classes]
+
+        return msg

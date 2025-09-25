@@ -6,12 +6,13 @@ from logging import Logger
 from fed_mgr.v1.providers.schemas import ProviderType
 
 from src.models.site_config import SiteConfig
+from src.providers.k8s import KubernetesClient
 from src.providers.openstack import OpenstackClient
 
 
 def create_clients(
     connections: list[SiteConfig], *, logger: Logger
-) -> list[OpenstackClient]:
+) -> list[OpenstackClient | KubernetesClient]:
     """Generate a list of clients to connect to each trplet provider-region-project.
 
     Args:
@@ -54,16 +55,26 @@ def create_clients(
             msg = "Creating kubernetes client: "
             msg += f"{connection.provider_name}-{connection.project_id}"
             logger.info(msg)
-            pass
+            client = KubernetesClient(
+                provider_name=connection.provider_name,
+                provider_endpoint=connection.provider_endpoint,
+                project_id=connection.project_id,
+                idp_endpoint=connection.idp_endpoint,
+                idp_name=connection.idp_name,
+                idp_audience=connection.idp_audience,
+                idp_token=connection.idp_token,
+                user_group=connection.user_group,
+            )
+            clients.append(client)
     return clients
 
 
 def retrieve_data_from_providers(
-    clients: list[OpenstackClient],
+    clients: list[OpenstackClient | KubernetesClient],
     *,
     logger: Logger,
     multithreading: bool = False,
-) -> list[OpenstackClient]:
+) -> list[OpenstackClient | KubernetesClient]:
     """For each client retrieve their resources.
 
     For each connection, create a separated thread (if multithreading mode is enabled)

@@ -15,15 +15,15 @@ from openstack import connect
 from openstack.exceptions import ForbiddenException, HttpException
 from pydantic import AnyHttpUrl
 
-from src.logger import create_logger
 from src.models.flavors import Flavor
 from src.models.images import Image
 from src.models.networks import Network
 from src.models.projects import Project
 from src.models.quotas import BlockStorageQuota, ComputeQuota, NetworkQuota
+from src.providers.core import ProviderClient
 
 
-class OpenstackClient:
+class OpenstackClient(ProviderClient):
     """Class to organize data retrieved from and Openstack instance."""
 
     def __init__(
@@ -38,12 +38,12 @@ class OpenstackClient:
         idp_protocol: str,
         idp_token: str,
         user_group: str,
-        image_tags: list[str] | None,
-        network_tags: list[str] | None,
         overbooking_cpu: float = 1,
         overbooking_ram: float = 1,
         bandwidth_in: float = 10,
         bandwidth_out: float = 10,
+        image_tags: list[str] | None,
+        network_tags: list[str] | None,
         default_public_net: str | None = None,
         default_private_net: str | None = None,
         private_net_proxy_host: str | None = None,
@@ -53,16 +53,21 @@ class OpenstackClient:
         log_level: int = logging.INFO,
     ) -> None:
         """Create an openstack client to retrieve data."""
-        self.provider_name = provider_name
-        self.provider_endpoint = str(provider_endpoint)
-        self.provider_type = ProviderType.openstack
+        super().__init__(
+            provider_name=provider_name,
+            provider_endpoint=str(provider_endpoint),
+            provider_type=ProviderType.openstack,
+            project_id=project_id,
+            idp_endpoint=str(idp_endpoint),
+            idp_name=idp_name,
+            idp_token=idp_token,
+            user_group=user_group,
+            logger_name=f"{provider_name} - {region_name} - {project_id}",
+            log_level=log_level,
+            timeout=timeout,
+        )
         self.region_name = region_name
-        self.project_id = project_id
-        self.idp_endpoint = str(idp_endpoint)
-        self.idp_name = idp_name
         self.idp_protocol = idp_protocol
-        self.idp_token = idp_token
-        self.user_group = user_group
         self.image_tags = image_tags
         self.network_tags = network_tags
         self.overbooking_cpu = overbooking_cpu
@@ -74,10 +79,6 @@ class OpenstackClient:
         self.private_net_proxy_host = private_net_proxy_host
         self.private_net_proxy_user = private_net_proxy_user
         self.auth_type = auth_type
-        self.timeout = timeout
-        self.logger = create_logger(
-            f"{self.provider_name} - {self.region_name} - {self.project_id}", log_level
-        )
 
         # Connection is only defined, not yet opened
         self.conn = self.create_connection()
@@ -180,8 +181,7 @@ class OpenstackClient:
         """
         self.logger.info("Retrieve current project accessible compute quotas")
         quota = self.conn.compute.get_quota_set(
-            self.conn.current_project_id,
-            # base_path="/os-quota-sets/%(project_id)s/detail",
+            self.conn.current_project_id, usage=True
         )
         data = quota.to_dict()
         self.logger.debug("Compute service quotas=%s", data)

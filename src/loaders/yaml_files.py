@@ -6,9 +6,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml.parser
-from pydantic import AnyHttpUrl, ValidationError
+from pydantic import ValidationError
 
-from src.config import Settings
 from src.exceptions import AbortProcedureError, InvalidYamlError
 from src.loaders.utils import complete_partial_connection, create_partial_connection
 from src.models.site_config import SiteConfig
@@ -175,9 +174,7 @@ def list_conn_params_from_providers(
     return connections
 
 
-def load_connections_from_yaml_files(
-    path: Path, *, settings: Settings, logger: Logger
-) -> tuple[list[SiteConfig], list[AnyHttpUrl]]:
+def load_connections_from_yaml_files(path: Path, *, logger: Logger) -> list[SiteConfig]:
     """Retrieve the list of connections from YAML files.
 
     Read the folder content and parse the yaml files content.
@@ -208,13 +205,9 @@ def load_connections_from_yaml_files(
         logger.error("Not all YAML files have been loaded.")
 
     connections = []
-    idps = set()
     for config in yaml_configs:
         connections += list_conn_params_from_providers(
             config.openstack + config.kubernetes, config.trusted_idps
         )
-        for idp in config.trusted_idps:
-            idps.add(idp.endpoint)
-    idps = list(idps)
 
-    return connections, idps
+    return connections

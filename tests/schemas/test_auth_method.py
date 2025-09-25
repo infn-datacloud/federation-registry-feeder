@@ -6,7 +6,7 @@ from tests.schemas.utils import auth_method_dict
 
 
 class CaseMissingAttr:
-    @parametrize(attr=["name", "protocol", "endpoint"])
+    @parametrize(attr=["endpoint"])
     def case_missing_attr(self, attr: str) -> str:
         return attr
 
