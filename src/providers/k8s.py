@@ -37,7 +37,7 @@ class KubernetesClient(ProviderClient):
         super().__init__(
             provider_name=provider_name,
             provider_endpoint=str(provider_endpoint),
-            provider_type=ProviderType.openstack,
+            provider_type=ProviderType.kubernetes,
             project_id=project_id,
             idp_endpoint=str(idp_endpoint),
             idp_name=idp_name,
