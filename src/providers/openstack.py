@@ -163,10 +163,8 @@ class OpenstackClient(ProviderClient):
         data_usage = data_limits.pop("usage", {})
         self.logger.debug("Block storage service quota limits=%s", data_limits)
         self.logger.debug("Block storage service quota usage=%s", data_usage)
-        return BlockStorageQuota(
-            **data_limits, project=self.conn.current_project_id
-        ), BlockStorageQuota(
-            **data_usage, project=self.conn.current_project_id, usage=True
+        return BlockStorageQuota(**data_limits), BlockStorageQuota(
+            **data_usage, usage=True
         )
 
     def get_compute_quota_and_usage(
@@ -189,9 +187,7 @@ class OpenstackClient(ProviderClient):
         data_usage = data_limits.pop("usage", {})
         self.logger.debug("Compute service quota limits=%s", data_limits)
         self.logger.debug("Compute service quota usage=%s", data_usage)
-        return ComputeQuota(
-            **data_limits, project=self.conn.current_project_id
-        ), ComputeQuota(**data_usage, project=self.conn.current_project_id, usage=True)
+        return ComputeQuota(**data_limits), ComputeQuota(**data_usage, usage=True)
 
     def get_network_quota_and_usage(
         self,
@@ -216,9 +212,7 @@ class OpenstackClient(ProviderClient):
                 data_usage[new_k] = v.get("used")
         self.logger.debug("Network service quota limits=%s", data_limits)
         self.logger.debug("Network service quota usage=%s", data_usage)
-        return NetworkQuota(
-            **data_limits, project=self.conn.current_project_id
-        ), NetworkQuota(**data_usage, project=self.conn.current_project_id, usage=True)
+        return NetworkQuota(**data_limits), NetworkQuota(**data_usage, usage=True)
 
     def get_flavor_extra_specs(self, extra_specs: dict[str, Any]) -> dict[str, Any]:
         """Format flavor extra specs into a dictionary.

@@ -44,7 +44,6 @@ class QuotaBase(BaseNode):
             description="Flag to determine if this quota represents the current usage.",
         ),
     ]
-    project: Annotated[str, Field(description="Target project's UUID in the Provider.")]
 
 
 class BlockStorageQuota(QuotaBase):

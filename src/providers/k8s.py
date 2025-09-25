@@ -36,7 +36,7 @@ class KubernetesClient(ProviderClient):
         """Create a kubernetes client to retrieve data."""
         super().__init__(
             provider_name=provider_name,
-            provider_endpoint=str(provider_endpoint),
+            provider_endpoint=str(provider_endpoint).rstrip("/"),
             provider_type=ProviderType.kubernetes,
             project_id=project_id,
             idp_endpoint=str(idp_endpoint),
@@ -136,6 +136,7 @@ class KubernetesClient(ProviderClient):
 
     def get_quotas(self) -> list[ComputeQuota | BlockStorageQuota]:
         """Retrieve quotas."""
+        self.logger.info("Retrieve current namespace accessible quotas")
         quotas = {"compute": {}, "block_storage": {}, "storage_class": {}}
         usage = {"compute": {}, "block_storage": {}, "storage_class": {}}
 
@@ -167,6 +168,7 @@ class KubernetesClient(ProviderClient):
 
     def get_storage_classes(self) -> list[StorageClass]:
         """Retrieve available storage classes."""
+        self.logger.info("Retrieve current namespace accessible storage classes")
         storage_class_list = []
         storage_classes = self.storagev1.list_storage_class(
             _request_timeout=self.timeout
