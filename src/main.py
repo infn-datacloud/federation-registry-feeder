@@ -31,7 +31,9 @@ def main(log_level: str) -> None:
         connections = load_connections_from_fed_mgr(base_url=settings.FED_MGR_URL)
     else:
         connections = load_connections_from_yaml_files(
-            settings.PROVIDERS_CONF_DIR, logger=logger
+            settings.PROVIDERS_CONF_DIR,
+            settings=settings,
+            logger=logger,
         )
 
     filtered_connections = filter_connections_with_valid_token(

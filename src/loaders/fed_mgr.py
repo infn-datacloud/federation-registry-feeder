@@ -257,6 +257,8 @@ def list_conn_params_from_providers(
         regions = get_provider_regions(provider)
         projects = get_provider_projects(provider)
         idps = merge_idp_with_overrides(trusted_idps, idp_overrides)
+        ca_path = None
+        # TODO load CA from S3 and create file?
         for project in projects:
             configs = get_project_configs(project)
             for region in regions:
@@ -272,6 +274,7 @@ def list_conn_params_from_providers(
                     "bandwidth_in": region.bandwidth_in,
                     "bandwidth_out": region.bandwidth_out,
                     "project_id": project.id,
+                    "ca_path": ca_path,
                 }
                 for config in configs:
                     if region.id in config.region_id:

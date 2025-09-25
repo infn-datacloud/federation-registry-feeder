@@ -91,3 +91,10 @@ class SiteConfig(BaseModel):
             default=None, description="Username to use when performing ssh operations"
         ),
     ]
+    ca_path: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="Path to the CA to use when connecting to a provider",
+        ),
+    ]

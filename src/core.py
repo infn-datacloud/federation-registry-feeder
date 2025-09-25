@@ -64,6 +64,7 @@ def create_clients(
                 idp_audience=connection.idp_audience,
                 idp_token=connection.idp_token,
                 user_group=connection.user_group,
+                ca_path=connection.ca_path,
             )
             clients.append(client)
     return clients

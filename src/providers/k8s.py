@@ -30,6 +30,7 @@ class KubernetesClient(ProviderClient):
         idp_audience: str,
         idp_token: str,
         user_group: str,
+        ca_path: str | None,
         timeout: int = 2,
         log_level: int = logging.INFO,
     ):
@@ -47,7 +48,7 @@ class KubernetesClient(ProviderClient):
             logger_name=f"{provider_name} - {project_id}",
             log_level=log_level,
         )
-        self.ssl_ca_cert_path = None
+        self.ca_path = ca_path
         self.idp_audience = idp_audience
 
         # Connection is only defined, not yet opened
@@ -68,7 +69,7 @@ class KubernetesClient(ProviderClient):
             api_key={"authorization": self.idp_token},
             api_key_prefix={"authorization": "Bearer"},
         )
-        conf.ssl_ca_cert = self.ssl_ca_cert_path
+        conf.ssl_ca_cert = self.ca_path
         return client.ApiClient(conf)
 
     def retrieve_info(self):

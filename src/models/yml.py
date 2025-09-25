@@ -217,6 +217,13 @@ class Kubernetes(Provider):
         Literal[ProviderType.kubernetes],
         Field(default=ProviderType.kubernetes, description="Kubernetes provider type"),
     ]
+    ca_fname: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="File name of the CA to use to connect to this cluster",
+        ),
+    ]
     regions: Annotated[
         list[RegionBase],
         Field(

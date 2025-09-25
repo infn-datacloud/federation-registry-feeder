@@ -42,6 +42,14 @@ class Settings(BaseSettings):
             "configurations.",
         ),
     ]
+    CA_DIR: Annotated[
+        Path,
+        Field(
+            default="certs",
+            description="Path to the directory containing the federated provider yaml "
+            "configurations.",
+        ),
+    ]
     OIDC_AGENT_CONTAINER_NAME: Annotated[
         str | None,
         Field(

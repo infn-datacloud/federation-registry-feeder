@@ -6,8 +6,10 @@ from pathlib import Path
 from typing import Any
 
 import yaml.parser
+from fed_mgr.v1.providers.schemas import ProviderType
 from pydantic import ValidationError
 
+from src.config import Settings
 from src.exceptions import AbortProcedureError, InvalidYamlError
 from src.loaders.utils import complete_partial_connection, create_partial_connection
 from src.models.site_config import SiteConfig
@@ -122,13 +124,17 @@ def complete_partial_connections(
 
 
 def list_conn_params_from_providers(
-    providers: list[Provider], trusted_idps: list[IdentityProvider]
+    providers: list[Provider],
+    trusted_idps: list[IdentityProvider],
+    *,
+    settings: Settings,
 ) -> list[SiteConfig]:
     """From the list of providers retrieve the list of connection parameters.
 
     Args:
         providers (list of Provider): list of provider's configuration
         trusted_idps (list of IdentityProvider): list of trusted identity providers
+        settings (Settings): application settings
 
     Returns:
         (list of SiteConfig, dict): tuple with the list of connections and a dict with
@@ -141,6 +147,9 @@ def list_conn_params_from_providers(
         idps = provider.identity_providers
         regions = provider.regions
         projects = provider.projects
+        ca_path = None
+        if provider.type == ProviderType.kubernetes and provider.ca_fname is not None:
+            ca_path = os.path.join(settings.CA_DIR, provider.ca_fname)
         for project in projects:
             for region in regions:
                 kwargs = {
@@ -157,6 +166,7 @@ def list_conn_params_from_providers(
                     "project_id": project.id,
                     "default_public_net": project.default_public_net,
                     "default_private_net": project.default_private_net,
+                    "ca_path": ca_path,
                 }
                 if project.private_net_proxy is not None:
                     kwargs["private_net_proxy_host"] = project.private_net_proxy.host
@@ -174,7 +184,9 @@ def list_conn_params_from_providers(
     return connections
 
 
-def load_connections_from_yaml_files(path: Path, *, logger: Logger) -> list[SiteConfig]:
+def load_connections_from_yaml_files(
+    path: Path, *, settings: Settings, logger: Logger
+) -> list[SiteConfig]:
     """Retrieve the list of connections from YAML files.
 
     Read the folder content and parse the yaml files content.
@@ -207,7 +219,7 @@ def load_connections_from_yaml_files(path: Path, *, logger: Logger) -> list[Site
     connections = []
     for config in yaml_configs:
         connections += list_conn_params_from_providers(
-            config.openstack + config.kubernetes, config.trusted_idps
+            config.openstack + config.kubernetes, config.trusted_idps, settings=settings
         )
 
     return connections
