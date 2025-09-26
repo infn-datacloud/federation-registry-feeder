@@ -1,35 +1,19 @@
-ARG PYTHON_VERSION=3.10
-ARG POETRY_VERSION=1.8.3
+ARG PYTHON_VERSION=3.12
+ARG POETRY_VERSION=2.1
 
 # Create requirements.txt from poetry dependencies
-FROM ghcr.io/withlogicco/poetry:${POETRY_VERSION}-python-${PYTHON_VERSION}-slim AS requirements
-
-WORKDIR /tmp
-
-COPY ./pyproject.toml ./poetry.lock* /tmp/
-
-RUN poetry export \
-    -f requirements.txt \
-    --output requirements.txt \
-    --without-hashes \
-    --without dev
-
-# Stage used in production
-FROM python:${PYTHON_VERSION}-slim AS production
+FROM harbor.cloud.infn.it/datacloud-middleware/poetry:${POETRY_VERSION}-python${PYTHON_VERSION} AS base
 
 # Updating packages and installing docker to communicate with external containers
 RUN apt-get update \
     && apt-get install -y docker.io gcc \
     && apt-get clean
 
-WORKDIR /app/
+WORKDIR /app
 
-COPY --from=requirements /tmp/requirements.txt /app/requirements.txt
-
-# Upgrade pip and install requirements
-RUN pip install --user --upgrade pip \
-    && pip install --user --no-cache-dir --upgrade -r /app/requirements.txt
-
-ENV PYTHONPATH="${PYTHONPATH}:/app"
-
+COPY ./pyproject.toml ./poetry.lock* ./README.md /app/
 COPY ./src /app/src
+
+RUN poetry install --without dev
+
+USER ${USERNAME}
