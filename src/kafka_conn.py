@@ -116,7 +116,7 @@ class Producer:
             "msg_version": "2.0.0",
             "provider_name": data.provider_name,
             "provider_type": data.provider_type,
-            "identity_endpoint": data.provider_endpoint,
+            "provider_endpoint": data.provider_endpoint,
             "issuer_endpoint": data.idp_endpoint,
             "issuer_name": data.idp_name,
             "user_group": data.user_group,

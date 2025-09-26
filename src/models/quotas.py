@@ -13,7 +13,6 @@ class QuotaType(str, Enum):
 
     BLOCK_STORAGE = "block-storage"
     COMPUTE = "compute"
-    IDENTITY = "identity"
     NETWORK = "networking"
     OBJECT_STORE = "object-store"
     STORAGECLASS = "storageclass"

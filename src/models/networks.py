@@ -1,12 +1,10 @@
 """Pydantic models of the Virtual Machine Network owned by a Provider."""
 
-import uuid
-from typing import Annotated, Self
+from typing import Annotated
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from src.models.core import BaseNode
-from src.utils import find_duplicates
 
 
 class Network(BaseNode):
@@ -60,26 +58,3 @@ class Network(BaseNode):
         ),
     ]
     is_shared: Annotated[bool, Field(description="Public or private network.")]
-    projects: Annotated[
-        list[uuid.UUID],
-        Field(
-            default_factory=list,
-            description="List of projects' UUID allowed to use this network.",
-        ),
-    ]
-
-    @model_validator(mode="after")
-    def validate_projects_and_gpus(self) -> Self:
-        """Verify consistency between gpus values and shared-projects values."""
-        if self.is_shared:
-            if len(self.projects) > 0:
-                raise ValueError(
-                    "A shared network does not have a list of proprietary projects"
-                )
-        else:
-            if len(self.projects) == 0:
-                raise ValueError(
-                    "A private network must have at least a proprietary project"
-                )
-            find_duplicates(self.projects)
-        return self

@@ -3,9 +3,7 @@
 import logging
 from typing import Any
 
-import openstack.compute.v2.flavor
 import openstack.connection
-import openstack.image.v2.image
 from fed_mgr.v1.providers.schemas import ProviderType
 from keystoneauth1.exceptions.auth_plugins import NoMatchingPlugin
 from keystoneauth1.exceptions.catalog import EndpointNotFound
@@ -235,26 +233,6 @@ class OpenstackClient(ProviderClient):
         data["infiniband"] = extra_specs.get("infiniband", False)
         return data
 
-    def get_flavor_projects(
-        self, flavor: openstack.compute.v2.flavor.Flavor
-    ) -> list[str]:
-        """Retrieve project ids having access to target flavor.
-
-        Args:
-            flavor (openstack.compute.v2.flavor.Flavor): openstack flavor.
-
-        Returns:
-            list of str: List of projects ids.
-
-        Raises:
-            ForbiddenException: raised from openstack when openstack policy does not
-                allow the service user to read these details.
-        """
-        projects = set()
-        for i in self.conn.compute.get_flavor_access(flavor):
-            projects.add(i.get("tenant_id"))
-        return list(projects)
-
     def get_flavors(self) -> list[Flavor]:
         """Map Openstack flavor instance into Flavor instance.
 
@@ -272,40 +250,12 @@ class OpenstackClient(ProviderClient):
             if data.get("description") is None:
                 data["description"] = ""
             data["is_shared"] = data.pop("is_public")
-            if not data["is_shared"]:
-                data["projects"] = self.get_flavor_projects(flavor)
             extra = data.pop("extra_specs")
             if extra:
                 data = {**self.get_flavor_extra_specs(extra), **data}
-            if data["is_shared"]:
-                flavors.append(Flavor(**data))
-            elif len(data["projects"]) > 0:
-                flavors.append(Flavor(**data))
-            else:
-                msg = "Skipping private flavor with no projects. "
-                msg += f"IaaS uuid: '{data['iaas_uuid']}'"
-                self.logger.warning(msg)
+            flavors.append(Flavor(**data))
             self.logger.debug("Flavor manipulated data=%s", data)
         return flavors
-
-    def get_image_projects(self, image: openstack.image.v2.image.Image) -> list[str]:
-        """Retrieve project ids having access to target image.
-
-        Called only by shared (openstack definition) images.
-
-        Args:
-            image (openstack.image.v2.image.Image): openstack 'shared' image.
-
-        Returns:
-            list of str: list of the ids of the projects authorized to use this image.
-
-        """
-        projects = set([image.owner_id])
-        members = list(self.conn.image.members(image))
-        for member in members:
-            if member.status == "accepted":
-                projects.add(member.id)
-        return list(projects)
 
     def get_images(self, *, tags: list[str] | None = None) -> list[Image]:
         """Map Openstack image istance into Image instance.
@@ -329,18 +279,11 @@ class OpenstackClient(ProviderClient):
             data["description"] = ""
             # At least one project is present since the image is visible from the
             # current project.
-            if image.visibility == "private":
+            if image.visibility == "private" or image.visibility == "shared":
                 data["is_shared"] = False
-                data["projects"] = [image.owner_id]
-            elif image.visibility == "shared":
-                data["is_shared"] = False
-                data["projects"] = self.get_image_projects(image)
             else:
                 data["is_shared"] = True
-            if data["is_shared"]:
-                images.append(Image(**data))
-            else:
-                images.append(Image(**data))
+            images.append(Image(**data))
             self.logger.debug("Image manipulated data=%s", data)
         return images
 
@@ -379,13 +322,6 @@ class OpenstackClient(ProviderClient):
             data["iaas_uuid"] = data.pop("id")
             if data.get("description") is None:
                 data["description"] = ""
-            # A project can find not owned networks. Discard them.
-            if not data["is_shared"]:
-                if self.conn.current_project_id != network.project_id:
-                    self.logger.warning(
-                        "Not shared and not owned network, but still usable"
-                    )
-                data["projects"] = [self.conn.current_project_id]
             if data.get("is_default", None) is None:
                 data["is_default"] = False
             data["proxy_host"] = str(self.private_net_proxy_host)

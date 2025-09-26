@@ -1,12 +1,10 @@
 """Pydantic models of the Virtual Machine Flavor owned by a Provider."""
 
-import uuid
 from typing import Annotated, Self
 
 from pydantic import Field, model_validator
 
 from src.models.core import BaseNode
-from src.utils import find_duplicates
 
 
 class Flavor(BaseNode):
@@ -54,33 +52,13 @@ class Flavor(BaseNode):
         str | None, Field(default=None, description="Local storage presence.")
     ]
     is_shared: Annotated[bool, Field(description="Public or private Flavor.")]
-    projects: Annotated[
-        list[uuid.UUID],
-        Field(
-            default_factory=list,
-            description="List of projects' UUID allowed to use this flavor.",
-        ),
-    ]
 
     @model_validator(mode="after")
-    def validate_projects_and_gpus(self) -> Self:
-        """Verify consistency between gpus values and shared-projects values."""
+    def validate_gpus(self) -> Self:
+        """Verify consistency between gpus values."""
         if self.gpus == 0:
             if self.gpu_model is not None:
                 raise ValueError("'GPU model' must be None if 'Num GPUs' is 0")
             if self.gpu_vendor is not None:
                 raise ValueError("'GPU vendor' must be None if 'Num GPUs' is 0")
-
-        if self.is_shared:
-            if len(self.projects) > 0:
-                raise ValueError(
-                    "A shared flavor does not have a list of proprietary projects"
-                )
-        else:
-            if len(self.projects) == 0:
-                raise ValueError(
-                    "A private flavor must have at least a proprietary project"
-                )
-            find_duplicates(self.projects)
-
         return self

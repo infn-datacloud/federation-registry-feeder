@@ -1,14 +1,12 @@
 """Pydantic models of the Virtual Machine Image owned by a Provider."""
 
-import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Self
+from typing import Annotated
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from src.models.core import BaseNode
-from src.utils import find_duplicates
 
 
 class ImageOS(str, Enum):
@@ -77,26 +75,3 @@ class Image(BaseNode):
         ),
     ]
     is_shared: Annotated[bool, Field(description="Public or private Image.")]
-    projects: Annotated[
-        list[uuid.UUID],
-        Field(
-            default_factory=list,
-            description="List of projects' UUID allowed to use this image.",
-        ),
-    ]
-
-    @model_validator(mode="after")
-    def validate_projects_and_gpus(self) -> Self:
-        """Verify consistency between gpus values and shared-projects values."""
-        if self.is_shared:
-            if len(self.projects) > 0:
-                raise ValueError(
-                    "A shared image does not have a list of proprietary projects"
-                )
-        else:
-            if len(self.projects) == 0:
-                raise ValueError(
-                    "A private image must have at least a proprietary project"
-                )
-            find_duplicates(self.projects)
-        return self
