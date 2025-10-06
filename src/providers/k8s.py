@@ -61,14 +61,14 @@ class KubernetesData:
             self.network_services = []
             self.object_store_services = []
 
-            ssl_ca_cert_path = None
+            self.ssl_ca_cert_path = provider_conf.ca_path
 
             # Connection is only defined, not yet opened
             self.client = self.create_connection(
                 token=retrieve_token(
                     self.issuer.endpoint, audience=self.auth_method.audience
                 ),
-                ssl_ca_cert_path=ssl_ca_cert_path,
+                ssl_ca_cert_path=self.ssl_ca_cert_path,
             )
 
             self.corev1 = client.CoreV1Api(self.client)
@@ -132,10 +132,15 @@ class KubernetesData:
 
     def get_storage_classes(self) -> list[StorageClassCreateExtended]:
         storage_class_list = []
-        storage_classes = self.storagev1.list_storage_class(
-            _request_timeout=REQUEST_TIMEOUT
-        )
-        for storage_class in storage_classes.items:
+        try:
+            storage_classes = self.storagev1.list_storage_class(
+                _request_timeout=REQUEST_TIMEOUT
+            )
+            storage_classes = storage_classes.items
+        except ValueError:
+            self.logger.warning("No storage classes detected.")
+            storage_classes = []
+        for storage_class in storage_classes:
             data = {
                 "name": storage_class.metadata.name,
                 "is_default": storage_class.metadata.annotations.get(

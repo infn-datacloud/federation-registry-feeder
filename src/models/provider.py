@@ -174,6 +174,10 @@ class Kubernetes(Provider):
     type: Literal[ProviderType.K8S] = Field(
         default=ProviderType.K8S, description="Kubernetes provider type"
     )
+    ca_path: str | None = Field(
+        default=None,
+        description="Name of the file with the certs needed to access the provider.",
+    )
 
     @validator("regions", always=True)
     @classmethod
