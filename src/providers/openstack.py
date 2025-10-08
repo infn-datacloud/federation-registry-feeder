@@ -344,7 +344,11 @@ class OpenstackData:
         if len(tags) > 0:
             os_images = []
             for tag in tags:
-                os_images += list(self.conn.image.images(status="active", tag=tag))
+                names = [i.name for i in os_images]
+                new_images = list(self.conn.image.images(status="active", tag=tag))
+                for new_image in new_images:
+                    if new_image.name not in names:
+                        os_images.append(new_image)
         else:
             os_images = self.conn.image.images(status="active")
         images = []
