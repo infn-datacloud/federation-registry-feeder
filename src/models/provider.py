@@ -176,7 +176,7 @@ class Kubernetes(Provider):
     )
     ca_path: str | None = Field(
         default=None,
-        description="Name of the file with the certs needed to access the provider.",
+        description="Path to the file with the certs needed to access the provider.",
     )
 
     @validator("regions", always=True)
