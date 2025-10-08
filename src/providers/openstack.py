@@ -341,10 +341,14 @@ class OpenstackData:
         if tags is None:
             tags = []
         self.logger.info("Retrieve current project accessible images")
+        if len(tags) > 0:
+            os_images = []
+            for tag in tags:
+                os_images += list(self.conn.image.images(status="active", tag=tag))
+        else:
+            os_images = self.conn.image.images(status="active")
         images = []
-        for image in self.conn.image.images(
-            status="active", tag=None if len(tags) == 0 else tags
-        ):
+        for image in os_images:
             self.logger.debug("Image received data=%r", image)
             data = image.to_dict()
             data["uuid"] = data.pop("id")
