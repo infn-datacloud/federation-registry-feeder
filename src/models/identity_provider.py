@@ -18,16 +18,18 @@ def retrieve_token(endpoint: str, *, audience: str | None = None):
     min_valid_period = 5 * 60  # 5 min
 
     if settings.OIDC_AGENT_CONTAINER_NAME is not None:
+        args = [
+            "docker",
+            "exec",
+            settings.OIDC_AGENT_CONTAINER_NAME,
+            "oidc-token",
+            f"--time={min_valid_period}",
+        ]
+        if audience is not None:
+            args.append(f"--aud={audience}")
+        args.append(str(endpoint))
         token_cmd = subprocess.run(
-            [
-                "docker",
-                "exec",
-                settings.OIDC_AGENT_CONTAINER_NAME,
-                "oidc-token",
-                f"--time={min_valid_period}",
-                f"--aud={audience}",
-                str(endpoint),
-            ],
+            args,
             capture_output=True,
             text=True,
         )
