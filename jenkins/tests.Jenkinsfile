@@ -12,6 +12,10 @@ pipeline {
         SONAR_TOKEN = credentials('sonar-token')
     }
 
+    options {
+        githubNotify(context: 'tests')
+    }
+
     stages {
         stage('Run tests on multiple python versions') {
             parallel {

@@ -15,6 +15,10 @@ pipeline {
         cron("${dockerRepository.periodicTrigger(env.BRANCH_NAME)}")
     }
 
+    options {
+        githubNotify(context: 'build')
+    }
+
     stages {
         stage('Create and push images') {
             parallel {
