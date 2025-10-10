@@ -20,7 +20,6 @@ pipeline {
             parallel {
                 stage('Image with python 3.10 published on Harbor') {
                     steps {
-                        githubNotify context: 'build', status: 'PENDING', description: 'Build started'
                         script {
                             dockerRepository.buildAndPushImage(
                                 imageName: "${PROJECT_NAME}",
@@ -29,7 +28,6 @@ pipeline {
                                 pythonVersion: '3.10'
                             )
                         }
-                        githubNotify context: 'test', status: 'SUCCESS', description: 'Build successful'
                     }
                 }
                 stage('Image with python 3.11 published on Harbor') {

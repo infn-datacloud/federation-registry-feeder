@@ -17,7 +17,6 @@ pipeline {
             parallel {
                 stage('Run tests on python3.10') {
                     steps {
-                        githubNotify context: 'test', status: 'PENDING', description: 'Tests started'
                         script {
                             pythonProject.testCode(
                                 pythonVersion: '3.10',
@@ -26,7 +25,6 @@ pipeline {
                                 imageIsSlim: false
                                 )
                         }
-                        githubNotify context: 'test', status: 'SUCCESS', description: 'Tests successful'
                     }
                 }
                 stage('Run tests on python3.11') {
