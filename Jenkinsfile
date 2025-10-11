@@ -28,7 +28,13 @@ pipeline {
                 }
                 stages {
                     stage("Test") {
-                        // TODO Add agent
+                        agent {
+                            docker {
+                                label 'jenkins-node-label-1'
+                                image "python:${PYTHON_VERSION}"
+                                args "-u root:root"
+                            }
+                        }
                         steps {
                             script {
                                 echo "Test on python${PYTHON_VERSION}"
@@ -42,7 +48,7 @@ pipeline {
                             always {
                                 script {
                                     pythonTests.notifySonar(
-                                        token: env.SONAR_TOKEN,
+                                        token: "${SONAR_TOKEN}",
                                         project: env.PROJECT_NAME,
                                         pythonVersion: env.PYTHON_VERSION,
                                         srcDir: 'src'
