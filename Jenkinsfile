@@ -10,10 +10,10 @@ pipeline {
 
     environment {
         PROJECT_NAME = 'federation-registry-feeder'
+        ORG_NAME = 'infn-datacloud'
         DOCKERFILE = './docker/Dockerfile'
-        USE_POETRY = true
         POETRY_VERSION = '2.1'
-        SONAR_TOKEN = credentials('sonar-token')
+        SRC_DIR = 'src'
     }
 
     triggers {
@@ -42,13 +42,14 @@ pipeline {
                         stages{
                             stage("Install dependencies with poetry") {
                                 when { 
-                                    expression { env.USE_POETRY }
+                                    expression { env.POETRY_VERSIOn != '' }
                                 }
                                 steps {
                                     script  {
                                         echo "Installing dependencies using poetry on python${PYTHON_VERSION}"
                                         sh '''
-                                            python -m ensurepip --upgrade && python -m pip install --upgrade pip poetry setuptools
+                                            python -m ensurepip --upgrade
+                                            python -m pip install --upgrade pip poetry setuptools
                                             poetry install
                                         '''
                                     }
@@ -56,13 +57,14 @@ pipeline {
                             }
                             stage("Install dependencies with pip") {
                                 when { 
-                                    expression { !env.USE_POETRY }
+                                    expression { env.POETRY_VERSION == '' }
                                 }
                                 steps {
                                     script  {
                                         echo "Installing dependencies using pip on python${PYTHON_VERSION}"
                                         sh '''
-                                            python -m ensurepip --upgrade && python -m pip install --upgrade pip poetry setuptools
+                                            python -m ensurepip --upgrade
+                                            python -m pip install --upgrade pip poetry setuptools
                                             pip install -r requirements.txt
                                         '''
                                     }
@@ -101,8 +103,8 @@ pipeline {
             agent {
                 docker {
                     label 'jenkins-node-label-1'
-                    image "python:3.13"
-                    args "-u root:root"
+                    image 'python:3.13'
+                    args '-u root:root'
                     reuseNode true
                 }
             }
@@ -129,22 +131,22 @@ pipeline {
                 docker {
                     label 'jenkins-node-label-1'
                     image 'sonarsource/sonar-scanner-cli'
-                    args '-u root:root -v ${WORKSPACE}:/usr/src'
+                    args "-u root:root -v ${WORKSPACE}:/usr/src"
                     reuseNode true
                 }
             }
             steps {
                 withSonarQubeEnv('SonarCloud') {
                     echo 'Sends coverage report to SonarCloud'
-                    sh '''
+                    sh """
                         sonar-scanner \
-                        -D sonar.projectKey=infn-datacloud_${PROJECT_NAME} \
-                        -D sonar.organization=infn-datacloud \
-                        -D sonar.sources=src \
+                        -D sonar.projectKey=${ORG_NAME}_${PROJECT_NAME} \
+                        -D sonar.organization=${ORG_NAME} \
+                        -D sonar.sources=${SRC_DIR} \
                         -D sonar.tests=tests \
                         -D sonar.branch.name=${BRANCH_NAME} \
                         -D sonar.python.coverage.reportPaths=coverage.xml
-                    '''
+                    """
                 }
             }
         }
