@@ -3,7 +3,9 @@
 
 pipeline {
     agent {
-        node { label 'jenkins-node-label-1' }
+        node {
+            label 'jenkins-node-label-1'
+        }
     }
 
     environment {
@@ -36,6 +38,19 @@ pipeline {
                             }
                         }
                     }
+                    post {
+                        always {
+                            script {
+                                pythonTest.notifySonar(
+                                    token: env.SONAR_TOKEN,
+                                    project: env.PROJECT_NAME,
+                                    pythonVersion: env.PYTHON_VERSION,
+                                    srcDir: 'src'
+                                )
+                            }
+                        }
+                    }
+
                     stage("Build docker image") {
                         steps {
                             script {
