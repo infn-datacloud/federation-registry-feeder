@@ -28,6 +28,7 @@ pipeline {
                 }
                 stages {
                     stage("Test") {
+                        // TODO Add agent
                         steps {
                             script {
                                 echo "Test on python${PYTHON_VERSION}"
@@ -37,19 +38,20 @@ pipeline {
                                 )
                             }
                         }
-                    }
-                    post {
-                        always {
-                            script {
-                                pythonTest.notifySonar(
-                                    token: env.SONAR_TOKEN,
-                                    project: env.PROJECT_NAME,
-                                    pythonVersion: env.PYTHON_VERSION,
-                                    srcDir: 'src'
-                                )
+                        post {
+                            always {
+                                script {
+                                    pythonTests.notifySonar(
+                                        token: env.SONAR_TOKEN,
+                                        project: env.PROJECT_NAME,
+                                        pythonVersion: env.PYTHON_VERSION,
+                                        srcDir: 'src'
+                                    )
+                                }
                             }
                         }
                     }
+                    
 
                     stage("Build docker image") {
                         steps {
