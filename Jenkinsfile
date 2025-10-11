@@ -35,7 +35,8 @@ pipeline {
                             docker {
                                 label 'jenkins-node-label-1'
                                 image "python:${PYTHON_VERSION}"
-                                args "-u root:root"
+                                args "-u root:root -e POETRY_VERSION=${POETRY_VERSION} -e POETRY_VIRTUALENVS_CREATE=false"
+                                reuseNode true
                             }
                         }
                         stages{
@@ -47,7 +48,7 @@ pipeline {
                                     script  {
                                         echo "Installing dependencies using poetry on python${PYTHON_VERSION}"
                                         sh 'python -m ensurepip --upgrade && python -m pip install --upgrade pip poetry setuptools'
-                                        sh "POETRY_VERSION=${POETRY_VERSION} POETRY_VIRTUALENVS_CREATE=false poetry install"
+                                        sh 'poetry install'
                                     }
                                 }
                             }
@@ -77,7 +78,7 @@ pipeline {
                                     }
                                 }
                                 post {
-                                    success {
+                                    always {
                                         script {
                                             archiveArtifacts artifacts: "coverage-reports/**/*", fingerprint: true
                                         }
@@ -98,7 +99,8 @@ pipeline {
                                     -D sonar.organization=infn-datacloud \
                                     -D sonar.sources=src \
                                     -D sonar.tests=tests \
-                                    -D sonar.python.version='${PYTHON_VERSION}'
+                                    -D sonar.branch.name=${BRANCH_NAME} \
+                                    -D sonar.python.version='${PYTHON_VERSION}' \
                                     -D sonar.python.coverage.reportPaths=coverage-reports/coverage-${PYTHON_VERSION}.xml'''
                             }
                         }
