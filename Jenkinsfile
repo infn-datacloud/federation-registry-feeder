@@ -29,7 +29,10 @@ pipeline {
                         steps {
                             script {
                                 echo "Test on python${PYTHON_VERSION}"
-                                pythonTests.testCode(pythonVersion: env.PYTHON_VERSION)
+                                pythonTests.testCode(
+                                    pythonVersion: env.PYTHON_VERSION,
+                                    usePoetry: true
+                                )
                             }
                         }
                     }
