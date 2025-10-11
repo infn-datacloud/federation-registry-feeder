@@ -21,7 +21,7 @@ pipeline {
     }
 
     stages {
-        stage("Test and build docker") {
+        stage("Tests") {
             matrix {
                 axes {
                     axis {
@@ -47,8 +47,10 @@ pipeline {
                                 steps {
                                     script  {
                                         echo "Installing dependencies using poetry on python${PYTHON_VERSION}"
-                                        sh 'python -m ensurepip --upgrade && python -m pip install --upgrade pip poetry setuptools'
-                                        sh 'poetry install'
+                                        sh '''
+                                            python -m ensurepip --upgrade && python -m pip install --upgrade pip poetry setuptools
+                                            poetry install
+                                        '''
                                     }
                                 }
                             }
@@ -59,8 +61,10 @@ pipeline {
                                 steps {
                                     script  {
                                         echo "Installing dependencies using pip on python${PYTHON_VERSION}"
-                                        sh 'python -m ensurepip --upgrade && python -m pip install --upgrade pip poetry setuptools'
-                                        sh 'pip install -r requirements.txt'
+                                        sh '''
+                                            python -m ensurepip --upgrade && python -m pip install --upgrade pip poetry setuptools
+                                            pip install -r requirements.txt
+                                        '''
                                     }
                                 }
                             }
@@ -69,11 +73,14 @@ pipeline {
                                     script {
                                         echo "Running tests on python${PYTHON_VERSION}"
                                         configFileProvider([configFile(fileId: ".coveragerc", variable: 'COVERAGERC')]) {
-                                            sh """pytest \
+                                            sh """
+                                                COVERAGE_FILE=coverage-reports/.coverage-${PYTHON_VERSION} \
+                                                pytest \
                                                 --cov \
                                                 --cov-config=${COVERAGERC} \
                                                 --cov-report=xml:coverage-reports/coverage-${PYTHON_VERSION}.xml \
-                                                --cov-report=html:coverage-reports/htmlcov-${PYTHON_VERSION}"""
+                                                --cov-report=html:coverage-reports/htmlcov-${PYTHON_VERSION}
+                                            """
                                         }
                                     }
                                 }
@@ -87,45 +94,92 @@ pipeline {
                             }
                         }
                     }
-                    stage("Notify SonarCloud") {
-                        steps {
-                            script {
-                                sh '''docker run --rm \
-                                    -e SONAR_HOST_URL=https://sonarcloud.io/ \
-                                    -e SONAR_TOKEN=${SONAR_TOKEN} \
-                                    -v ${WORKSPACE}:/usr/src \
-                                    sonarsource/sonar-scanner-cli \
-                                    -D sonar.projectKey=infn-datacloud_${PROJECT_NAME} \
-                                    -D sonar.organization=infn-datacloud \
-                                    -D sonar.sources=src \
-                                    -D sonar.tests=tests \
-                                    -D sonar.branch.name=${BRANCH_NAME} \
-                                    -D sonar.python.version='${PYTHON_VERSION}' \
-                                    -D sonar.python.coverage.reportPaths=coverage-reports/coverage-${PYTHON_VERSION}.xml'''
-                            }
-                        }
-                    }
-
-                    // stage("Build docker image") {
-                    //     steps {
-                    //         script {
-                    //             echo "Build docker image for python${PYTHON_VERSION}"
-                    //             dockerImg = dockerRepository.buildImage(
-                    //                 imageName: env.PROJECT_NAME,
-                    //                 dockerfile: env.DOCKERFILE,
-                    //                 pythonVersion: env.PYTHON_VERSION
-                    //             )
-                    //         }
-                    //     }
-                    // }
                 }
             }
         }
-    }
+        stage("Combine coverages") {
+            agent {
+                docker {
+                    label 'jenkins-node-label-1'
+                    image "python:3.13"
+                    args "-u root:root"
+                    reuseNode true
+                }
+            }
+            steps {
+                script {
+                    echo 'Merge coverage reports'
+                    sh '''
+                        pip install coverage
+                        coverage combine coverage-reports/.coverage-*
+                        coverage xml -o coverage.xml
+                    '''
+                }
+            }
+            post {
+                success {
+                    script {
+                        archiveArtifacts artifacts: "coverage.xml", fingerprint: true
+                    }
+                }
+            }
+        }
+        stage("Notify SonarCloud") {
+            agent {
+                docker {
+                    label 'jenkins-node-label-1'
+                    image 'sonarsource/sonar-scanner-cli'
+                    args '-u root:root -v ${WORKSPACE}:/usr/src'
+                    reuseNode true
+                }
+            }
+            steps {
+                withSonarQubeEnv('SonarCloud') {
+                    echo 'Sends coverage report to SonarCloud'
+                    sh '''
+                        sonar-scanner \
+                        -D sonar.projectKey=infn-datacloud_${PROJECT_NAME} \
+                        -D sonar.organization=infn-datacloud \
+                        -D sonar.sources=src \
+                        -D sonar.tests=tests \
+                        -D sonar.branch.name=${BRANCH_NAME} \
+                        -D sonar.python.coverage.reportPaths=coverage.xml
+                    '''
+                }
+            }
+        }
+    //     stage("Build images") {
+    //         when {
+    //             expression { currentBuild.result != 'UNSECURE' }
+    //         }
+    //         matrix {
+    //             axes {
+    //                 axis {
+    //                     name 'PYTHON_VERSION'
+    //                     values '3.10', '3.11', '3.12', '3.13'
+    //                 }
+    //             }
+    //             stages {
+    //                 stage("Build") {
+    //                     steps {
+    //                         script {
+    //                             echo "Build docker image for python${PYTHON_VERSION}"
+    //                             // dockerImg = dockerRepository.buildImage(
+    //                             //     imageName: env.PROJECT_NAME,
+    //                             //     dockerfile: env.DOCKERFILE,
+    //                             //     pythonVersion: env.PYTHON_VERSION
+    //                             // )
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
     // post {
     //     always {
     //         echo 'Cleaning up Docker images...'
     //         sh 'docker system prune -af || true'
     //     }
-    // }
+    }
 }
