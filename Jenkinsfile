@@ -13,11 +13,12 @@ pipeline {
         DOCKERFILE = './docker/Dockerfile'
         USE_POETRY = true
         POETRY_VERSION = '2.1'
+        SONAR_TOKEN = credentials('sonar-token')
     }
 
-    // triggers {
-    //     cron("${myCron.periodicTrigger(env.BRANCH_NAME)}")
-    // }
+    triggers {
+        cron("${myCron.periodicTrigger(env.BRANCH_NAME)}")
+    }
 
     stages {
         stage("Test and build docker") {
@@ -68,10 +69,10 @@ pipeline {
                                         echo "Running tests on python${PYTHON_VERSION}"
                                         configFileProvider([configFile(fileId: ".coveragerc", variable: 'COVERAGERC')]) {
                                             sh """pytest \
-                                            --cov \
-                                            --cov-config=${COVERAGERC} \
-                                            --cov-report=xml:coverage-reports/coverage-${PYTHON_VERSION}.xml \
-                                            --cov-report=html:coverage-reports/htmlcov-${PYTHON_VERSION}"""
+                                                --cov \
+                                                --cov-config=${COVERAGERC} \
+                                                --cov-report=xml:coverage-reports/coverage-${PYTHON_VERSION}.xml \
+                                                --cov-report=html:coverage-reports/htmlcov-${PYTHON_VERSION}"""
                                         }
                                     }
                                 }
@@ -79,15 +80,26 @@ pipeline {
                                     success {
                                         script {
                                             archiveArtifacts artifacts: "coverage-reports/**/*", fingerprint: true
-                                            // pythonTests.notifySonar(
-                                            //     token: "${SONAR_TOKEN}",
-                                            //     project: env.PROJECT_NAME,
-                                            //     pythonVersion: env.PYTHON_VERSION,
-                                            //     srcDir: 'src'
-                                            // )
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                    stage("Notify SonarCloud") {
+                        steps {
+                            script {
+                                sh '''docker run --rm \
+                                    -e SONAR_HOST_URL=https://sonarcloud.io/ \
+                                    -e SONAR_TOKEN=${SONAR_TOKEN} \
+                                    -v ${WORKSPACE}:/usr/src \
+                                    sonarsource/sonar-scanner-cli \
+                                    -D sonar.projectKey=infn-datacloud_${PROJECT_NAME} \
+                                    -D sonar.organization=infn-datacloud \
+                                    -D sonar.sources=src \
+                                    -D sonar.tests=tests \
+                                    -D sonar.python.version='${PYTHON_VERSION}'
+                                    -D sonar.python.coverage.reportPaths=coverage-reports/coverage-${PYTHON_VERSION}.xml'''
                             }
                         }
                     }
