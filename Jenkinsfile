@@ -166,12 +166,23 @@ pipeline {
                         steps {
                             script {
                                 echo "Build docker image for python${PYTHON_VERSION}"
-                                dockerImg = dockerRepository.buildImage(
-                                    imageName: env.PROJECT_NAME,
-                                    dockerfile: env.DOCKERFILE,
-                                    pythonVersion: env.PYTHON_VERSION,
-                                    poetryVersion: env.POETRY_VERSION
-                                )
+                                def name = "${PROJECT_NAME}"
+                                def customTags = []
+                                def buildArgsStr = ''
+                                if ("${PYTHON_VERSION}" != '') {
+                                    buildArgsStr += " --build-arg PYTHON_VERSION=${PYTHON_VERSION}"
+                                    customTags.add("python${PYTHON_VERSION}")
+                                }
+                                if ("${POETRY_VERSION}" != '') {
+                                    buildArgsStr += " --build-arg POETRY_VERSION=${POETRY_VERSION}"
+                                }
+                                if (customTags.size() > 0) {
+                                    def tags = customTags.join('-')
+                                    name += ":${tags}"
+                                }
+                                sh "docker build -t ${name} -f ${DOCKERFILE} ${buildArgsStr} ."
+                                sh "docker save ${name} -o ${PROJECT_NAME}-${PYTHON_VERSION}.tar"
+                                stash includes: "${PROJECT_NAME}-${PYTHON_VERSION}.tar", name: "${PROJECT_NAME}-${PYTHON_VERSION}.tar"
                             }
                         }
                     }
@@ -198,10 +209,14 @@ pipeline {
                         steps {
                             script {
                                 echo "Push docker image for ${PYTHON_VERSION} on registry ${DOCKER_REGISTRY}"
+                                unstash "${PROJECT_NAME}-${PYTHON_VERSION}.tar"
+                                def output = sh(script: "docker load -i ${PROJECT_NAME}-${PYTHON_VERSION}.tar",  returnStdout: true).trim()
+                                def (imgName, imgTags) = output.tokenize(" ")[-1].tokenize(":")
                                 dockerRepository.pushImage(
-                                    srcImg: dockerImg,
+                                    imgName: imgName,
+                                    imgTags: imgTags,
                                     registryType: "${DOCKER_REGISTRY}",
-                                    // TODO isLatest: based on pythonVersion
+                                    isLatest: env.PYTHON_VERSION == "3.13" ? true : false
                                 )
                             }
                         }
@@ -224,6 +239,7 @@ pipeline {
                     stage("Update description") {
                         agent {
                             docker {
+                                label 'jenkins-node-label-1' 
                                 image 'chko/docker-pushrm:1'
                                 args '-v ${WORKSPACE}:/myvol '
                             }
