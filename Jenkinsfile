@@ -21,6 +21,20 @@ pipeline {
     }
 
     stages {
+        stage("Linting and format") {
+            agent {
+                docker {
+                    image 'python:3.13'
+                    args '-u root:root'
+                    reuseNode true
+                }
+            }
+            steps {
+                script {
+                    linting.ruff(srcDir: env.SRC_DIR)
+                }
+            }
+        }
         stage("Tests execution") {
             matrix {
                 axes {
@@ -153,7 +167,8 @@ pipeline {
         stage("Build images") {
             when {
                 allOf {
-                    expression { return currentBuild.currentResult == 'SUCCESS' }
+                    expression { return currentBuild.currentResult != 'UNSTABLE' }
+                    expression { return currentBuild.result != 'UNSTABLE' }
                     expression { return env.CHANGE_ID != null } // It is a PR
                 }
             }
@@ -195,7 +210,8 @@ pipeline {
         stage("Push images") {
             when {
                 allOf {
-                    expression { return currentBuild.currentResult == 'SUCCESS' }
+                    expression { return currentBuild.currentResult != 'UNSTABLE' }
+                    expression { return currentBuild.result != 'UNSTABLE' }
                     expression { return env.CHANGE_ID != null } // It is a PR
                 }
             }
@@ -233,7 +249,8 @@ pipeline {
         stage("Update docker description") {
             when {
                 allOf {
-                    expression { return currentBuild.currentResult == 'SUCCESS' }
+                    expression { return currentBuild.currentResult != 'UNSTABLE' }
+                    expression { return currentBuild.result != 'UNSTABLE' }
                     expression { return env.CHANGE_ID != null } // It is a PR
                 }
             }
