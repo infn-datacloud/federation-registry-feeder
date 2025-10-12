@@ -169,7 +169,7 @@ pipeline {
                 allOf {
                     expression { return currentBuild.currentResult != 'UNSTABLE' }
                     expression { return currentBuild.result != 'UNSTABLE' }
-                    expression { return env.CHANGE_ID != null } // It is a PR
+                    expression { return env.CHANGE_ID != null || env.TAG_NAME != null } // It is a PR or tag
                 }
             }
             matrix {
@@ -212,7 +212,7 @@ pipeline {
                 allOf {
                     expression { return currentBuild.currentResult != 'UNSTABLE' }
                     expression { return currentBuild.result != 'UNSTABLE' }
-                    expression { return env.CHANGE_ID != null } // It is a PR
+                    expression { return env.CHANGE_ID != null || env.TAG_NAME != null } // It is a PR or tag
                 }
             }
             matrix {
@@ -251,7 +251,7 @@ pipeline {
                 allOf {
                     expression { return currentBuild.currentResult != 'UNSTABLE' }
                     expression { return currentBuild.result != 'UNSTABLE' }
-                    expression { return env.CHANGE_ID != null } // It is a PR
+                    expression { return env.CHANGE_ID != null || env.TAG_NAME != null } // It is a PR or tag
                 }
             }
             matrix {
