@@ -29,6 +29,9 @@ pipeline {
                     reuseNode true
                 }
             }
+            when {
+                expression { return env.CHANGE_ID != null } // It is a PR
+            }
             steps {
                 script {
                     linting.ruff(srcDir: env.SRC_DIR)
