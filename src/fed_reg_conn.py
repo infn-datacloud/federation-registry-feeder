@@ -76,7 +76,7 @@ class CRUD:
             self.logger.info("Provider=%s created", data.name)
             self.logger.debug(resp.json())
             return ProviderReadExtended(**resp.json())
-        elif resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
+        elif resp.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
             self.logger.error("Provider=%s has not been created.", data.name)
             self.logger.error(resp.json())
             self.error = True
@@ -123,7 +123,7 @@ class CRUD:
                 "New data match stored data. Provider=%s not modified", new_data.name
             )
             return None
-        elif resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
+        elif resp.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
             self.logger.error("Provider=%s has not been updated.", new_data.name)
             self.logger.error(resp.json())
             self.error = True

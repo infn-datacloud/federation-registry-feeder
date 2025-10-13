@@ -76,7 +76,7 @@ class CaseErrorCode:
         return code
 
     @case(tags="managed")
-    @parametrize(code=[status.HTTP_422_UNPROCESSABLE_ENTITY])
+    @parametrize(code=[status.HTTP_422_UNPROCESSABLE_CONTENT])
     def case_managed_error_code(self, code: int) -> int:
         return code
 
