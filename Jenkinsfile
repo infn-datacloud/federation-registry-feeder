@@ -36,7 +36,7 @@ pipeline {
             }
             steps {
                 script {
-                    linting.ruff(srcDir: env.SRC_DIR)
+                    ruffChecks()
                 }
             }
         }
@@ -62,24 +62,14 @@ pipeline {
                             stage('Install dependencies') {
                                 steps {
                                     script  {
-                                        pythonTests.installDependecies()
+                                        installDependencies()
                                     }
                                 }
                             }
                             stage('Run Tests') {
                                 steps {
                                     script {
-                                        echo "Running tests on python${PYTHON_VERSION}"
-                                        configFileProvider([configFile(fileId: '.coveragerc', variable: 'COVERAGERC')]) {
-                                            sh """
-                                                COVERAGE_FILE=coverage-reports/.coverage-${PYTHON_VERSION} \
-                                                pytest \
-                                                --cov \
-                                                --cov-config=${COVERAGERC} \
-                                                --cov-report=xml:coverage-reports/coverage-${PYTHON_VERSION}.xml \
-                                                --cov-report=html:coverage-reports/htmlcov-${PYTHON_VERSION}
-                                            """
-                                        }
+                                        runTests()
                                     }
                                 }
                                 post {
@@ -106,12 +96,7 @@ pipeline {
             }
             steps {
                 script {
-                    echo 'Merge coverage reports'
-                    sh '''
-                        pip install coverage
-                        coverage combine coverage-reports/.coverage-*
-                        coverage xml -o coverage.xml
-                    '''
+                    combineCovReports()
                 }
             }
             post {
@@ -132,17 +117,8 @@ pipeline {
                 }
             }
             steps {
-                withSonarQubeEnv('SonarCloud') {
-                    echo 'Sends coverage report to SonarCloud'
-                    sh """
-                        sonar-scanner \
-                        -D sonar.projectKey=${ORG_NAME}_${PROJECT_NAME} \
-                        -D sonar.organization=${ORG_NAME} \
-                        -D sonar.sources=${SRC_DIR} \
-                        -D sonar.tests=tests \
-                        -D sonar.branch.name=${BRANCH_NAME} \
-                        -D sonar.python.coverage.reportPaths=coverage.xml
-                    """
+                script {
+                    notifySonar()
                 }
             }
         }
