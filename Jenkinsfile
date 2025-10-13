@@ -40,47 +40,9 @@ pipeline {
             }
         }
         stage('Tests execution') {
-            matrix {
-                axes {
-                    axis {
-                        name 'PYTHON_VERSION'
-                        values '3.11', '3.12', '3.13'
-                    }
-                }
-                stages {
-                    stage('Test'){
-                        agent {
-                            docker {
-                                label 'jenkins-node-label-1'
-                                image "python:${env.PYTHON_VERSION}"
-                                args '-u root:root'
-                                reuseNode true
-                            }
-                        }
-                        stages{
-                            stage('Install dependencies') {
-                                steps {
-                                    script  {
-                                        installDependencies()
-                                    }
-                                }
-                            }
-                            stage('Run Tests') {
-                                steps {
-                                    script {
-                                        runTests()
-                                    }
-                                }
-                                post {
-                                    always {
-                                        script {
-                                            archiveArtifacts artifacts: 'coverage-reports/**/*', fingerprint: true
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+            steps {
+                script {
+                    testCode pythonVersions: ['3.11', '3.12', '3.13']
                 }
             }
         }
