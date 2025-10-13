@@ -22,7 +22,7 @@ pytest = "^8.4"
 pytest-cases = "^3.8.2"
 pytest-cov = {extras = ["toml"], version = "^7.0"}
 pytest-mock = "^3.12.0"
-ruff = "^0.13"
+ruff = "^0.14"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
