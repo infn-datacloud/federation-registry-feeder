@@ -12,8 +12,9 @@ pipeline {
         PROJECT_NAME = 'federation-registry-feeder'
         ORG_NAME = 'infn-datacloud'
         DOCKERFILE = './docker/Dockerfile'
-        POETRY_VERSION = '2.1'
         SRC_DIR = 'src'
+        POETRY_VERSION = '2.1'
+        TARGET_PYTHON = '3.13'
     }
 
     triggers {
@@ -21,10 +22,11 @@ pipeline {
     }
 
     stages {
-        stage("Linting and format") {
+        stage('Linting and format') {
             agent {
                 docker {
-                    image 'python:3.13'
+                    label 'jenkins-node-label-1'
+                    image "python:${TARGET_PYTHON}"
                     args '-u root:root'
                     reuseNode true
                 }
@@ -38,7 +40,7 @@ pipeline {
                 }
             }
         }
-        stage("Tests execution") {
+        stage('Tests execution') {
             matrix {
                 axes {
                     axis {
@@ -47,51 +49,28 @@ pipeline {
                     }
                 }
                 stages {
-                    stage("Test"){
+                    stage('Test'){
                         agent {
                             docker {
                                 label 'jenkins-node-label-1'
                                 image "python:${PYTHON_VERSION}"
-                                args "-u root:root -e POETRY_VERSION=${POETRY_VERSION} -e POETRY_VIRTUALENVS_CREATE=false"
+                                args '-u root:root'
                                 reuseNode true
                             }
                         }
                         stages{
-                            stage("Install dependencies with poetry") {
-                                when { 
-                                    expression { env.POETRY_VERSIOn != '' }
-                                }
+                            stage('Install dependencies') {
                                 steps {
                                     script  {
-                                        echo "Installing dependencies using poetry on python${PYTHON_VERSION}"
-                                        sh '''
-                                            python -m ensurepip --upgrade
-                                            python -m pip install --upgrade pip poetry setuptools
-                                            poetry install
-                                        '''
+                                        pythonTests.installDependecies()
                                     }
                                 }
                             }
-                            stage("Install dependencies with pip") {
-                                when { 
-                                    expression { env.POETRY_VERSION == '' }
-                                }
-                                steps {
-                                    script  {
-                                        echo "Installing dependencies using pip on python${PYTHON_VERSION}"
-                                        sh '''
-                                            python -m ensurepip --upgrade
-                                            python -m pip install --upgrade pip poetry setuptools
-                                            pip install -r requirements.txt
-                                        '''
-                                    }
-                                }
-                            }
-                            stage("Run Tests") {
+                            stage('Run Tests') {
                                 steps {
                                     script {
                                         echo "Running tests on python${PYTHON_VERSION}"
-                                        configFileProvider([configFile(fileId: ".coveragerc", variable: 'COVERAGERC')]) {
+                                        configFileProvider([configFile(fileId: '.coveragerc', variable: 'COVERAGERC')]) {
                                             sh """
                                                 COVERAGE_FILE=coverage-reports/.coverage-${PYTHON_VERSION} \
                                                 pytest \
@@ -106,7 +85,7 @@ pipeline {
                                 post {
                                     always {
                                         script {
-                                            archiveArtifacts artifacts: "coverage-reports/**/*", fingerprint: true
+                                            archiveArtifacts artifacts: 'coverage-reports/**/*', fingerprint: true
                                         }
                                     }
                                 }
@@ -116,11 +95,11 @@ pipeline {
                 }
             }
         }
-        stage("Combine coverages") {
+        stage('Combine coverages') {
             agent {
                 docker {
                     label 'jenkins-node-label-1'
-                    image 'python:3.13'
+                    image "python:${TARGET_PYTHON}"
                     args '-u root:root'
                     reuseNode true
                 }
@@ -138,12 +117,12 @@ pipeline {
             post {
                 success {
                     script {
-                        archiveArtifacts artifacts: "coverage.xml", fingerprint: true
+                        archiveArtifacts artifacts: 'coverage.xml', fingerprint: true
                     }
                 }
             }
         }
-        stage("Notify SonarCloud") {
+        stage('Notify SonarCloud') {
             agent {
                 docker {
                     label 'jenkins-node-label-1'
@@ -167,7 +146,7 @@ pipeline {
                 }
             }
         }
-        stage("Build images") {
+        stage('Build images') {
             when {
                 allOf {
                     expression { return currentBuild.currentResult != 'UNSTABLE' }
@@ -183,7 +162,7 @@ pipeline {
                     }
                 }
                 stages {
-                    stage("Build") {
+                    stage('Build') {
                         steps {
                             script {
                                 echo "Build docker image for python${PYTHON_VERSION}"
@@ -210,7 +189,7 @@ pipeline {
                 }
             }
         }
-        stage("Push images") {
+        stage('Push images') {
             when {
                 allOf {
                     expression { return currentBuild.currentResult != 'UNSTABLE' }
@@ -230,7 +209,7 @@ pipeline {
                     }
                 }
                 stages {
-                    stage("Push") {
+                    stage('Push') {
                         steps {
                             script {
                                 echo "Push docker image for ${PYTHON_VERSION} on registry ${DOCKER_REGISTRY}"
@@ -241,7 +220,7 @@ pipeline {
                                     imgName: imgName,
                                     imgTags: imgTags,
                                     registryType: "${DOCKER_REGISTRY}",
-                                    isLatest: env.PYTHON_VERSION == "3.13" ? true : false
+                                    isLatest: env.PYTHON_VERSION == "${TARGET_PYTHON}" ? true : false
                                 )
                             }
                         }
@@ -249,7 +228,7 @@ pipeline {
                 }
             }
         }
-        stage("Update docker description") {
+        stage('Update docker description') {
             when {
                 allOf {
                     expression { return currentBuild.currentResult != 'UNSTABLE' }
@@ -265,7 +244,7 @@ pipeline {
                     }
                 }
                 stages {
-                    stage("Update description") {
+                    stage('Update description') {
                         steps {
                             script {
                                 echo "Update project description on registry ${DOCKER_REGISTRY}"
