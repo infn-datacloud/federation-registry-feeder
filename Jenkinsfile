@@ -10,7 +10,6 @@ pipeline {
 
     environment {
         PROJECT_NAME = 'federation-registry-feeder'
-        ORG_NAME = 'infn-datacloud'
         DOCKERFILE = './docker/Dockerfile'
         SRC_DIR = 'src'
         POETRY_VERSION = '2.1'
@@ -26,7 +25,7 @@ pipeline {
             agent {
                 docker {
                     label 'jenkins-node-label-1'
-                    image "python:${TARGET_PYTHON}"
+                    image "python:${env.TARGET_PYTHON}"
                     args '-u root:root'
                     reuseNode true
                 }
@@ -53,7 +52,7 @@ pipeline {
                         agent {
                             docker {
                                 label 'jenkins-node-label-1'
-                                image "python:${PYTHON_VERSION}"
+                                image "python:${env.PYTHON_VERSION}"
                                 args '-u root:root'
                                 reuseNode true
                             }
@@ -89,7 +88,7 @@ pipeline {
             agent {
                 docker {
                     label 'jenkins-node-label-1'
-                    image "python:${TARGET_PYTHON}"
+                    image "python:${env.TARGET_PYTHON}"
                     args '-u root:root'
                     reuseNode true
                 }
@@ -112,7 +111,7 @@ pipeline {
                 docker {
                     label 'jenkins-node-label-1'
                     image 'sonarsource/sonar-scanner-cli'
-                    args "-u root:root -v ${WORKSPACE}:/usr/src"
+                    args "-u root:root -v ${env.WORKSPACE}:/usr/src"
                     reuseNode true
                 }
             }
@@ -141,24 +140,7 @@ pipeline {
                     stage('Build') {
                         steps {
                             script {
-                                echo "Build docker image for python${PYTHON_VERSION}"
-                                def name = "${PROJECT_NAME}"
-                                def customTags = []
-                                def buildArgsStr = ''
-                                if ("${PYTHON_VERSION}" != '') {
-                                    buildArgsStr += " --build-arg PYTHON_VERSION=${PYTHON_VERSION}"
-                                    customTags.add("python${PYTHON_VERSION}")
-                                }
-                                if ("${POETRY_VERSION}" != '') {
-                                    buildArgsStr += " --build-arg POETRY_VERSION=${POETRY_VERSION}"
-                                }
-                                if (customTags.size() > 0) {
-                                    def tags = customTags.join('-')
-                                    name += ":${tags}"
-                                }
-                                sh "docker build -t ${name} -f ${DOCKERFILE} ${buildArgsStr} ."
-                                sh "docker save ${name} -o ${PROJECT_NAME}-${PYTHON_VERSION}.tar"
-                                stash includes: "${PROJECT_NAME}-${PYTHON_VERSION}.tar", name: "${PROJECT_NAME}-${PYTHON_VERSION}.tar"
+                                buildDockerImage()
                             }
                         }
                     }
@@ -188,15 +170,8 @@ pipeline {
                     stage('Push') {
                         steps {
                             script {
-                                echo "Push docker image for ${PYTHON_VERSION} on registry ${DOCKER_REGISTRY}"
-                                unstash "${PROJECT_NAME}-${PYTHON_VERSION}.tar"
-                                def output = sh(script: "docker load -i ${PROJECT_NAME}-${PYTHON_VERSION}.tar",  returnStdout: true).trim()
-                                def (imgName, imgTags) = output.tokenize(" ")[-1].tokenize(":")
-                                dockerRepository.pushImage(
-                                    imgName: imgName,
-                                    imgTags: imgTags,
-                                    registryType: "${DOCKER_REGISTRY}",
-                                    isLatest: env.PYTHON_VERSION == "${TARGET_PYTHON}" ? true : false
+                                pushDockerImage(
+                                    isLatest: env.PYTHON_VERSION == env.TARGET_PYTHON ? true : false
                                 )
                             }
                         }
@@ -223,11 +198,7 @@ pipeline {
                     stage('Update description') {
                         steps {
                             script {
-                                echo "Update project description on registry ${DOCKER_REGISTRY}"
-                                dockerRepository.updateReadMe(
-                                    imgName: env.PROJECT_NAME,
-                                    registryType: "${DOCKER_REGISTRY}"
-                                )
+                                updateDockerRegistryDoc()
                             }
                         }
                     }
