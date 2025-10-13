@@ -13,7 +13,6 @@ files = [
 ]
 
 [package.dependencies]
-exceptiongroup = {version = ">=1.0.2", markers = "python_version < \"3.11\""}
 idna = ">=2.8"
 sniffio = ">=1.1"
 typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
@@ -278,33 +277,11 @@ files = [
 
 [[package]]
 name = "cliff"
-version = "4.9.1"
-description = "Command Line Interface Formulation Framework"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "python_version < \"3.14\" or platform_python_implementation == \"PyPy\""
-files = [
-    {file = "cliff-4.9.1-py3-none-any.whl", hash = "sha256:3e5861dcc56164b7c0aef2dae166b537c2dc11c9df785f74f54bdff16971fb1e"},
-    {file = "cliff-4.9.1.tar.gz", hash = "sha256:5b392198293c0b9225d459be8ba710cf8248f1ee33006bdeb3d92fb0012592b4"},
-]
-
-[package.dependencies]
-autopage = ">=0.4.0"
-cmd2 = ">=1.0.0"
-importlib-metadata = {version = ">=4.4", markers = "python_version < \"3.10\""}
-PrettyTable = ">=0.7.2"
-PyYAML = ">=3.12"
-stevedore = ">=2.0.1"
-
-[[package]]
-name = "cliff"
 version = "4.11.0"
 description = "Command Line Interface Formulation Framework"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "platform_python_implementation != \"PyPy\" and python_version >= \"3.14\""
 files = [
     {file = "cliff-4.11.0-py3-none-any.whl", hash = "sha256:845084c452fbfbf79bf13d2a3f33248326776a2273bb854a44ea065e7be310a4"},
     {file = "cliff-4.11.0.tar.gz", hash = "sha256:aa33c11ac2fecdf2d1eaffea9d5d0eb4584b8e777673bb55d42a693e34ccc429"},
@@ -463,9 +440,6 @@ files = [
     {file = "coverage-7.10.7.tar.gz", hash = "sha256:f4ab143ab113be368a3e9b795f9cd7906c5ef407d6173fe9675a902e1fffc239"},
 ]
 
-[package.dependencies]
-tomli = {version = "*", optional = true, markers = "python_full_version <= \"3.11.0a6\" and extra == \"toml\""}
-
 [package.extras]
 toml = ["tomli ; python_full_version <= \"3.11.0a6\""]
 
@@ -535,7 +509,6 @@ files = [
 
 [package.dependencies]
 cffi = {version = ">=2.0.0", markers = "python_full_version >= \"3.9.0\" and platform_python_implementation != \"PyPy\""}
-typing-extensions = {version = ">=4.13.2", markers = "python_full_version < \"3.11.0\""}
 
 [package.extras]
 docs = ["sphinx (>=5.3.0)", "sphinx-inline-tabs", "sphinx-rtd-theme (>=3.0.0)"]
@@ -603,34 +576,11 @@ files = [
 
 [[package]]
 name = "dnspython"
-version = "2.7.0"
-description = "DNS toolkit"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "python_version < \"3.14\" or platform_python_implementation == \"PyPy\""
-files = [
-    {file = "dnspython-2.7.0-py3-none-any.whl", hash = "sha256:b4c34b7d10b51bcc3a5071e7b8dee77939f1e878477eeecc965e9835f63c6c86"},
-    {file = "dnspython-2.7.0.tar.gz", hash = "sha256:ce9c432eda0dc91cf618a5cedf1a4e142651196bbcd2c80e89ed5a907e5cfaf1"},
-]
-
-[package.extras]
-dev = ["black (>=23.1.0)", "coverage (>=7.0)", "flake8 (>=7)", "hypercorn (>=0.16.0)", "mypy (>=1.8)", "pylint (>=3)", "pytest (>=7.4)", "pytest-cov (>=4.1.0)", "quart-trio (>=0.11.0)", "sphinx (>=7.2.0)", "sphinx-rtd-theme (>=2.0.0)", "twine (>=4.0.0)", "wheel (>=0.42.0)"]
-dnssec = ["cryptography (>=43)"]
-doh = ["h2 (>=4.1.0)", "httpcore (>=1.0.0)", "httpx (>=0.26.0)"]
-doq = ["aioquic (>=1.0.0)"]
-idna = ["idna (>=3.7)"]
-trio = ["trio (>=0.23)"]
-wmi = ["wmi (>=1.5.1)"]
-
-[[package]]
-name = "dnspython"
 version = "2.8.0"
 description = "DNS toolkit"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "platform_python_implementation != \"PyPy\" and python_version >= \"3.14\""
 files = [
     {file = "dnspython-2.8.0-py3-none-any.whl", hash = "sha256:01d9bbc4a2d76bf0db7c1f729812ded6d912bd318d3b1cf81d30c0f845dbf3af"},
     {file = "dnspython-2.8.0.tar.gz", hash = "sha256:181d3c6996452cb1189c4046c61599b84a5a86e099562ffde77d26984ff26d0f"},
@@ -660,7 +610,6 @@ files = [
 [package.dependencies]
 decorator = ">=4.0.0"
 stevedore = ">=3.0.0"
-typing_extensions = {version = ">=4.0.1", markers = "python_version < \"3.11\""}
 
 [package.extras]
 bmemcached = ["python-binary-memcached"]
@@ -698,25 +647,6 @@ files = [
 [package.dependencies]
 dnspython = ">=2.0.0"
 idna = ">=2.0.0"
-
-[[package]]
-name = "exceptiongroup"
-version = "1.3.0"
-description = "Backport of PEP 654 (exception groups)"
-optional = false
-python-versions = ">=3.7"
-groups = ["main", "dev"]
-markers = "python_version < \"3.11\""
-files = [
-    {file = "exceptiongroup-1.3.0-py3-none-any.whl", hash = "sha256:4d111e6e0c13d0644cad6ddaa7ed0261a0b36971f6d23e7ec9b4b9097da78a10"},
-    {file = "exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88"},
-]
-
-[package.dependencies]
-typing-extensions = {version = ">=4.6.0", markers = "python_version < \"3.13\""}
-
-[package.extras]
-test = ["pytest (>=6)"]
 
 [[package]]
 name = "fedreg"
@@ -850,31 +780,6 @@ files = [
 all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
 
 [[package]]
-name = "importlib-metadata"
-version = "8.7.0"
-description = "Read metadata from Python packages"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "python_version < \"3.10\""
-files = [
-    {file = "importlib_metadata-8.7.0-py3-none-any.whl", hash = "sha256:e5dd1551894c77868a30651cef00984d50e1002d06942a7101d34870c5f02afd"},
-    {file = "importlib_metadata-8.7.0.tar.gz", hash = "sha256:d13b81ad223b890aa16c5471f2ac3056cf76c5f10f82d6f9292f0b415f389000"},
-]
-
-[package.dependencies]
-zipp = ">=3.20"
-
-[package.extras]
-check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1) ; sys_platform != \"cygwin\""]
-cover = ["pytest-cov"]
-doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
-enabler = ["pytest-enabler (>=2.2)"]
-perf = ["ipython"]
-test = ["flufl.flake8", "importlib_resources (>=1.3) ; python_version < \"3.9\"", "jaraco.test (>=5.4)", "packaging", "pyfakefs", "pytest (>=6,!=8.1.*)", "pytest-perf (>=0.9.2)"]
-type = ["pytest-mypy"]
-
-[[package]]
 name = "iniconfig"
 version = "2.1.0"
 description = "brain-dead simple config-ini parsing"
@@ -996,40 +901,11 @@ zstd = ["zstandard"]
 
 [[package]]
 name = "keystoneauth1"
-version = "5.11.1"
-description = "Authentication Library for OpenStack Identity"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "python_version < \"3.14\" or platform_python_implementation == \"PyPy\""
-files = [
-    {file = "keystoneauth1-5.11.1-py3-none-any.whl", hash = "sha256:4525adf03b6e591f4b9b8a72c3b14f6510a04816dd5a7aca6ebaa6dfc90b69e6"},
-    {file = "keystoneauth1-5.11.1.tar.gz", hash = "sha256:806f12c49b7f4b2cad3f5a460f7bdd81e4247c81b6042596a7fea8575f6591f3"},
-]
-
-[package.dependencies]
-iso8601 = ">=2.0.0"
-os-service-types = ">=1.2.0"
-pbr = ">=2.0.0"
-requests = ">=2.14.2"
-stevedore = ">=1.20.0"
-typing-extensions = ">=4.12"
-
-[package.extras]
-betamax = ["PyYAML (>=3.13)", "betamax (>=0.7.0)", "fixtures (>=3.0.0)"]
-kerberos = ["requests-kerberos (>=0.8.0)"]
-oauth1 = ["oauthlib (>=0.6.2)"]
-saml2 = ["lxml (>=4.2.0)"]
-test = ["PyYAML (>=3.12)", "bandit (>=1.7.6,<1.8.0)", "betamax (>=0.7.0)", "coverage (>=4.0)", "fixtures (>=3.0.0)", "flake8-docstrings (>=1.7.0,<1.8.0)", "flake8-import-order (>=0.18.2,<0.19.0)", "hacking (>=6.1.0,<6.2.0)", "lxml (>=4.2.0)", "oauthlib (>=0.6.2)", "oslo.config (>=5.2.0)", "oslo.utils (>=3.33.0)", "oslotest (>=3.2.0)", "requests-kerberos (>=0.8.0)", "requests-mock (>=1.2.0)", "stestr (>=1.0.0)", "testresources (>=2.0.0)", "testtools (>=2.2.0)"]
-
-[[package]]
-name = "keystoneauth1"
 version = "5.12.0"
 description = "Authentication Library for OpenStack Identity"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "platform_python_implementation != \"PyPy\" and python_version >= \"3.14\""
 files = [
     {file = "keystoneauth1-5.12.0-py3-none-any.whl", hash = "sha256:2e514b03615e2d9162f0c07c823a61a636e6d4df38ff4a34b7511a04e8a4166a"},
     {file = "keystoneauth1-5.12.0.tar.gz", hash = "sha256:dd113c2f3dcb418d9f761c73b8cd43a96ddfa8a612b51c576822381f39ca4ae8"},
@@ -1106,38 +982,11 @@ files = [
 
 [[package]]
 name = "markdown-it-py"
-version = "3.0.0"
-description = "Python port of markdown-it. Markdown parsing, done right!"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-markers = "python_version < \"3.14\" or platform_python_implementation == \"PyPy\""
-files = [
-    {file = "markdown-it-py-3.0.0.tar.gz", hash = "sha256:e3f60a94fa066dc52ec76661e37c851cb232d92f9886b15cb560aaada2df8feb"},
-    {file = "markdown_it_py-3.0.0-py3-none-any.whl", hash = "sha256:355216845c60bd96232cd8d8c40e8f9765cc86f46880e43a8fd22dc1a1a8cab1"},
-]
-
-[package.dependencies]
-mdurl = ">=0.1,<1.0"
-
-[package.extras]
-benchmarking = ["psutil", "pytest", "pytest-benchmark"]
-code-style = ["pre-commit (>=3.0,<4.0)"]
-compare = ["commonmark (>=0.9,<1.0)", "markdown (>=3.4,<4.0)", "mistletoe (>=1.0,<2.0)", "mistune (>=2.0,<3.0)", "panflute (>=2.3,<3.0)"]
-linkify = ["linkify-it-py (>=1,<3)"]
-plugins = ["mdit-py-plugins"]
-profiling = ["gprof2dot"]
-rtd = ["jupyter_sphinx", "mdit-py-plugins", "myst-parser", "pyyaml", "sphinx", "sphinx-copybutton", "sphinx-design", "sphinx_book_theme"]
-testing = ["coverage", "pytest", "pytest-cov", "pytest-regressions"]
-
-[[package]]
-name = "markdown-it-py"
 version = "4.0.0"
 description = "Python port of markdown-it. Markdown parsing, done right!"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "platform_python_implementation != \"PyPy\" and python_version >= \"3.14\""
 files = [
     {file = "markdown_it_py-4.0.0-py3-none-any.whl", hash = "sha256:87327c59b172c5011896038353a81343b6754500a08cd7a4973bb48c6d578147"},
     {file = "markdown_it_py-4.0.0.tar.gz", hash = "sha256:cb0a2b4aa34f932c007117b194e945bd74e0ec24133ceb5bac59009cda1cb9f3"},
@@ -1325,41 +1174,11 @@ signedtoken = ["cryptography (>=3.0.0)", "pyjwt (>=2.0.0,<3)"]
 
 [[package]]
 name = "openstacksdk"
-version = "4.5.0"
-description = "An SDK for building applications to work with OpenStack"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "python_version < \"3.14\" or platform_python_implementation == \"PyPy\""
-files = [
-    {file = "openstacksdk-4.5.0-py3-none-any.whl", hash = "sha256:8ee80c594a2b710a3f4dc6a75334455bb8deb40f0bd42a706520210e82efc171"},
-    {file = "openstacksdk-4.5.0.tar.gz", hash = "sha256:ab7a1240207a6969ba09ceee8f16653805730677b4497a806cd956733651fe68"},
-]
-
-[package.dependencies]
-cryptography = ">=2.7"
-decorator = ">=4.4.1"
-"dogpile.cache" = ">=0.6.5"
-iso8601 = ">=0.1.11"
-jmespath = ">=0.9.0"
-jsonpatch = ">=1.16,<1.20 || >1.20"
-keystoneauth1 = ">=5.10.0"
-os-service-types = ">=1.7.0"
-pbr = ">=2.0.0,<2.1.0 || >2.1.0"
-platformdirs = ">=3"
-psutil = ">=3.2.2"
-PyYAML = ">=3.13"
-requestsexceptions = ">=1.2.0"
-typing-extensions = ">=4.12.0"
-
-[[package]]
-name = "openstacksdk"
 version = "4.7.1"
 description = "An SDK for building applications to work with OpenStack"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "platform_python_implementation != \"PyPy\" and python_version >= \"3.14\""
 files = [
     {file = "openstacksdk-4.7.1-py3-none-any.whl", hash = "sha256:953d5549f4a06928e82335e5f404cedd2f1138d5ddfd68ec502f2b800d30d88f"},
     {file = "openstacksdk-4.7.1.tar.gz", hash = "sha256:23348aa69c6cc6c1ed0e8f03fb42b156519ed8cfcd143e783ef5c1dd800ad9f1"},
@@ -1383,28 +1202,11 @@ typing-extensions = ">=4.12.0"
 
 [[package]]
 name = "os-service-types"
-version = "1.7.0"
-description = "Python library for consuming OpenStack sevice-types-authority data"
-optional = false
-python-versions = "*"
-groups = ["main"]
-markers = "python_version < \"3.14\" or platform_python_implementation == \"PyPy\""
-files = [
-    {file = "os-service-types-1.7.0.tar.gz", hash = "sha256:31800299a82239363995b91f1ebf9106ac7758542a1e4ef6dc737a5932878c6c"},
-    {file = "os_service_types-1.7.0-py2.py3-none-any.whl", hash = "sha256:0505c72205690910077fb72b88f2a1f07533c8d39f2fe75b29583481764965d6"},
-]
-
-[package.dependencies]
-pbr = ">=2.0.0,<2.1.0 || >2.1.0"
-
-[[package]]
-name = "os-service-types"
 version = "1.8.0"
 description = "Python library for consuming OpenStack sevice-types-authority data"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "platform_python_implementation != \"PyPy\" and python_version >= \"3.14\""
 files = [
     {file = "os_service_types-1.8.0-py3-none-any.whl", hash = "sha256:bc0418bf826de1639c7f54b2c752827ea9aa91cbde560d0b0bf6339d97270b3b"},
     {file = "os_service_types-1.8.0.tar.gz", hash = "sha256:890ce74f132ca334c2b23f0025112b47c6926da6d28c2f75bcfc0a83dea3603e"},
@@ -1415,35 +1217,11 @@ pbr = ">=2.0.0,<2.1.0 || >2.1.0"
 
 [[package]]
 name = "osc-lib"
-version = "4.0.2"
-description = "OpenStackClient Library"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-markers = "python_version < \"3.14\" or platform_python_implementation == \"PyPy\""
-files = [
-    {file = "osc_lib-4.0.2-py3-none-any.whl", hash = "sha256:41d1466489d3f8799684ca4794c25356d508e57375de010398080ccec4708e18"},
-    {file = "osc_lib-4.0.2.tar.gz", hash = "sha256:403f9d4cc1b13d934a3483b43afaf50886447a224fec74ada2b6c7087ad3d77d"},
-]
-
-[package.dependencies]
-cliff = ">=3.2.0"
-keystoneauth1 = ">=3.14.0"
-openstacksdk = ">=0.15.0"
-"oslo.i18n" = ">=3.15.3"
-"oslo.utils" = ">=3.33.0"
-pbr = ">=2.0.0,<2.1.0 || >2.1.0"
-requests = ">=2.14.2"
-stevedore = ">=1.20.0"
-
-[[package]]
-name = "osc-lib"
 version = "4.2.0"
 description = "OpenStackClient Library"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "platform_python_implementation != \"PyPy\" and python_version >= \"3.14\""
 files = [
     {file = "osc_lib-4.2.0-py3-none-any.whl", hash = "sha256:951d25c0975765242816c9e8f86a8e223dfae78a23ed8eb5a8e1c9c8dd688d58"},
     {file = "osc_lib-4.2.0.tar.gz", hash = "sha256:99718f06a990c1ad6fb9034bbed9655390a2ea83cef71a53781e7e9abd9f20ce"},
@@ -1918,12 +1696,10 @@ files = [
 
 [package.dependencies]
 colorama = {version = ">=0.4", markers = "sys_platform == \"win32\""}
-exceptiongroup = {version = ">=1", markers = "python_version < \"3.11\""}
 iniconfig = ">=1"
 packaging = ">=20"
 pluggy = ">=1.5,<2"
 pygments = ">=2.7.2"
-tomli = {version = ">=1", markers = "python_version < \"3.11\""}
 
 [package.extras]
 dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "requests", "setuptools", "xmlschema"]
@@ -1986,34 +1762,11 @@ dev = ["pre-commit", "pytest-asyncio", "tox"]
 
 [[package]]
 name = "python-cinderclient"
-version = "9.7.0"
-description = "OpenStack Block Storage API Client Library"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "python_version < \"3.14\" or platform_python_implementation == \"PyPy\""
-files = [
-    {file = "python_cinderclient-9.7.0-py3-none-any.whl", hash = "sha256:f82080b5f7af7fc97c2fda1baee802ad9206cbec0099736ee1b850083e098154"},
-    {file = "python_cinderclient-9.7.0.tar.gz", hash = "sha256:18c4501e549677984d85b0b10fd074efbd265e30add2a796d28176055a8d7dcf"},
-]
-
-[package.dependencies]
-keystoneauth1 = ">=5.9.0"
-"oslo.i18n" = ">=5.0.1"
-"oslo.utils" = ">=4.8.0"
-pbr = ">=5.5.0"
-PrettyTable = ">=0.7.2"
-requests = ">=2.25.1"
-stevedore = ">=3.3.0"
-
-[[package]]
-name = "python-cinderclient"
 version = "9.8.0"
 description = "OpenStack Block Storage API Client Library"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "platform_python_implementation != \"PyPy\" and python_version >= \"3.14\""
 files = [
     {file = "python_cinderclient-9.8.0-py3-none-any.whl", hash = "sha256:e82f88d1b9fd8e4a41420da5535b73bb8580084f3303ad9bcaf64f0aa5d3bae6"},
     {file = "python_cinderclient-9.8.0.tar.gz", hash = "sha256:bd3ee9f9487c5e79957f018a6b3f2dece7059dad8f6155d83dd4b6eb9447a11d"},
@@ -2060,36 +1813,11 @@ cli = ["click (>=5.0)"]
 
 [[package]]
 name = "python-glanceclient"
-version = "4.8.0"
-description = "OpenStack Image API Client Library"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "python_version < \"3.14\" or platform_python_implementation == \"PyPy\""
-files = [
-    {file = "python_glanceclient-4.8.0-py3-none-any.whl", hash = "sha256:11b5e6abae24f0536cce3d4cf432725f3a6ee9e9a38059201c9bc234f8460587"},
-    {file = "python_glanceclient-4.8.0.tar.gz", hash = "sha256:f85b6fc81f27b34da1c87484b3097659db0529abd1c67595d2f0fe7cb159036c"},
-]
-
-[package.dependencies]
-keystoneauth1 = ">=3.6.2"
-"oslo.i18n" = ">=3.15.3"
-"oslo.utils" = ">=3.33.0"
-pbr = ">=2.0.0,<2.1.0 || >2.1.0"
-PrettyTable = ">=0.7.1"
-pyOpenSSL = ">=17.1.0"
-requests = ">=2.14.2"
-warlock = ">=1.2.0"
-wrapt = ">=1.7.0"
-
-[[package]]
-name = "python-glanceclient"
 version = "4.10.0"
 description = "OpenStack Image API Client Library"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "platform_python_implementation != \"PyPy\" and python_version >= \"3.14\""
 files = [
     {file = "python_glanceclient-4.10.0-py3-none-any.whl", hash = "sha256:286f2fac1dcbdfcde8781b3fb41ec61608a15b7b6c154d049e75ab84395f796a"},
     {file = "python_glanceclient-4.10.0.tar.gz", hash = "sha256:ff6c2d42a1767c5cfa3cd1d22a3732d38ab113d471ad22c4ee64a1bd3941b103"},
@@ -2108,37 +1836,11 @@ wrapt = ">=1.7.0"
 
 [[package]]
 name = "python-keystoneclient"
-version = "5.6.0"
-description = "Client Library for OpenStack Identity"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "python_version < \"3.14\" or platform_python_implementation == \"PyPy\""
-files = [
-    {file = "python_keystoneclient-5.6.0-py3-none-any.whl", hash = "sha256:86d5f615dac5b64797334c54a0440451aff11bea19328501df32e87385290702"},
-    {file = "python_keystoneclient-5.6.0.tar.gz", hash = "sha256:721de2aec7710076389c674ee27b6712e97d86c7e0ff487b0b4409c8fcee10e7"},
-]
-
-[package.dependencies]
-debtcollector = ">=1.2.0"
-keystoneauth1 = ">=3.4.0"
-"oslo.config" = ">=5.2.0"
-"oslo.i18n" = ">=3.15.3"
-"oslo.serialization" = ">=2.18.0"
-"oslo.utils" = ">=3.33.0"
-packaging = ">=20.4"
-pbr = ">=2.0.0"
-requests = ">=2.14.2"
-stevedore = ">=1.20.0"
-
-[[package]]
-name = "python-keystoneclient"
 version = "5.7.0"
 description = "Client Library for OpenStack Identity"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "platform_python_implementation != \"PyPy\" and python_version >= \"3.14\""
 files = [
     {file = "python_keystoneclient-5.7.0-py3-none-any.whl", hash = "sha256:2ec19994ba8b8b16fe6cf4ac45c3f2180a22e203d1b3aa977a34a0160caae0b6"},
     {file = "python_keystoneclient-5.7.0.tar.gz", hash = "sha256:8ce7bf1c8cddca6d7140fc76918b44eddf1d64040a60cb8ff7059136104d4ceb"},
@@ -2684,60 +2386,16 @@ files = [
 ]
 
 [[package]]
-name = "tomli"
-version = "2.2.1"
-description = "A lil' TOML parser"
-optional = false
-python-versions = ">=3.8"
-groups = ["dev"]
-markers = "python_full_version <= \"3.11.0a6\""
-files = [
-    {file = "tomli-2.2.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:678e4fa69e4575eb77d103de3df8a895e1591b48e740211bd1067378c69e8249"},
-    {file = "tomli-2.2.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:023aa114dd824ade0100497eb2318602af309e5a55595f76b626d6d9f3b7b0a6"},
-    {file = "tomli-2.2.1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ece47d672db52ac607a3d9599a9d48dcb2f2f735c6c2d1f34130085bb12b112a"},
-    {file = "tomli-2.2.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6972ca9c9cc9f0acaa56a8ca1ff51e7af152a9f87fb64623e31d5c83700080ee"},
-    {file = "tomli-2.2.1-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:c954d2250168d28797dd4e3ac5cf812a406cd5a92674ee4c8f123c889786aa8e"},
-    {file = "tomli-2.2.1-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:8dd28b3e155b80f4d54beb40a441d366adcfe740969820caf156c019fb5c7ec4"},
-    {file = "tomli-2.2.1-cp311-cp311-musllinux_1_2_i686.whl", hash = "sha256:e59e304978767a54663af13c07b3d1af22ddee3bb2fb0618ca1593e4f593a106"},
-    {file = "tomli-2.2.1-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:33580bccab0338d00994d7f16f4c4ec25b776af3ffaac1ed74e0b3fc95e885a8"},
-    {file = "tomli-2.2.1-cp311-cp311-win32.whl", hash = "sha256:465af0e0875402f1d226519c9904f37254b3045fc5084697cefb9bdde1ff99ff"},
-    {file = "tomli-2.2.1-cp311-cp311-win_amd64.whl", hash = "sha256:2d0f2fdd22b02c6d81637a3c95f8cd77f995846af7414c5c4b8d0545afa1bc4b"},
-    {file = "tomli-2.2.1-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:4a8f6e44de52d5e6c657c9fe83b562f5f4256d8ebbfe4ff922c495620a7f6cea"},
-    {file = "tomli-2.2.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:8d57ca8095a641b8237d5b079147646153d22552f1c637fd3ba7f4b0b29167a8"},
-    {file = "tomli-2.2.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4e340144ad7ae1533cb897d406382b4b6fede8890a03738ff1683af800d54192"},
-    {file = "tomli-2.2.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:db2b95f9de79181805df90bedc5a5ab4c165e6ec3fe99f970d0e302f384ad222"},
-    {file = "tomli-2.2.1-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:40741994320b232529c802f8bc86da4e1aa9f413db394617b9a256ae0f9a7f77"},
-    {file = "tomli-2.2.1-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:400e720fe168c0f8521520190686ef8ef033fb19fc493da09779e592861b78c6"},
-    {file = "tomli-2.2.1-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:02abe224de6ae62c19f090f68da4e27b10af2b93213d36cf44e6e1c5abd19fdd"},
-    {file = "tomli-2.2.1-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:b82ebccc8c8a36f2094e969560a1b836758481f3dc360ce9a3277c65f374285e"},
-    {file = "tomli-2.2.1-cp312-cp312-win32.whl", hash = "sha256:889f80ef92701b9dbb224e49ec87c645ce5df3fa2cc548664eb8a25e03127a98"},
-    {file = "tomli-2.2.1-cp312-cp312-win_amd64.whl", hash = "sha256:7fc04e92e1d624a4a63c76474610238576942d6b8950a2d7f908a340494e67e4"},
-    {file = "tomli-2.2.1-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:f4039b9cbc3048b2416cc57ab3bda989a6fcf9b36cf8937f01a6e731b64f80d7"},
-    {file = "tomli-2.2.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:286f0ca2ffeeb5b9bd4fcc8d6c330534323ec51b2f52da063b11c502da16f30c"},
-    {file = "tomli-2.2.1-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a92ef1a44547e894e2a17d24e7557a5e85a9e1d0048b0b5e7541f76c5032cb13"},
-    {file = "tomli-2.2.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9316dc65bed1684c9a98ee68759ceaed29d229e985297003e494aa825ebb0281"},
-    {file = "tomli-2.2.1-cp313-cp313-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:e85e99945e688e32d5a35c1ff38ed0b3f41f43fad8df0bdf79f72b2ba7bc5272"},
-    {file = "tomli-2.2.1-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:ac065718db92ca818f8d6141b5f66369833d4a80a9d74435a268c52bdfa73140"},
-    {file = "tomli-2.2.1-cp313-cp313-musllinux_1_2_i686.whl", hash = "sha256:d920f33822747519673ee656a4b6ac33e382eca9d331c87770faa3eef562aeb2"},
-    {file = "tomli-2.2.1-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:a198f10c4d1b1375d7687bc25294306e551bf1abfa4eace6650070a5c1ae2744"},
-    {file = "tomli-2.2.1-cp313-cp313-win32.whl", hash = "sha256:d3f5614314d758649ab2ab3a62d4f2004c825922f9e370b29416484086b264ec"},
-    {file = "tomli-2.2.1-cp313-cp313-win_amd64.whl", hash = "sha256:a38aa0308e754b0e3c67e344754dff64999ff9b513e691d0e786265c93583c69"},
-    {file = "tomli-2.2.1-py3-none-any.whl", hash = "sha256:cb55c73c5f4408779d0cf3eef9f762b9c9f147a77de7b258bef0a5628adc85cc"},
-    {file = "tomli-2.2.1.tar.gz", hash = "sha256:cd45e1dc79c835ce60f7404ec8119f2eb06d38b1deba146f07ced3bbc44505ff"},
-]
-
-[[package]]
 name = "typing-extensions"
 version = "4.15.0"
 description = "Backported and Experimental Type Hints for Python 3.9+"
 optional = false
 python-versions = ">=3.9"
-groups = ["main", "dev"]
+groups = ["main"]
 files = [
     {file = "typing_extensions-4.15.0-py3-none-any.whl", hash = "sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548"},
     {file = "typing_extensions-4.15.0.tar.gz", hash = "sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466"},
 ]
-markers = {dev = "python_version < \"3.11\""}
 
 [[package]]
 name = "tzdata"
@@ -2785,7 +2443,6 @@ files = [
 distlib = ">=0.3.7,<1"
 filelock = ">=3.12.2,<4"
 platformdirs = ">=3.9.1,<5"
-typing-extensions = {version = ">=4.13.2", markers = "python_version < \"3.11\""}
 
 [package.extras]
 docs = ["furo (>=2023.7.26)", "proselint (>=0.13)", "sphinx (>=7.1.2,!=7.3)", "sphinx-argparse (>=0.4)", "sphinxcontrib-towncrier (>=0.2.1a0)", "towncrier (>=23.6)"]
@@ -2930,28 +2587,7 @@ files = [
     {file = "wrapt-1.17.3.tar.gz", hash = "sha256:f66eb08feaa410fe4eebd17f2a2c8e2e46d3476e9f8c783daa8e09e0faa666d0"},
 ]
 
-[[package]]
-name = "zipp"
-version = "3.23.0"
-description = "Backport of pathlib-compatible object wrapper for zip files"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "python_version < \"3.10\""
-files = [
-    {file = "zipp-3.23.0-py3-none-any.whl", hash = "sha256:071652d6115ed432f5ce1d34c336c0adfd6a884660d1e9712a256d3d3bd4b14e"},
-    {file = "zipp-3.23.0.tar.gz", hash = "sha256:a07157588a12518c9d4034df3fbbee09c814741a33ff63c05fa29d26a2404166"},
-]
-
-[package.extras]
-check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1) ; sys_platform != \"cygwin\""]
-cover = ["pytest-cov"]
-doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
-enabler = ["pytest-enabler (>=2.2)"]
-test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more_itertools", "pytest (>=6,!=8.1.*)", "pytest-ignore-flaky"]
-type = ["pytest-mypy"]
-
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.9.2,<4.0.0"
-content-hash = "4e8bb71de4f3ce93c147baffbcfa40c8f7c2e2d348b13f927cae2400a83120f6"
+python-versions = ">=3.11,<4.0.0"
+content-hash = "b21d4b3cf5fb96b7e8b2e6c0ea9b084660699953a9a0228bfd97109d5545bfd9"

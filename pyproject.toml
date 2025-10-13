@@ -6,7 +6,7 @@ authors = ["Giovanni Savarese <giovanni.savarese@ba.infn.it>"]
 packages = [{ include = "src" }]
 
 [tool.poetry.dependencies]
-python = ">=3.9.2,<4.0.0"
+python = ">=3.11,<4.0.0"
 python-openstackclient = "^6.2.0"
 python-glanceclient = "^4.4.0"
 kafka-python = "^2.2.14"
