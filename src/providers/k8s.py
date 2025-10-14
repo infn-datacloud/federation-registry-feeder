@@ -163,8 +163,11 @@ class KubernetesData:
         key = key.replace(".", "_")
         key = key.replace("-", "_")
 
-        if value.endswith("Gi"):
-            value = value[:-2]
+        try:
+            value = int(value)
+        except ValueError:
+            # Value ends with Gi, Ki, Mi...
+            value = int(value[:-2])
 
         if key in [
             "limits_cpu",
@@ -173,16 +176,16 @@ class KubernetesData:
             "requests_memory",
             "pods",
         ]:
-            data["compute"][key] = int(value)
+            data["compute"][key] = value
         elif key in [
             "requests_ephemeral_storage",
             "limits_ephemeral_storage",
             "storage",
             "pvcs",
         ]:
-            data["block_storage"][key] = int(value)
+            data["block_storage"][key] = value
         elif key in []:
-            data["storage_class"][key] = int(value)
+            data["storage_class"][key] = value
 
         return data
 
