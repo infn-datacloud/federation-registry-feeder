@@ -12,6 +12,7 @@ pipeline {
         PROJECT_NAME = 'federation-registry-feeder'
         DOCKERFILE = './docker/Dockerfile'
         SRC_DIR = 'src'
+        TEST_DIR = 'tests'
         POETRY_VERSION = '2.1'
         TARGET_PYTHON = '3.13'
     }
