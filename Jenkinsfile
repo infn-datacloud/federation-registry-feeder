@@ -12,7 +12,7 @@ pipeline {
         PROJECT_NAME = 'federation-registry-feeder'
         DOCKERFILE = './docker/Dockerfile'
         SRC_DIR = 'src'
-        TEST_DIR = 'tests'
+        TESTS_DIR = 'tests'
         POETRY_VERSION = '2.1'
         TARGET_PYTHON = '3.13'
     }
@@ -36,7 +36,7 @@ pipeline {
             }
             steps {
                 script {
-                    ruffChecks()
+                    ruffChecks(env.SRC_DIR)
                 }
             }
         }
@@ -62,14 +62,14 @@ pipeline {
                             stage('Install dependencies') {
                                 steps {
                                     script  {
-                                        installDependencies()
+                                        installDependencies(env.PYTHON_VERSION, env.POETRY_VERSION)
                                     }
                                 }
                             }
                             stage('Run Tests') {
                                 steps {
                                     script {
-                                        runTests()
+                                        runTests(env.SRC_DIR, env.PYTHON_VERSION)
                                     }
                                 }
                                 post {
@@ -118,7 +118,7 @@ pipeline {
             }
             steps {
                 script {
-                    notifySonar()
+                    notifySonar(env.PROJECT_NAME, env.SRC_DIR, env.TESTS_DIR, env.TARGET_PYTHON)
                 }
             }
         }
@@ -141,7 +141,7 @@ pipeline {
                     stage('Build') {
                         steps {
                             script {
-                                buildDockerImage()
+                                buildDockerImage(env.PROJECT_NAME, env.PYTHON_VERSION, env.POETRY_VERSION)
                             }
                         }
                     }
@@ -172,7 +172,10 @@ pipeline {
                         steps {
                             script {
                                 pushDockerImage(
-                                    isLatest: env.PYTHON_VERSION == env.TARGET_PYTHON ? true : false
+                                    env.PROJECT_NAME,
+                                    env.DOCKER_REGISTRY,
+                                    env.PYTHON_VERSION,
+                                    env.PYTHON_VERSION == env.TARGET_PYTHON
                                 )
                             }
                         }
@@ -199,7 +202,7 @@ pipeline {
                     stage('Update description') {
                         steps {
                             script {
-                                updateDockerRegistryDoc()
+                                updateDockerRegistryDoc(env.PROJECT_NAME, env.DOCKER_REGISTRY)
                             }
                         }
                     }
