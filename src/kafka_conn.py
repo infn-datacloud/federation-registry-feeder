@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from logging import Logger
 from typing import Any
 
@@ -133,9 +133,7 @@ class Producer:
             case "1.3.0":
                 return {
                     "msg_version": msg_version,
-                    "timestamp": datetime.now(timezone.utc).isoformat(
-                        timespec="seconds"
-                    ),
+                    "timestamp": datetime.now(UTC).isoformat(timespec="seconds"),
                     "provider_name": provider_conf["name"],
                     "provider_type": provider_conf["type"],
                     "identity_endpoint": identity_services[0]["endpoint"],
@@ -156,9 +154,7 @@ class Producer:
             case "1.4.0":
                 return {
                     "msg_version": msg_version,
-                    "timestamp": datetime.now(timezone.utc).isoformat(
-                        timespec="seconds"
-                    ),
+                    "timestamp": datetime.now(UTC).isoformat(timespec="seconds"),
                     "provider_name": provider_conf["name"],
                     "provider_type": provider_conf["type"],
                     "identity_endpoint": identity_services[0]["endpoint"],
