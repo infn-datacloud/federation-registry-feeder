@@ -18,9 +18,9 @@ from fedreg.service.enum import (
     IdentityServiceName,
 )
 from fedreg.service.schemas import IdentityServiceCreate
+from kubernetes.client import ApiClient, Configuration, CoreV1Api, StorageV1Api
 from kubernetes.client.exceptions import ApiException
 
-from kubernetes import client
 from src.models.identity_provider import Issuer, retrieve_token
 from src.models.provider import Kubernetes
 
@@ -71,8 +71,8 @@ class KubernetesData:
                 ssl_ca_cert_path=self.ssl_ca_cert_path,
             )
 
-            self.corev1 = client.CoreV1Api(self.client)
-            self.storagev1 = client.StorageV1Api(self.client)
+            self.corev1 = CoreV1Api(self.client)
+            self.storagev1 = StorageV1Api(self.client)
 
             # Retrieve information
             self.retrieve_info()
@@ -93,17 +93,15 @@ class KubernetesData:
             "object_store_services": [i.dict() for i in self.object_store_services],
         }
 
-    def create_connection(
-        self, *, token: str, ssl_ca_cert_path: str
-    ) -> client.ApiClient:
+    def create_connection(self, *, token: str, ssl_ca_cert_path: str) -> ApiClient:
         """Create a connection with the k8s cluster's V1 API."""
-        conf = client.Configuration(
+        conf = Configuration(
             host=self.provider_conf.auth_url,
             api_key={"authorization": token},
             api_key_prefix={"authorization": "Bearer"},
         )
         conf.ssl_ca_cert = ssl_ca_cert_path
-        return client.ApiClient(conf)
+        return ApiClient(conf)
 
     def retrieve_info(self):
         self.project = ProjectCreate(
