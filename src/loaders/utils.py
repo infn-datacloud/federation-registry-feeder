@@ -44,9 +44,9 @@ def complete_partial_connection(
     conn_idp: IdentityProviderBase | None = conn_idps.get(idp_endpoint, None)
     if conn_idp is not None:
         conn_params["idp_endpoint"] = conn_idp.endpoint
+        conn_params["idp_name"] = conn_idp.name
         if conn_params["provider_type"] == ProviderType.openstack:
             conn_params["idp_protocol"] = conn_idp.protocol
-            conn_params["idp_name"] = conn_idp.name
         elif conn_params["provider_type"] == ProviderType.kubernetes:
             conn_params["idp_audience"] = conn_idp.audience
         return SiteConfig(**conn_params)

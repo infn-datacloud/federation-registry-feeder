@@ -13,7 +13,7 @@ from src.providers.k8s import KubernetesClient
 from src.providers.openstack import OpenstackClient
 
 
-class Producer:
+class KafkaHandler:
     """Producer instance to send messages to kafka."""
 
     def __init__(self, *, settings: Settings, logger: Logger) -> None:
@@ -36,7 +36,7 @@ class Producer:
         self.topic = settings.KAFKA_TOPIC
         self.bootstrap_servers = settings.KAFKA_BOOTSTRAP_SERVERS
 
-        kwargs = {
+        self.context = {
             "client_id": settings.KAFKA_CLIENT_NAME,
             "bootstrap_servers": self.bootstrap_servers,
             "value_serializer": lambda x: json.dumps(x, sort_keys=True).encode("utf-8"),
@@ -47,50 +47,19 @@ class Producer:
         }
 
         if settings.KAFKA_SSL_ENABLE:
-            self.producer = KafkaProducer(
-                security_protocol="SSL",
-                ssl_check_hostname=False,
-                ssl_cafile=settings.KAFKA_SSL_CACERT_PATH,
-                ssl_certfile=settings.KAFKA_SSL_CERT_PATH,
-                ssl_keyfile=settings.KAFKA_SSL_KEY_PATH,
-                ssl_password=settings.KAFKA_SSL_PASSWORD,
-                **kwargs,
-            )
-        else:
-            self.producer = KafkaProducer(**kwargs)
+            self.context = {
+                "security_protocol": "SSL",
+                "ssl_check_hostname": False,
+                "ssl_cafile": settings.KAFKA_SSL_CACERT_PATH,
+                "ssl_certfile": settings.KAFKA_SSL_CERT_PATH,
+                "ssl_keyfile": settings.KAFKA_SSL_KEY_PATH,
+                "ssl_password": settings.KAFKA_SSL_PASSWORD,
+                **self.context,
+            }
 
-    def send(self, clients: list[OpenstackClient]) -> None:
-        """Sends a list of data items to a specified Kafka topic.
-
-        - For each item in `data`, builds a message using `build_message`,
-            serializes it to JSON, and sends it to the Kafka topic.
-        - Logs information and debug details for each message sent.
-        - Flushes and closes the Kafka producer after sending all messages.
-
-        Args:
-            clients (list of Client): A list of clients from which extrapolate data to
-                be sent as messages.
-
-        Returns:
-            bool: True messages are successfully sent to kafka. False otherwise.
-
-        """
-        try:
-            for item in clients:
-                message = self.build_message(data=item)
-                message = json.loads(json.dumps(message, default=str))
-                self.producer.send(self.topic, message)
-                self.logger.debug("Data: %s", message)
-            self.producer.flush()
-            self.logger.info("Sending messages")
-            self.producer.close()
-            return True
-        except NoBrokersAvailable:
-            msg = f"No brokers available at {self.bootstrap_servers}"
-            self.logger.error(msg)
-            return False
-
-    def build_message(self, data: OpenstackClient | KubernetesClient) -> dict[str, Any]:
+    def __build_message(
+        self, data: OpenstackClient | KubernetesClient
+    ) -> dict[str, Any]:
         """Builds a message dictionary for a specific message version.
 
         Parameters:
@@ -140,3 +109,35 @@ class Producer:
             msg["storage_classes"] = [i.model_dump() for i in data.storage_classes]
 
         return msg
+
+    def send(self, clients: list[OpenstackClient | KubernetesClient]) -> bool:
+        """Sends a list of data items to a specified Kafka topic.
+
+        - For each item in `data`, builds a message using `build_message`,
+            serializes it to JSON, and sends it to the Kafka topic.
+        - Logs information and debug details for each message sent.
+        - Flushes and closes the Kafka producer after sending all messages.
+
+        Args:
+            clients (list of Client): A list of clients from which extrapolate data to
+                be sent as messages.
+
+        Returns:
+            bool: True messages are successfully sent to kafka. False otherwise.
+
+        """
+        try:
+            producer = KafkaProducer(**self.context)
+            for item in clients:
+                message = self.__build_message(data=item)
+                message = json.loads(json.dumps(message, default=str))
+                producer.send(self.topic, message)
+                self.logger.debug("Data: %s", message)
+            producer.flush()
+            self.logger.info("Sending messages")
+            producer.close()
+            return True
+        except NoBrokersAvailable:
+            msg = f"No brokers available at {self.bootstrap_servers}"
+            self.logger.error(msg)
+            return False

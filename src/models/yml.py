@@ -161,6 +161,20 @@ class Provider(ProviderBase):
         list[Project],
         Field(description="list of projects/namespaces... belonged by this provider"),
     ]
+    rally_username: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="It is not mandatory to define the rally user's name here",
+        ),
+    ]
+    rally_password: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="It is not mandatory to define the rally user's password here",
+        ),
+    ]
 
     @field_validator("identity_providers")
     @classmethod

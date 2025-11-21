@@ -2,7 +2,7 @@
 
 from src.config import get_settings
 from src.core import create_clients, retrieve_data_from_providers
-from src.kafka_conn import Producer
+from src.kafka_conn import KafkaHandler
 from src.loaders.fed_mgr import load_connections_from_fed_mgr
 from src.loaders.yaml_files import load_connections_from_yaml_files
 from src.logger import create_logger
@@ -50,7 +50,7 @@ def main(log_level: str) -> None:
 
     # Create kafka producer if needed and send data to kafka
     if settings.KAFKA_ENABLE:
-        producer = Producer(settings=settings, logger=logger)
+        producer = KafkaHandler(settings=settings, logger=logger)
         success = producer.send(clients=clients)
         error = error or not success
 
