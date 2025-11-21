@@ -268,10 +268,18 @@ class OpenstackClient(ProviderClient):
         if tags is None:
             tags = []
         self.logger.info("Retrieve current project accessible images")
+        if len(tags) > 0:
+            os_images = []
+            for tag in tags:
+                names = [i.name for i in os_images]
+                new_images = list(self.conn.image.images(status="active", tag=tag))
+                for new_image in new_images:
+                    if new_image.name not in names:
+                        os_images.append(new_image)
+        else:
+            os_images = self.conn.image.images(status="active")
         images = []
-        for image in self.conn.image.images(
-            status="active", tag=None if len(tags) == 0 else tags
-        ):
+        for image in os_images:
             self.logger.debug("Image received data=%r", image)
             data = image.to_dict()
             data["iaas_uuid"] = data.pop("id")

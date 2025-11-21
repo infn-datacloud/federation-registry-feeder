@@ -1,7 +1,7 @@
 """Module to define kafka connection parameters and message details."""
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from logging import Logger
 from typing import Any
 
@@ -122,7 +122,7 @@ class Producer:
             "user_group": data.user_group,
             "project_id": data.project_id,
             "quotas": [i.model_dump() for i in data.quotas],
-            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "timestamp": datetime.now(UTC).isoformat(timespec="seconds"),
         }
 
         if isinstance(data, OpenstackClient):
@@ -135,7 +135,7 @@ class Producer:
             msg["flavors"] = [i.model_dump() for i in data.flavors]
             msg["images"] = [i.model_dump() for i in data.images]
             msg["networks"] = [i.model_dump() for i in data.networks]
-        elif isinstance(data, OpenstackClient):
+        elif isinstance(data, KubernetesClient):
             msg["issuer_audience"] = data.idp_audience
             msg["storage_classes"] = [i.model_dump() for i in data.storage_classes]
 

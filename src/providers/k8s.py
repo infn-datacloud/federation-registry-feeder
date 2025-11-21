@@ -112,8 +112,11 @@ class KubernetesClient(ProviderClient):
         key = key.replace(".", "_")
         key = key.replace("-", "_")
 
-        if value.endswith("Gi"):
-            value = value[:-2]
+        try:
+            value = int(value)
+        except ValueError:
+            # Value ends with Gi, Ki, Mi...
+            value = int(value[:-2])
 
         if key in [
             "limits_cpu",
@@ -122,16 +125,16 @@ class KubernetesClient(ProviderClient):
             "requests_memory",
             "pods",
         ]:
-            data["compute"][key] = int(value)
+            data["compute"][key] = value
         elif key in [
             "requests_ephemeral_storage",
             "limits_ephemeral_storage",
             "storage",
             "pvcs",
         ]:
-            data["block_storage"][key] = int(value)
+            data["block_storage"][key] = value
         elif key in []:
-            data["storage_class"][key] = int(value)
+            data["storage_class"][key] = value
 
         return data
 
@@ -171,10 +174,15 @@ class KubernetesClient(ProviderClient):
         """Retrieve available storage classes."""
         self.logger.info("Retrieve current namespace accessible storage classes")
         storage_class_list = []
-        storage_classes = self.storagev1.list_storage_class(
-            _request_timeout=self.timeout
-        )
-        for storage_class in storage_classes.items:
+        try:
+            storage_classes = self.storagev1.list_storage_class(
+                _request_timeout=self.timeout
+            )
+            storage_classes = storage_classes.items
+        except ValueError:
+            self.logger.warning("No storage classes detected.")
+            storage_classes = []
+        for storage_class in storage_classes:
             data = {
                 "name": storage_class.metadata.name,
                 "is_default": storage_class.metadata.annotations.get(
