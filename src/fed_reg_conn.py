@@ -185,8 +185,11 @@ def update_database(
                 crud.create(data=item)
             else:
                 crud.update(new_data=item, old_data=db_item)
+        # Do not delete missing projects. List them for reference
         for db_item in db_items.values():
-            crud.remove(item=db_item)
+            msg = f"Out of sync project: {db_item.name}"
+            logger.warning(msg)
+        #     crud.remove(item=db_item)
     except (ConnectionError, HTTPError) as e:
         logger.error("Can't connect to Federation Registry.")
         logger.error(e)
