@@ -125,7 +125,7 @@ class ProviderThread:
         return None
 
     def get_provider(
-        self,
+        self, parallel: bool = True
     ) -> tuple[Openstack | Kubernetes, list[OpenstackData | KubernetesData], bool]:
         """Generate a list of generic providers.
 
@@ -148,9 +148,12 @@ class ProviderThread:
                 if conn_thread is not None:
                     connections.append(conn_thread)
 
-        with ThreadPoolExecutor() as executor:
-            provider_data = executor.map(self.retrieve_data, connections)
-        provider_data = list(provider_data)
+        if parallel:
+            with ThreadPoolExecutor() as executor:
+                provider_data = executor.map(self.retrieve_data, connections)
+            provider_data = list(provider_data)
+        else:
+            provider_data = [self.retrieve_data(x) for x in connections]
         provider_data = list(filter(lambda x: x is not None, provider_data))
         self.error |= any([x.error for x in connections])
 
