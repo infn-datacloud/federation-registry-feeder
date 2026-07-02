@@ -45,7 +45,7 @@ def create_logger(name: str, level: str | int | None = None) -> Logger:
 
     stderr_handler = StreamHandler()
     stderr_handler.setFormatter(formatter)
-    stdout_handler.addFilter(thread_id_filter)
+    stderr_handler.addFilter(thread_id_filter)
     stderr_handler.addFilter(StderrFilter())
     logger.addHandler(stderr_handler)
 
