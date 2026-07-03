@@ -107,21 +107,21 @@ pipeline {
                 }
             }
         }
-        stage('Notify SonarCloud') {
-            agent {
-                docker {
-                    label 'jenkins-node-label-1'
-                    image 'sonarsource/sonar-scanner-cli'
-                    args "-u root:root -v ${env.WORKSPACE}:/usr/src"
-                    reuseNode true
-                }
-            }
-            steps {
-                script {
-                    notifySonar(env.PROJECT_NAME, env.SRC_DIR, env.TESTS_DIR, env.TARGET_PYTHON)
-                }
-            }
-        }
+        // stage('Notify SonarCloud') {
+        //     agent {
+        //         docker {
+        //             label 'jenkins-node-label-1'
+        //             image 'sonarsource/sonar-scanner-cli'
+        //             args "-u root:root -v ${env.WORKSPACE}:/usr/src"
+        //             reuseNode true
+        //         }
+        //     }
+        //     steps {
+        //         script {
+        //             notifySonar(env.PROJECT_NAME, env.SRC_DIR, env.TESTS_DIR, env.TARGET_PYTHON)
+        //         }
+        //     }
+        // }
         stage('Build images') {
             when {
                 allOf {
