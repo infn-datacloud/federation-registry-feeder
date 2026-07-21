@@ -41,9 +41,12 @@ def main(log_level: str) -> None:
 
     # Multithreading read
     providers = []
-    with ThreadPoolExecutor() as executor:
-        providers_data = executor.map(lambda x: x.get_provider(), pthreads)
-    providers_data = list(providers_data)
+    if settings.PARALLEL:
+        with ThreadPoolExecutor() as executor:
+            providers_data = executor.map(lambda x: x.get_provider(), pthreads)
+        providers_data = list(providers_data)
+    else:
+        providers_data = [p.get_provider(parallel=False) for p in pthreads]
     providers_data = list(filter(lambda x: x, providers_data))
     error |= any([x.error for x in pthreads])
 

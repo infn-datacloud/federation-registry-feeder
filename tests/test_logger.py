@@ -2,7 +2,7 @@ from logging import CRITICAL, DEBUG, ERROR, INFO, NOTSET, WARNING, Logger, getLe
 
 from pytest_cases import parametrize, parametrize_with_cases
 
-from src.logger import StderrFilter, StdoutFilter, create_logger
+from src.logger import StderrFilter, StdoutFilter, create_logger, thread_id_filter
 from tests.utils import random_lower_string
 
 
@@ -23,8 +23,10 @@ def test_logger() -> None:
     assert logger.name == name
     assert logger.level == NOTSET
     assert len(logger.handlers) == 2
-    assert isinstance(logger.handlers[0].filters[0], StdoutFilter)
-    assert isinstance(logger.handlers[1].filters[0], StderrFilter)
+    assert logger.handlers[0].filters[0] is thread_id_filter
+    assert isinstance(logger.handlers[0].filters[1], StdoutFilter)
+    assert logger.handlers[1].filters[0] is thread_id_filter
+    assert isinstance(logger.handlers[1].filters[1], StderrFilter)
 
 
 @parametrize_with_cases("level", cases=CaseLevel)

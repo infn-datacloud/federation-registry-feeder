@@ -93,6 +93,9 @@ class Settings(BaseSettings):
         default=None,
         description="Name of the container with the oidc-agent service instance.",
     )
+    PARALLEL: bool = Field(
+        default=True, description="Run providers inspection in parallel mode"
+    )
     KAFKA_ENABLE: bool = Field(
         default=False, description="Enable Kafka message exchange"
     )
