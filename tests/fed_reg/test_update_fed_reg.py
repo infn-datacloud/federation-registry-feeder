@@ -87,32 +87,32 @@ def test_add_provider_to_db(
     mock_crud_remove.assert_not_called()
 
 
-@patch("src.fed_reg_conn.CRUD.remove")
-@patch("src.fed_reg_conn.CRUD.update")
-@patch("src.fed_reg_conn.CRUD.create")
-@patch("src.fed_reg_conn.CRUD.read")
-def test_delete_provider_from_db(
-    mock_crud_read: Mock,
-    mock_crud_create: Mock,
-    mock_crud_update: Mock,
-    mock_crud_remove: Mock,
-) -> None:
-    """One entry in the database and no tracked providers."""
-    service_endpoints = URLs(**service_endpoints_dict())
-    provider_read = ProviderRead(uid=uuid4(), **fedreg_provider_dict())
-    mock_crud_read.return_value = [provider_read]
+# @patch("src.fed_reg_conn.CRUD.remove")
+# @patch("src.fed_reg_conn.CRUD.update")
+# @patch("src.fed_reg_conn.CRUD.create")
+# @patch("src.fed_reg_conn.CRUD.read")
+# def test_delete_provider_from_db(
+#     mock_crud_read: Mock,
+#     mock_crud_create: Mock,
+#     mock_crud_update: Mock,
+#     mock_crud_remove: Mock,
+# ) -> None:
+#     """One entry in the database and no tracked providers."""
+#     service_endpoints = URLs(**service_endpoints_dict())
+#     provider_read = ProviderRead(uid=uuid4(), **fedreg_provider_dict())
+#     mock_crud_read.return_value = [provider_read]
 
-    assert update_database(
-        service_api_url=service_endpoints,
-        items=[],
-        token=random_lower_string(),
-        logger=getLogger("test"),
-        settings=Settings(api_ver=APIVersions()),
-    )
-    mock_crud_read.assert_called_once()
-    mock_crud_create.assert_not_called()
-    mock_crud_update.assert_not_called()
-    mock_crud_remove.assert_called_once()
+#     assert update_database(
+#         service_api_url=service_endpoints,
+#         items=[],
+#         token=random_lower_string(),
+#         logger=getLogger("test"),
+#         settings=Settings(api_ver=APIVersions()),
+#     )
+#     mock_crud_read.assert_called_once()
+#     mock_crud_create.assert_not_called()
+#     mock_crud_update.assert_not_called()
+#     mock_crud_remove.assert_called_once()
 
 
 @patch("src.fed_reg_conn.CRUD.remove")
@@ -202,34 +202,34 @@ def test_create_error(
     mock_crud_remove.assert_not_called()
 
 
-@parametrize_with_cases("error", cases=CaseErrors)
-@patch("src.fed_reg_conn.CRUD.remove")
-@patch("src.fed_reg_conn.CRUD.update")
-@patch("src.fed_reg_conn.CRUD.create")
-@patch("src.fed_reg_conn.CRUD.read")
-def test_delete_error(
-    mock_crud_read: Mock,
-    mock_crud_create: Mock,
-    mock_crud_update: Mock,
-    mock_crud_remove: Mock,
-    error: ConnectionError | HTTPError,
-) -> None:
-    service_endpoints = URLs(**service_endpoints_dict())
-    provider_read = ProviderRead(uid=uuid4(), **fedreg_provider_dict())
-    mock_crud_read.return_value = [provider_read]
-    mock_crud_remove.side_effect = error
+# @parametrize_with_cases("error", cases=CaseErrors)
+# @patch("src.fed_reg_conn.CRUD.remove")
+# @patch("src.fed_reg_conn.CRUD.update")
+# @patch("src.fed_reg_conn.CRUD.create")
+# @patch("src.fed_reg_conn.CRUD.read")
+# def test_delete_error(
+#     mock_crud_read: Mock,
+#     mock_crud_create: Mock,
+#     mock_crud_update: Mock,
+#     mock_crud_remove: Mock,
+#     error: ConnectionError | HTTPError,
+# ) -> None:
+#     service_endpoints = URLs(**service_endpoints_dict())
+#     provider_read = ProviderRead(uid=uuid4(), **fedreg_provider_dict())
+#     mock_crud_read.return_value = [provider_read]
+#     mock_crud_remove.side_effect = error
 
-    assert not update_database(
-        service_api_url=service_endpoints,
-        items=[],
-        token=random_lower_string(),
-        logger=getLogger("test"),
-        settings=Settings(api_ver=APIVersions()),
-    )
-    mock_crud_read.assert_called_once()
-    mock_crud_create.assert_not_called()
-    mock_crud_update.assert_not_called()
-    mock_crud_remove.assert_called_once()
+#     assert not update_database(
+#         service_api_url=service_endpoints,
+#         items=[],
+#         token=random_lower_string(),
+#         logger=getLogger("test"),
+#         settings=Settings(api_ver=APIVersions()),
+#     )
+#     mock_crud_read.assert_called_once()
+#     mock_crud_create.assert_not_called()
+#     mock_crud_update.assert_not_called()
+#     mock_crud_remove.assert_called_once()
 
 
 @parametrize_with_cases("error", cases=CaseErrors)

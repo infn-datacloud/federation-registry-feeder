@@ -6,7 +6,7 @@ FROM harbor.cloud.infn.it/datacloud-middleware/poetry:${POETRY_VERSION}-python${
 
 # Updating packages and installing docker to communicate with external containers
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends docker.io gcc \
+    && apt-get install -y docker.io gcc \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -17,4 +17,4 @@ COPY ./src /app/src
 
 RUN poetry install --without dev
 
-USER ${USERNAME}
+# USER ${USERNAME}
