@@ -2,7 +2,14 @@ from logging import CRITICAL, DEBUG, ERROR, INFO, NOTSET, WARNING, Logger, getLe
 
 from pytest_cases import parametrize, parametrize_with_cases
 
-from src.logger import StderrFilter, StdoutFilter, create_logger, thread_id_filter
+from src.logger import (
+    StderrFilter,
+    StdoutFilter,
+    create_logger,
+    get_error_details,
+    start_error_capture,
+    thread_id_filter,
+)
 from tests.utils import random_lower_string
 
 
@@ -58,3 +65,15 @@ def test_stdout_filter(capsys) -> None:
     assert "info" in captured.out
     assert "error" in captured.err
     assert "critical" in captured.err
+
+
+def test_error_capture() -> None:
+    start_error_capture()
+    logger = create_logger(random_lower_string(), DEBUG)
+
+    logger.warning("ignored")
+    logger.error("captured %s", "detail")
+
+    assert "ERROR" in get_error_details()
+    assert "captured detail" in get_error_details()
+    assert "ignored" not in get_error_details()

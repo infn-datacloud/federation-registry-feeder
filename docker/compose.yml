@@ -17,6 +17,7 @@ services:
     env_file:
       - ../.env
     volumes:
+      - ../error.log:/tmp/federation-registry-feeder-last-error.log
       - ../providers-conf:/providers-conf:ro
       - ../certs:/certs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

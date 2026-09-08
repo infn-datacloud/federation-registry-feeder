@@ -1,7 +1,48 @@
 import logging
 import sys
 import threading
-from logging import Formatter, Logger, StreamHandler
+from logging import Formatter, Handler, Logger, LogRecord, StreamHandler
+
+
+class ErrorDetailsHandler(Handler):
+    """Collect error log details emitted during the current execution."""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.ERROR)
+        self._records: list[str] = []
+        self._lock = threading.Lock()
+        self.setFormatter(Formatter("%(levelname)s - %(name)s - %(message)s"))
+
+    def emit(self, record: LogRecord) -> None:
+        detail = self.format(record)
+        with self._lock:
+            self._records.append(detail)
+
+    def reset(self) -> None:
+        with self._lock:
+            self._records.clear()
+
+    def details(self) -> str:
+        """Return stable details, independent of parallel logging order."""
+        with self._lock:
+            records = sorted(self._records)
+        return "\n".join(records)
+
+
+error_details_handler = ErrorDetailsHandler()
+
+
+def start_error_capture() -> None:
+    """Start a fresh error capture on the root logger."""
+    error_details_handler.reset()
+    root_logger = logging.getLogger()
+    if error_details_handler not in root_logger.handlers:
+        root_logger.addHandler(error_details_handler)
+
+
+def get_error_details() -> str:
+    """Return the errors captured during the current execution."""
+    return error_details_handler.details()
 
 
 class StdoutFilter(logging.Filter):

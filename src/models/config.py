@@ -89,6 +89,10 @@ class Settings(BaseSettings):
         description="Path to the directory containing the federated provider \
             yaml configurations.",
     )
+    ERROR_STATE_FILE: Path = Field(
+        default="/tmp/federation-registry-feeder-last-error.log",
+        description="File containing the errors found in the previous execution.",
+    )
     OIDC_AGENT_CONTAINER_NAME: str | None = Field(
         default=None,
         description="Name of the container with the oidc-agent service instance.",
